@@ -181,7 +181,7 @@ def linear_regression(X, y):
         beta = np.linalg.inv(X_with_intercept.T @ X_with_intercept) @ X_with_intercept.T @ y
         y_pred = X_with_intercept @ beta
         return beta[1:], beta[0], y_pred  # coefficients, intercept, predictions
-    except:
+    except np.linalg.LinAlgError:
         return None, None, None
 
 def r_squared(y_true, y_pred):

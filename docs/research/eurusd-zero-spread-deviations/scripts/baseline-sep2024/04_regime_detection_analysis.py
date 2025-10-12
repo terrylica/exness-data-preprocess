@@ -9,6 +9,7 @@ in volatility, trend, or market microstructure?
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from math import erf
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -294,7 +295,6 @@ se = np.sqrt(p0 * (1 - p0) / n)
 z_score = (p_obs - p0) / se
 
 # Two-tailed p-value from z-score (approximate)
-from math import erf
 p_value = 2 * (1 - 0.5 * (1 + erf(abs(z_score) / np.sqrt(2))))
 
 print(f"\n   Null Hypothesis: Clusters have no predictive power (50% vol increase expected)")

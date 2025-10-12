@@ -9,6 +9,7 @@ predict flash crashes, liquidity crises, or other extreme market events?
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from math import erf
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -278,7 +279,6 @@ se_diff = np.sqrt(p_pooled * (1 - p_pooled) * (1/n_extreme + 1/n_regular))
 z_score = (p_extreme - p_regular) / se_diff if se_diff > 0 else 0
 
 # Two-tailed p-value
-from math import erf
 p_value = 2 * (1 - 0.5 * (1 + erf(abs(z_score) / np.sqrt(2))))
 
 print(f"\nFlash Crash Prediction (60s horizon):")
