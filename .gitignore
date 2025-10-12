@@ -97,4 +97,4 @@ pip-delete-this-directory.txt
 uv.lock
 
 # Pre-commit
-.pre-commit-config.yaml
+# .pre-commit-config.yaml should be tracked, not ignored
