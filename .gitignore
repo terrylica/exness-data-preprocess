@@ -98,3 +98,4 @@ uv.lock
 
 # Pre-commit
 # .pre-commit-config.yaml should be tracked, not ignored
+.token-info.md
