@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Direct queryability via DuckDB SQL
 - Support for Python 3.9+
 
-## [0.1.0] - 2025-01-XX (Planned)
+## [0.1.0] - 2025-10-12
 
 Initial PyPI release.
 
