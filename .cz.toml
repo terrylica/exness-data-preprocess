@@ -1,0 +1,12 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$major.$minor.$patch"
+update_changelog_on_bump = true
+version_files = [
+    "pyproject.toml:version",
+    "src/exness_data_preprocess/__init__.py:__version__"
+]
+
+[tool.commitizen.settings]
+major_version_zero = true

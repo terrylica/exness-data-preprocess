@@ -1,0 +1,144 @@
+# git-cliff configuration for detailed CHANGELOG.md generation
+# See: https://git-cliff.org/docs/configuration
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes to exness-data-preprocess will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+"""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits %}
+        - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message | upper_first }}\
+          {% if commit.breaking %} [**breaking**]{% endif %}
+    {% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+tag_pattern = "v[0-9]*"
+tag_prefix = "v"
+skip_tags = ""
+ignore_tags = ""
+
+[[git.commit_parsers]]
+# Breaking changes (highest priority)
+message = "^.*!:"
+group = "⚠️ Breaking Changes"
+
+[[git.commit_parsers]]
+body = ".*BREAKING[- ]CHANGE.*"
+group = "⚠️ Breaking Changes"
+
+# Features (semantic grouping)
+[[git.commit_parsers]]
+message = "^feat\\(compression\\)"
+group = "🗜️ Compression Improvements"
+
+[[git.commit_parsers]]
+message = "^feat\\(api\\)"
+group = "🔌 API Enhancements"
+
+[[git.commit_parsers]]
+message = "^feat\\(cli\\)"
+group = "💻 CLI Improvements"
+
+[[git.commit_parsers]]
+message = "^feat\\(processor\\)"
+group = "⚙️ Processor Enhancements"
+
+[[git.commit_parsers]]
+message = "^feat\\(perf\\)"
+group = "🚀 Performance Improvements"
+
+[[git.commit_parsers]]
+message = "^feat\\(docs\\)"
+group = "📚 Documentation Improvements"
+
+[[git.commit_parsers]]
+message = "^feat"
+group = "✨ Features"
+
+# Fixes (semantic grouping)
+[[git.commit_parsers]]
+message = "^fix\\(ci\\)"
+group = "🔧 CI/CD Improvements"
+
+[[git.commit_parsers]]
+message = "^fix\\(security\\)"
+group = "🔒 Security Fixes"
+
+[[git.commit_parsers]]
+message = "^fix\\(perf\\)"
+group = "🚀 Performance Fixes"
+
+[[git.commit_parsers]]
+message = "^fix\\(compression\\)"
+group = "🗜️ Compression Fixes"
+
+[[git.commit_parsers]]
+message = "^fix"
+group = "🐛 Bug Fixes"
+
+# Other conventional commits
+[[git.commit_parsers]]
+message = "^refactor"
+group = "♻️ Refactoring"
+
+[[git.commit_parsers]]
+message = "^chore\\(deps\\)"
+group = "📦 Dependency Updates"
+
+[[git.commit_parsers]]
+message = "^chore"
+group = "🧰 Maintenance"
+
+[[git.commit_parsers]]
+message = "^docs"
+group = "📚 Documentation"
+
+[[git.commit_parsers]]
+message = "^test"
+group = "🧪 Testing"
+
+[[git.commit_parsers]]
+message = "^build"
+group = "🏗️ Build System"
+
+[[git.commit_parsers]]
+message = "^ci"
+group = "🔧 Continuous Integration"
+
+[[git.commit_parsers]]
+message = "^style"
+group = "💅 Code Style"
+
+# Catch-all
+[[git.commit_parsers]]
+message = ".*"
+group = "📝 Other Changes"
+
+[[git.commit_preprocessors]]
+# Remove gitmoji from messages to avoid duplication
+pattern = ':\w+:'
+replace = ""
+
+[[git.commit_preprocessors]]
+# Clean up extra whitespace
+pattern = '\s+'
+replace = " "
+
+[bump]
+# Automatic version bumping rules (optional, used with --bump flag)
+features_always_bump_minor = true
+breaking_always_bump_major = true

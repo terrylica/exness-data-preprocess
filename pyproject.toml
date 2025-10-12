@@ -1,0 +1,146 @@
+[project]
+name = "exness-data-preprocess"
+version = "0.1.0"
+description = "Professional Exness forex tick data preprocessing with optimal compression (Parquet Zstd-22) and DuckDB OHLC generation. Provides efficient storage (9% smaller than ZIP) with lossless precision and direct queryability."
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [
+    { name = "Eon Labs", email = "terry@eonlabs.com" }
+]
+maintainers = [
+    { name = "Terry Li", email = "terry@eonlabs.com" }
+]
+license = { text = "MIT" }
+keywords = [
+    "forex", "exness", "tick-data", "preprocessing", "parquet",
+    "duckdb", "compression", "zstd", "financial-data", "time-series",
+    "eurusd", "ohlc", "microstructure", "lossless", "queryable",
+    "data-engineering", "quantitative-finance", "backtesting",
+    "pandas", "pyarrow", "efficient-storage", "forex-data"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pandas>=2.0.0",
+    "pyarrow>=16.0.0",
+    "duckdb>=0.9.0",
+    "httpx>=0.25.0",
+    "tqdm>=4.65.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/terrylica/exness-data-preprocess"
+Documentation = "https://github.com/terrylica/exness-data-preprocess#readme"
+Repository = "https://github.com/terrylica/exness-data-preprocess.git"
+"Bug Tracker" = "https://github.com/terrylica/exness-data-preprocess/issues"
+"Source Code" = "https://github.com/terrylica/exness-data-preprocess"
+Changelog = "https://github.com/terrylica/exness-data-preprocess/blob/main/CHANGELOG.md"
+
+[project.scripts]
+exness-preprocess = "exness_data_preprocess.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",  # line too long
+    "C901",  # function too complex
+    "F841",  # unused variables
+    "W291",  # trailing whitespace
+    "W293",  # blank line contains whitespace
+    "B904",  # exception chaining warnings
+    "B007",  # unused loop variables
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["exness_data_preprocess"]
+
+[tool.black]
+target-version = ['py39']
+line-length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+strict_optional = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+markers = [
+    "integration: marks tests as integration tests (may require network access)",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.1",
+    "pandas-stubs>=2.2.2.240807",
+    "pre-commit>=4.3.0",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.13.0",
+    "types-requests>=2.32.4.20250913",
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver"
+version_provider = "pep621"
+major_version_zero = true
+bump_message = "chore(release): bump version $current_version → $new_version [skip ci]"

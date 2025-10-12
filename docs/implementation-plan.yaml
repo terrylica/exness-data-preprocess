@@ -1,0 +1,36 @@
+version: "2024-11-24T00:05:00Z"
+updated: "2024-11-24T00:05:00Z"
+priority: "P0"
+steps:
+  - id: persist_plan
+    description: "Persist plan file with SLO definitions in workspace"
+    status: "completed"
+    priority: "P0"
+  - id: run_pytest
+    description: "Execute baseline tests via pytest"
+    status: "completed"
+    depends_on:
+      - persist_plan
+    priority: "P0"
+  - id: record_outcome
+    description: "Record pytest outcome in plan file"
+    status: "completed"
+    depends_on:
+      - run_pytest
+    priority: "P0"
+steps_active: []
+slos:
+  availability: "Pytest invocation must be available on demand; baseline test command exits successfully in >=0.99 of scheduled runs per reporting period."
+  correctness: "Baseline pytest suite must pass without alterations; any failure blocks promotion until resolved."
+  observability: "Capture pytest stdout/stderr and exit status; raise errors immediately on non-zero exit."
+  maintainability: "Update this plan file on every lifecycle change; prune deprecated steps before adding new ones."
+constraints:
+  - "On any error, raise and propagate—no fallbacks, defaults, retries, or silent handling."
+  - "Use out-of-the-box or off-the-shelf tooling; avoid custom implementations."
+test_outcomes:
+  - command: "pytest"
+    exit_code: 0
+    passed: 24
+    skipped: 1
+    skipped_reasons:
+      - "tests/test_processor.py:207 Integration test - requires network access"
