@@ -20,19 +20,17 @@ Dependencies:
 - scipy 1.16.2, statsmodels 0.14.4, pandas 2.0+
 """
 
-import sys
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from scipy import stats
 import json
 import logging
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from scipy import stats
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Paths
@@ -40,20 +38,26 @@ SCRIPT_DIR = Path(__file__).parent
 DATA_DIR = SCRIPT_DIR.parent.parent / "data" / "multiperiod-validation"
 OUTPUT_DIR = Path("/tmp")
 
+
 # Error classes
 class InsufficientDataError(Exception):
     """Raised when insufficient data for statistical test"""
+
     pass
+
 
 class TestFailedError(Exception):
     """Raised when statistical test execution fails"""
+
     pass
+
 
 # =============================================================================
 # Phase 4.1: Mann-Kendall Trend Test
 # =============================================================================
 
-def mann_kendall_trend_test(csv_path: Path, metric: str = 'toward_5s') -> dict:
+
+def mann_kendall_trend_test(csv_path: Path, metric: str = "toward_5s") -> dict:
     """
     Mann-Kendall trend test for temporal monotonicity.
 
@@ -86,9 +90,7 @@ def mann_kendall_trend_test(csv_path: Path, metric: str = 'toward_5s') -> dict:
     df = pd.read_csv(csv_path)
 
     if metric not in df.columns:
-        raise ValueError(
-            f"Metric '{metric}' not found. Available: {df.columns.tolist()}"
-        )
+        raise ValueError(f"Metric '{metric}' not found. Available: {df.columns.tolist()}")
 
     if len(df) < 4:
         raise InsufficientDataError(f"Need ≥4 months, got {len(df)}")
@@ -110,25 +112,27 @@ def mann_kendall_trend_test(csv_path: Path, metric: str = 'toward_5s') -> dict:
     # Interpret trend
     alpha = 0.05
     if p_value < alpha:
-        trend = 'increasing' if tau > 0 else 'decreasing'
+        trend = "increasing" if tau > 0 else "decreasing"
     else:
-        trend = 'no trend'
+        trend = "no trend"
 
     logger.info(f"  Mann-Kendall [{metric}]: tau={tau:.4f}, p={p_value:.4f}, trend={trend}")
 
     return {
-        'metric': metric,
-        'tau': tau,
-        'p_value': p_value,
-        'trend': trend,
-        'alpha': alpha,
-        'n_months': n,
-        's_statistic': s_statistic
+        "metric": metric,
+        "tau": tau,
+        "p_value": p_value,
+        "trend": trend,
+        "alpha": alpha,
+        "n_months": n,
+        "s_statistic": s_statistic,
     }
+
 
 # =============================================================================
 # Phase 4.2: Chow Test for Structural Break
 # =============================================================================
+
 
 def chow_test_regime_shift(csv_path: Path, breakpoint_month: int = 8) -> dict:
     """
@@ -170,9 +174,7 @@ def chow_test_regime_shift(csv_path: Path, breakpoint_month: int = 8) -> dict:
     df = pd.read_csv(csv_path)
 
     if breakpoint_month < 1 or breakpoint_month >= len(df):
-        raise ValueError(
-            f"Breakpoint {breakpoint_month} out of range [1, {len(df)-1}]"
-        )
+        raise ValueError(f"Breakpoint {breakpoint_month} out of range [1, {len(df) - 1}]")
 
     # Split into two periods
     period1 = df.iloc[:breakpoint_month]  # 2024 (months 0-7)
@@ -184,16 +186,16 @@ def chow_test_regime_shift(csv_path: Path, breakpoint_month: int = 8) -> dict:
         )
 
     # Extract R² values
-    r2_before = period1['r_squared'].values
-    r2_after = period2['r_squared'].values
+    r2_before = period1["r_squared"].values
+    r2_after = period2["r_squared"].values
 
     # Chow test formula for mean comparison:
     # F = [(SSR_pooled - (SSR_1 + SSR_2)) / k] / [(SSR_1 + SSR_2) / (n1 + n2 - 2k)]
     # where k = number of parameters (k=1 for mean-only model)
 
     # Calculate pooled and individual residuals
-    mean_pooled = df['r_squared'].mean()
-    ssr_pooled = np.sum((df['r_squared'] - mean_pooled) ** 2)
+    mean_pooled = df["r_squared"].mean()
+    ssr_pooled = np.sum((df["r_squared"] - mean_pooled) ** 2)
 
     mean_before = r2_before.mean()
     mean_after = r2_after.mean()
@@ -205,13 +207,13 @@ def chow_test_regime_shift(csv_path: Path, breakpoint_month: int = 8) -> dict:
 
     # F-statistic calculation
     numerator = (ssr_pooled - (ssr_before + ssr_after)) / k
-    denominator = (ssr_before + ssr_after) / (n1 + n2 - 2*k)
+    denominator = (ssr_before + ssr_after) / (n1 + n2 - 2 * k)
 
     if denominator == 0:
         raise TestFailedError("Zero denominator in Chow test (no variance)")
 
     f_stat = numerator / denominator
-    p_value = 1 - stats.f.cdf(f_stat, k, n1 + n2 - 2*k)
+    p_value = 1 - stats.f.cdf(f_stat, k, n1 + n2 - 2 * k)
 
     # Effect size (percentage drop)
     effect_size = (mean_before - mean_after) / mean_before if mean_before != 0 else 0
@@ -224,23 +226,25 @@ def chow_test_regime_shift(csv_path: Path, breakpoint_month: int = 8) -> dict:
     logger.info(f"    Effect size: {effect_size:.1%}")
 
     return {
-        'breakpoint': breakpoint_str,
-        'f_statistic': f_stat,
-        'p_value': p_value,
-        'n_before': n1,
-        'n_after': n2,
-        'r2_before': mean_before,
-        'r2_after': mean_after,
-        'r2_before_std': r2_before.std(),
-        'r2_after_std': r2_after.std(),
-        'regime_shift': p_value < 0.05,
-        'alpha': 0.05,
-        'effect_size': effect_size
+        "breakpoint": breakpoint_str,
+        "f_statistic": f_stat,
+        "p_value": p_value,
+        "n_before": n1,
+        "n_after": n2,
+        "r2_before": mean_before,
+        "r2_after": mean_after,
+        "r2_before_std": r2_before.std(),
+        "r2_after_std": r2_after.std(),
+        "regime_shift": p_value < 0.05,
+        "alpha": 0.05,
+        "effect_size": effect_size,
     }
+
 
 # =============================================================================
 # Phase 4.3: Breakpoint Scan Analysis
 # =============================================================================
+
 
 def find_optimal_breakpoint(csv_path: Path) -> dict:
     """
@@ -270,9 +274,7 @@ def find_optimal_breakpoint(csv_path: Path) -> dict:
     df = pd.read_csv(csv_path)
 
     if len(df) < 7:
-        raise InsufficientDataError(
-            f"Need ≥7 months for breakpoint scan, got {len(df)}"
-        )
+        raise InsufficientDataError(f"Need ≥7 months for breakpoint scan, got {len(df)}")
 
     results = []
 
@@ -281,26 +283,30 @@ def find_optimal_breakpoint(csv_path: Path) -> dict:
 
     for bp in range(3, len(df) - 3):
         result = chow_test_regime_shift(csv_path, breakpoint_month=bp)
-        result['breakpoint_index'] = bp
+        result["breakpoint_index"] = bp
         results.append(result)
 
     # Find optimal (maximum F-statistic)
-    optimal = max(results, key=lambda x: x['f_statistic'])
+    optimal = max(results, key=lambda x: x["f_statistic"])
 
-    logger.info(f"  Optimal breakpoint: index={optimal['breakpoint_index']}, "
-                f"F={optimal['f_statistic']:.4f}, p={optimal['p_value']:.4f}")
+    logger.info(
+        f"  Optimal breakpoint: index={optimal['breakpoint_index']}, "
+        f"F={optimal['f_statistic']:.4f}, p={optimal['p_value']:.4f}"
+    )
 
     return {
-        'optimal_breakpoint_index': optimal['breakpoint_index'],
-        'optimal_breakpoint_month': optimal['breakpoint'],
-        'max_f_statistic': optimal['f_statistic'],
-        'min_p_value': optimal['p_value'],
-        'all_tests': results
+        "optimal_breakpoint_index": optimal["breakpoint_index"],
+        "optimal_breakpoint_month": optimal["breakpoint"],
+        "max_f_statistic": optimal["f_statistic"],
+        "min_p_value": optimal["p_value"],
+        "all_tests": results,
     }
+
 
 # =============================================================================
 # Main Execution
 # =============================================================================
+
 
 def main():
     """Execute Phase 4 statistical tests"""
@@ -326,7 +332,7 @@ def main():
     logger.info("\n--- Phase 4.1: Mann-Kendall Trend Tests ---")
 
     # Test multiple metrics
-    metrics_to_test = ['toward_5s', 'full_5s', 'toward_60s', 'full_60s']
+    metrics_to_test = ["toward_5s", "full_5s", "toward_60s", "full_60s"]
     mann_kendall_results = []
 
     for metric in metrics_to_test:
@@ -357,10 +363,9 @@ def main():
     # Save Chow test result (convert bool to int for JSON compatibility)
     chow_output = OUTPUT_DIR / "phase4_chow_test_results.json"
     chow_result_json = {
-        k: (int(v) if isinstance(v, (bool, np.bool_)) else v)
-        for k, v in chow_result.items()
+        k: (int(v) if isinstance(v, (bool, np.bool_)) else v) for k, v in chow_result.items()
     }
-    with open(chow_output, 'w') as f:
+    with open(chow_output, "w") as f:
         json.dump(chow_result_json, f, indent=2)
     logger.info(f"\n✓ Chow test results saved: {chow_output}")
 
@@ -378,15 +383,13 @@ def main():
 
     # Save all breakpoint results
     bp_output = OUTPUT_DIR / "phase4_breakpoint_scan.csv"
-    pd.DataFrame(breakpoint_scan['all_tests']).to_csv(bp_output, index=False)
+    pd.DataFrame(breakpoint_scan["all_tests"]).to_csv(bp_output, index=False)
     logger.info(f"\n✓ Breakpoint scan saved: {bp_output}")
 
     # Save summary
     bp_summary_output = OUTPUT_DIR / "phase4_breakpoint_summary.json"
-    with open(bp_summary_output, 'w') as f:
-        summary = {
-            k: v for k, v in breakpoint_scan.items() if k != 'all_tests'
-        }
+    with open(bp_summary_output, "w") as f:
+        summary = {k: v for k, v in breakpoint_scan.items() if k != "all_tests"}
         json.dump(summary, f, indent=2)
     logger.info(f"✓ Breakpoint summary saved: {bp_summary_output}")
 
@@ -400,23 +403,40 @@ def main():
 
     logger.info("\nMann-Kendall Trend Tests:")
     for result in mann_kendall_results:
-        trend_symbol = "↑" if result['trend'] == 'increasing' else "↓" if result['trend'] == 'decreasing' else "→"
-        sig = "***" if result['p_value'] < 0.001 else "**" if result['p_value'] < 0.01 else "*" if result['p_value'] < 0.05 else "ns"
-        logger.info(f"  {result['metric']:15s}: tau={result['tau']:+.4f}, p={result['p_value']:.4f} {sig} {trend_symbol}")
+        trend_symbol = (
+            "↑"
+            if result["trend"] == "increasing"
+            else "↓"
+            if result["trend"] == "decreasing"
+            else "→"
+        )
+        sig = (
+            "***"
+            if result["p_value"] < 0.001
+            else "**"
+            if result["p_value"] < 0.01
+            else "*"
+            if result["p_value"] < 0.05
+            else "ns"
+        )
+        logger.info(
+            f"  {result['metric']:15s}: tau={result['tau']:+.4f}, p={result['p_value']:.4f} {sig} {trend_symbol}"
+        )
 
-    logger.info(f"\nChow Test (2024/2025 Boundary):")
+    logger.info("\nChow Test (2024/2025 Boundary):")
     logger.info(f"  F-statistic: {chow_result['f_statistic']:.4f}")
     logger.info(f"  p-value: {chow_result['p_value']:.4f}")
     logger.info(f"  Regime shift: {'YES' if chow_result['regime_shift'] else 'NO'}")
     logger.info(f"  Effect size: {chow_result['effect_size']:.1%} drop in R²")
 
-    logger.info(f"\nBreakpoint Scan:")
+    logger.info("\nBreakpoint Scan:")
     logger.info(f"  Optimal: {breakpoint_scan['optimal_breakpoint_month']}")
     logger.info(f"  Max F: {breakpoint_scan['max_f_statistic']:.4f}")
     logger.info(f"  Min p: {breakpoint_scan['min_p_value']:.4f}")
 
     logger.info("\n✅ All Phase 4 tests completed successfully")
     logger.info(f"Results saved to: {OUTPUT_DIR}")
+
 
 if __name__ == "__main__":
     try:

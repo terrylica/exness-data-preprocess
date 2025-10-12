@@ -18,10 +18,10 @@ Architecture v2.0.0:
 - 9-column Phase7 OHLC schema
 """
 
-from pathlib import Path
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Any
+from pathlib import Path
+from typing import Any, Dict, List
+
 import exness_data_preprocess as edp
 
 # Optional: Configure base directory (defaults to ~/eon/exness-data/)
@@ -49,7 +49,7 @@ for pair in pairs_to_process:
             delete_zip=True,
         )
         results[pair] = result
-        print(f"   ✅ Success:")
+        print("   ✅ Success:")
         print(f"      Months added:  {result['months_added']}")
         print(f"      Raw ticks:     {result['raw_ticks_added']:,}")
         print(f"      Standard ticks: {result['standard_ticks_added']:,}")
@@ -137,12 +137,12 @@ for pair in existing_pairs:
             delete_zip=True,
         )
 
-        if result['months_added'] > 0:
+        if result["months_added"] > 0:
             print(f"   ✅ Added {result['months_added']} new months")
             print(f"      Raw ticks:     {result['raw_ticks_added']:,}")
             print(f"      Database size: {result['duckdb_size_mb']:.2f} MB")
         else:
-            print(f"   ✅ Already up to date")
+            print("   ✅ Already up to date")
             print(f"      Database size: {result['duckdb_size_mb']:.2f} MB")
 
     except Exception as e:
@@ -175,7 +175,7 @@ def update_with_retry(pair: str, start_date: str, max_retries: int = 3) -> Dict[
             if attempt == max_retries - 1:
                 print(f"   ❌ All {max_retries} attempts failed")
                 raise
-            print(f"   🔄 Retrying...")
+            print("   🔄 Retrying...")
 
 
 # Try processing EURUSD with retry logic
@@ -212,7 +212,7 @@ try:
                 results.append(result)
                 pbar.set_postfix(
                     pair=pair,
-                    months=result['months_added'],
+                    months=result["months_added"],
                     size_mb=f"{result['duckdb_size_mb']:.1f}",
                 )
             except Exception as e:
@@ -243,11 +243,11 @@ def validate_instrument_data(pair: str) -> Dict[str, Any]:
     # Step 1: Check coverage
     coverage = processor.get_data_coverage(pair)
 
-    if not coverage['database_exists']:
-        print(f"   ❌ Database does not exist")
-        return {'valid': False, 'reason': 'database_missing'}
+    if not coverage["database_exists"]:
+        print("   ❌ Database does not exist")
+        return {"valid": False, "reason": "database_missing"}
 
-    print(f"   📊 Coverage:")
+    print("   📊 Coverage:")
     print(f"      Raw_Spread ticks: {coverage['raw_spread_ticks']:,}")
     print(f"      Standard ticks:   {coverage['standard_ticks']:,}")
     print(f"      OHLC bars:        {coverage['ohlc_bars']:,}")
@@ -258,42 +258,42 @@ def validate_instrument_data(pair: str) -> Dict[str, Any]:
         df_ticks = processor.query_ticks(
             pair=pair,
             variant="raw_spread",
-            start_date=coverage['latest_date'],  # Get most recent day
+            start_date=coverage["latest_date"],  # Get most recent day
         )
 
         # Validate tick data
         if len(df_ticks) == 0:
-            print(f"   ⚠️  No ticks found for latest date")
-            return {'valid': False, 'reason': 'no_recent_ticks'}
+            print("   ⚠️  No ticks found for latest date")
+            return {"valid": False, "reason": "no_recent_ticks"}
 
         # Check for invalid prices
-        invalid_bids = (df_ticks['Bid'] <= 0).sum()
-        invalid_asks = (df_ticks['Ask'] <= 0).sum()
+        invalid_bids = (df_ticks["Bid"] <= 0).sum()
+        invalid_asks = (df_ticks["Ask"] <= 0).sum()
 
         if invalid_bids > 0 or invalid_asks > 0:
             print(f"   ⚠️  Found {invalid_bids} invalid bids, {invalid_asks} invalid asks")
 
         # Check spread
-        df_ticks['Spread'] = df_ticks['Ask'] - df_ticks['Bid']
-        negative_spreads = (df_ticks['Spread'] < 0).sum()
+        df_ticks["Spread"] = df_ticks["Ask"] - df_ticks["Bid"]
+        negative_spreads = (df_ticks["Spread"] < 0).sum()
 
         if negative_spreads > 0:
             print(f"   ⚠️  Found {negative_spreads} negative spreads")
 
         # Calculate spread statistics
-        mean_spread = df_ticks['Spread'].mean() * 10000  # in pips
-        zero_spread_pct = (df_ticks['Spread'] == 0).sum() / len(df_ticks) * 100
+        mean_spread = df_ticks["Spread"].mean() * 10000  # in pips
+        zero_spread_pct = (df_ticks["Spread"] == 0).sum() / len(df_ticks) * 100
 
-        print(f"   📈 Spread Statistics:")
+        print("   📈 Spread Statistics:")
         print(f"      Mean spread:   {mean_spread:.2f} pips")
         print(f"      Zero-spreads:  {zero_spread_pct:.2f}%")
 
-        print(f"   ✅ Validation passed")
-        return {'valid': True}
+        print("   ✅ Validation passed")
+        return {"valid": True}
 
     except Exception as e:
         print(f"   ❌ Validation failed: {e}")
-        return {'valid': False, 'reason': str(e)}
+        return {"valid": False, "reason": str(e)}
 
 
 # Validate all existing instruments
@@ -323,19 +323,23 @@ for db_file in sorted(BASE_DIR.glob("*.duckdb")):
     processor = edp.ExnessDataProcessor(base_dir=BASE_DIR)
     coverage = processor.get_data_coverage(pair_name)
 
-    databases.append({
-        'pair': pair_name,
-        'size_mb': size_mb,
-        'raw_ticks': coverage['raw_spread_ticks'],
-        'ohlc_bars': coverage['ohlc_bars'],
-        'date_range_days': coverage['date_range_days'],
-    })
+    databases.append(
+        {
+            "pair": pair_name,
+            "size_mb": size_mb,
+            "raw_ticks": coverage["raw_spread_ticks"],
+            "ohlc_bars": coverage["ohlc_bars"],
+            "date_range_days": coverage["date_range_days"],
+        }
+    )
 
 # Print sorted by size
-for db in sorted(databases, key=lambda x: x['size_mb'], reverse=True):
-    print(f"{db['pair']:10s} | {db['size_mb']:8.2f} MB | "
-          f"{db['raw_ticks']:12,} ticks | {db['ohlc_bars']:8,} bars | "
-          f"{db['date_range_days']:4d} days")
+for db in sorted(databases, key=lambda x: x["size_mb"], reverse=True):
+    print(
+        f"{db['pair']:10s} | {db['size_mb']:8.2f} MB | "
+        f"{db['raw_ticks']:12,} ticks | {db['ohlc_bars']:8,} bars | "
+        f"{db['date_range_days']:4d} days"
+    )
 
 print("-" * 80)
 print(f"{'TOTAL':10s} | {total_size_mb:8.2f} MB")
@@ -386,16 +390,16 @@ class MultiInstrumentPipeline:
                 )
 
                 # Validate if requested
-                if validate and result['months_added'] > 0:
+                if validate and result["months_added"] > 0:
                     coverage = self.processor.get_data_coverage(pair)
-                    result['validated'] = coverage['database_exists']
+                    result["validated"] = coverage["database_exists"]
 
                 results[pair] = result
                 print(f"   ✅ Synced: {result['months_added']} months added")
 
             except Exception as e:
                 print(f"   ❌ Failed: {e}")
-                results[pair] = {'error': str(e)}
+                results[pair] = {"error": str(e)}
 
         return results
 
@@ -416,7 +420,9 @@ class MultiInstrumentPipeline:
             report_lines.append(f"  Raw ticks:     {coverage['raw_spread_ticks']:,}")
             report_lines.append(f"  Standard ticks: {coverage['standard_ticks']:,}")
             report_lines.append(f"  OHLC bars:     {coverage['ohlc_bars']:,}")
-            report_lines.append(f"  Coverage:      {coverage['earliest_date']} to {coverage['latest_date']}")
+            report_lines.append(
+                f"  Coverage:      {coverage['earliest_date']} to {coverage['latest_date']}"
+            )
             report_lines.append(f"  Range:         {coverage['date_range_days']} days")
 
         return "\n".join(report_lines)

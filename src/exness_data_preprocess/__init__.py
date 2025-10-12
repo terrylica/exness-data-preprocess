@@ -28,14 +28,14 @@ __version__ = "0.1.0"
 __author__ = "Terry Li <terry@eonlabs.com>"
 __license__ = "MIT"
 
-from exness_data_preprocess.processor import ExnessDataProcessor
 from exness_data_preprocess.api import (
-    process_month,
-    process_date_range,
-    query_ohlc,
     analyze_ticks,
     get_storage_stats,
+    process_date_range,
+    process_month,
+    query_ohlc,
 )
+from exness_data_preprocess.processor import ExnessDataProcessor
 
 __all__ = [
     # Main class

@@ -6,12 +6,11 @@ for common use cases.
 """
 
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
 
 from exness_data_preprocess.processor import ExnessDataProcessor
-
 
 # Global processor instance (lazy initialization)
 _processor = None

@@ -4,9 +4,10 @@ Diagnostic script to visualize burst decay lines at different time horizons.
 Generates PNG images for self-checking using Plotly.
 """
 
+from pathlib import Path
+
 import pandas as pd
 import plotly.graph_objects as go
-from pathlib import Path
 
 # Paths
 DATA_DIR = Path("/tmp")
@@ -14,13 +15,14 @@ OUTPUT_DIR = Path("/tmp")
 
 # Colors
 COLORS = {
-    5: '#8B00FF',  # Purple
-    4: '#FF0000',  # Red
-    3: '#FF8800',  # Orange
-    2: '#FFD700',  # Yellow
-    1: '#00CC00',  # Green
-    0: '#0066FF'   # Blue
+    5: "#8B00FF",  # Purple
+    4: "#FF0000",  # Red
+    3: "#FF8800",  # Orange
+    2: "#FFD700",  # Yellow
+    1: "#00CC00",  # Green
+    0: "#0066FF",  # Blue
 }
+
 
 def create_diagnostic_plot(start_time, duration_hours, output_name):
     """
@@ -31,10 +33,10 @@ def create_diagnostic_plot(start_time, duration_hours, output_name):
         duration_hours: How many hours to show
         output_name: Output filename
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Creating diagnostic plot: {output_name}")
     print(f"Time window: {start_time} + {duration_hours}h")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Load data
     ohlc = pd.read_parquet(DATA_DIR / "viz_2024-08_ohlc_1m.parquet")
@@ -45,14 +47,16 @@ def create_diagnostic_plot(start_time, duration_hours, output_name):
     end_dt = start_dt + pd.Timedelta(hours=duration_hours)
 
     # Filter to time window
-    ohlc_window = ohlc[(ohlc['Timestamp'] >= start_dt) & (ohlc['Timestamp'] <= end_dt)]
-    dev_window = deviations[(deviations['Timestamp'] >= start_dt) & (deviations['Timestamp'] <= end_dt)]
+    ohlc_window = ohlc[(ohlc["Timestamp"] >= start_dt) & (ohlc["Timestamp"] <= end_dt)]
+    dev_window = deviations[
+        (deviations["Timestamp"] >= start_dt) & (deviations["Timestamp"] <= end_dt)
+    ]
 
     print(f"  OHLC bars in window: {len(ohlc_window)}")
     print(f"  Deviations in window: {len(dev_window)}")
 
     # Find bursts in this window
-    bursts = dev_window[dev_window['is_burst']]
+    bursts = dev_window[dev_window["is_burst"]]
     print(f"  Burst events in window: {len(bursts)}")
 
     if len(bursts) == 0:
@@ -64,26 +68,30 @@ def create_diagnostic_plot(start_time, duration_hours, output_name):
     fig = go.Figure()
 
     # Add price line
-    fig.add_trace(go.Scatter(
-        x=ohlc_window['Timestamp'],
-        y=ohlc_window['close'],
-        mode='lines',
-        line=dict(color='#D0D0D0', width=1),
-        name='Price',
-        opacity=0.5
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=ohlc_window["Timestamp"],
+            y=ohlc_window["close"],
+            mode="lines",
+            line={"color": "#D0D0D0", "width": 1},
+            name="Price",
+            opacity=0.5,
+        )
+    )
 
     # Add deviation markers
     for risk_level in [4, 3, 2, 1, 0]:
-        subset = dev_window[dev_window['risk_level'] == risk_level]
+        subset = dev_window[dev_window["risk_level"] == risk_level]
         if len(subset) > 0:
-            fig.add_trace(go.Scatter(
-                x=subset['Timestamp'],
-                y=subset['price'],
-                mode='markers',
-                marker=dict(color=COLORS[risk_level], size=8),
-                name=f'Level {risk_level} ({len(subset)})'
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=subset["Timestamp"],
+                    y=subset["price"],
+                    mode="markers",
+                    marker={"color": COLORS[risk_level], "size": 8},
+                    name=f"Level {risk_level} ({len(subset)})",
+                )
+            )
 
     # Add burst decay lines (sample to max 10 for clarity)
     if len(bursts) > 0:
@@ -93,16 +101,18 @@ def create_diagnostic_plot(start_time, duration_hours, output_name):
         else:
             bursts_sampled = bursts
 
-        decay_duration = pd.Timedelta('30min')
+        decay_duration = pd.Timedelta("30min")
         n_segments = 5
 
         print(f"\n  Drawing decay lines for {len(bursts_sampled)} bursts:")
         for idx, (_, burst) in enumerate(bursts_sampled.iterrows()):
-            color = COLORS[burst['risk_level']]
-            start_time_burst = burst['Timestamp']
-            price = burst['price']
+            color = COLORS[burst["risk_level"]]
+            start_time_burst = burst["Timestamp"]
+            price = burst["price"]
 
-            print(f"    Burst {idx+1}: {start_time_burst}, price={price:.5f}, risk={burst['risk_level']}")
+            print(
+                f"    Burst {idx + 1}: {start_time_burst}, price={price:.5f}, risk={burst['risk_level']}"
+            )
 
             # Draw fading segments using add_shape
             for i in range(n_segments):
@@ -119,62 +129,64 @@ def create_diagnostic_plot(start_time, duration_hours, output_name):
                     line_color=color,
                     line_width=4,
                     opacity=opacity,
-                    layer="above"
+                    layer="above",
                 )
 
     # Update layout
     fig.update_layout(
-        title=f'Burst Decay Diagnostic - {duration_hours}h window<br>'
-              f'<sub>{len(dev_window)} deviations, {len(bursts)} bursts, 30-min decay trails</sub>',
-        xaxis_title='Time (UTC)',
-        yaxis_title='Price (EUR/USD)',
+        title=f"Burst Decay Diagnostic - {duration_hours}h window<br>"
+        f"<sub>{len(dev_window)} deviations, {len(bursts)} bursts, 30-min decay trails</sub>",
+        xaxis_title="Time (UTC)",
+        yaxis_title="Price (EUR/USD)",
         height=600,
-        template='plotly_white',
-        showlegend=True
+        template="plotly_white",
+        showlegend=True,
     )
 
     # Save as HTML (faster than PNG)
-    output_path = OUTPUT_DIR / output_name.replace('.png', '.html')
+    output_path = OUTPUT_DIR / output_name.replace(".png", ".html")
     fig.write_html(str(output_path))
     print(f"\n  ✓ Saved: {output_path}")
 
     return output_path
 
+
 def main():
     """Generate 3 diagnostic plots at different time scales"""
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("BURST DECAY DIAGNOSTIC - 3 Time Horizons")
-    print("="*60)
+    print("=" * 60)
 
     # Horizon 1: 15 minutes (ultra-zoom)
     path1 = create_diagnostic_plot(
         start_time="2024-08-05 07:25:00",
         duration_hours=0.25,  # 15 minutes
-        output_name="diagnostic_burst_15min.png"
+        output_name="diagnostic_burst_15min.png",
     )
 
     # Horizon 2: 1 hour (medium zoom)
     path2 = create_diagnostic_plot(
         start_time="2024-08-05 07:00:00",
         duration_hours=1.0,
-        output_name="diagnostic_burst_1hour.png"
+        output_name="diagnostic_burst_1hour.png",
     )
 
     # Horizon 3: 4 hours (broader view)
     path3 = create_diagnostic_plot(
         start_time="2024-08-05 06:00:00",
         duration_hours=4.0,
-        output_name="diagnostic_burst_4hour.png"
+        output_name="diagnostic_burst_4hour.png",
     )
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("✅ All diagnostic plots generated!")
-    print("="*60)
-    print(f"\nView images at:")
+    print("=" * 60)
+    print("\nView images at:")
     print(f"  1. {path1}")
     print(f"  2. {path2}")
     print(f"  3. {path3}")
+
 
 if __name__ == "__main__":
     main()

@@ -2,14 +2,14 @@
 Pytest configuration and fixtures for exness-data-preprocess tests.
 """
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
+
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from datetime import datetime, timezone
+import pytest
 
 
 @pytest.fixture
@@ -28,10 +28,10 @@ def sample_tick_data():
     # Create 1000 ticks spanning one hour
     # Create timestamps as naive (without timezone) like real Exness CSV data
     timestamps = pd.date_range(
-        start='2024-08-01 00:00:00',
+        start="2024-08-01 00:00:00",
         periods=1000,
-        freq='3.6s',  # ~1000 ticks per hour
-        tz=None  # Naive timestamps like in CSV
+        freq="3.6s",  # ~1000 ticks per hour
+        tz=None,  # Naive timestamps like in CSV
     )
 
     # Simulate realistic EURUSD tick data
@@ -43,11 +43,7 @@ def sample_tick_data():
     spreads = 0.00015 + (pd.Series(range(1000)) % 10) * 0.00001
     asks = bids + spreads
 
-    df = pd.DataFrame({
-        'Timestamp': timestamps,
-        'Bid': bids,
-        'Ask': asks
-    })
+    df = pd.DataFrame({"Timestamp": timestamps, "Bid": bids, "Ask": asks})
 
     return df
 
@@ -55,14 +51,14 @@ def sample_tick_data():
 @pytest.fixture
 def sample_parquet_file(temp_dir, sample_tick_data):
     """Create sample Parquet file for testing."""
-    parquet_path = temp_dir / 'test_ticks.parquet'
+    parquet_path = temp_dir / "test_ticks.parquet"
 
     # Convert to UTC timezone-aware (like processor does)
     df = sample_tick_data.copy()
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], utc=True)
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], utc=True)
 
     table = pa.Table.from_pandas(df)
-    pq.write_table(table, parquet_path, compression='zstd', compression_level=22)
+    pq.write_table(table, parquet_path, compression="zstd", compression_level=22)
     return parquet_path
 
 
@@ -72,12 +68,12 @@ def mock_exness_zip(temp_dir, sample_tick_data):
     import zipfile
 
     # Create CSV content
-    csv_path = temp_dir / 'Exness_EURUSD_Raw_Spread_2024_08.csv'
+    csv_path = temp_dir / "Exness_EURUSD_Raw_Spread_2024_08.csv"
     sample_tick_data.to_csv(csv_path, index=False)
 
     # Create ZIP
-    zip_path = temp_dir / 'Exness_EURUSD_Raw_Spread_2024_08.zip'
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+    zip_path = temp_dir / "Exness_EURUSD_Raw_Spread_2024_08.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.write(csv_path, csv_path.name)
 
     # Cleanup CSV
@@ -90,4 +86,5 @@ def mock_exness_zip(temp_dir, sample_tick_data):
 def processor_with_temp_dir(temp_dir):
     """Create ExnessDataProcessor with temporary directory."""
     from exness_data_preprocess.processor import ExnessDataProcessor
+
     return ExnessDataProcessor(base_dir=temp_dir)

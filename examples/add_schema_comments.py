@@ -8,7 +8,6 @@ NO DATA IS RECREATED - this only adds metadata comments!
 """
 
 import exness_data_preprocess as edp
-from pathlib import Path
 
 # Initialize processor (default: ~/eon/exness-data/)
 processor = edp.ExnessDataProcessor()
@@ -25,6 +24,7 @@ if success:
 
     # Verify comments were added
     import duckdb
+
     conn = duckdb.connect(str(processor.base_dir / "eurusd.duckdb"), read_only=True)
 
     print("\n--- Table Comments ---")

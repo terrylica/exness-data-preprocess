@@ -18,12 +18,12 @@ Storage: ~135 MB/year, ~405 MB for 3 years per instrument
 
 import zipfile
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime, timezone
-from urllib.request import urlretrieve
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.error import URLError
-import pandas as pd
+from urllib.request import urlretrieve
+
 import duckdb
+import pandas as pd
 
 
 class ExnessDataProcessor:
@@ -141,7 +141,9 @@ class ExnessDataProcessor:
             'Exness Raw_Spread variant (execution prices, ~98% zero-spreads).
              Data source: https://ticks.ex2archive.com/ticks/{SYMBOL}_Raw_Spread/{YEAR}/{MONTH}/'
         """)
-        conn.execute("COMMENT ON COLUMN raw_spread_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'")
+        conn.execute(
+            "COMMENT ON COLUMN raw_spread_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'"
+        )
         conn.execute("COMMENT ON COLUMN raw_spread_ticks.Bid IS 'Bid price (execution price)'")
         conn.execute("COMMENT ON COLUMN raw_spread_ticks.Ask IS 'Ask price (execution price)'")
 
@@ -161,7 +163,9 @@ class ExnessDataProcessor:
             'Exness Standard variant (traditional quotes, 0% zero-spreads, always Bid < Ask).
              Data source: https://ticks.ex2archive.com/ticks/{SYMBOL}/{YEAR}/{MONTH}/'
         """)
-        conn.execute("COMMENT ON COLUMN standard_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'")
+        conn.execute(
+            "COMMENT ON COLUMN standard_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'"
+        )
         conn.execute("COMMENT ON COLUMN standard_ticks.Bid IS 'Bid price (always < Ask)'")
         conn.execute("COMMENT ON COLUMN standard_ticks.Ask IS 'Ask price (always > Bid)'")
 
@@ -179,7 +183,9 @@ class ExnessDataProcessor:
             COMMENT ON TABLE metadata IS
             'Database coverage tracking and statistics (earliest/latest dates, tick counts, etc.)'
         """)
-        conn.execute("COMMENT ON COLUMN metadata.key IS 'Metadata key identifier (e.g., earliest_date, latest_date)'")
+        conn.execute(
+            "COMMENT ON COLUMN metadata.key IS 'Metadata key identifier (e.g., earliest_date, latest_date)'"
+        )
         conn.execute("COMMENT ON COLUMN metadata.value IS 'Metadata value (string representation)'")
         conn.execute("COMMENT ON COLUMN metadata.updated_at IS 'Last update timestamp'")
 
@@ -209,33 +215,36 @@ class ExnessDataProcessor:
         conn.execute("COMMENT ON COLUMN ohlc_1m.High IS 'High price (max Raw_Spread Bid)'")
         conn.execute("COMMENT ON COLUMN ohlc_1m.Low IS 'Low price (min Raw_Spread Bid)'")
         conn.execute("COMMENT ON COLUMN ohlc_1m.Close IS 'Closing price (last Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)'")
-
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)'"
+        )
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)'"
+        )
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)'"
+        )
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)'"
+        )
 
         conn.close()
         return duckdb_path
 
     def _load_ticks_from_zip(self, zip_path: Path) -> pd.DataFrame:
         """Load ticks from ZIP file into DataFrame."""
-        with zipfile.ZipFile(zip_path, 'r') as zf:
-            csv_name = zip_path.stem + '.csv'
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            csv_name = zip_path.stem + ".csv"
             with zf.open(csv_name) as csv_file:
                 df = pd.read_csv(
-                    csv_file,
-                    usecols=['Timestamp', 'Bid', 'Ask'],
-                    parse_dates=['Timestamp']
+                    csv_file, usecols=["Timestamp", "Bid", "Ask"], parse_dates=["Timestamp"]
                 )
 
         # Convert to UTC timezone-aware
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'], utc=True)
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"], utc=True)
         return df
 
-    def _append_ticks_to_db(
-        self, duckdb_path: Path, df: pd.DataFrame, table_name: str
-    ) -> int:
+    def _append_ticks_to_db(self, duckdb_path: Path, df: pd.DataFrame, table_name: str) -> int:
         """
         Append ticks to DuckDB table.
 
@@ -251,7 +260,7 @@ class ExnessDataProcessor:
             count_before = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
 
             # Use INSERT OR IGNORE to skip duplicates
-            conn.register('df_temp', df)
+            conn.register("df_temp", df)
             conn.execute(f"""
                 INSERT OR IGNORE INTO {table_name}
                 SELECT * FROM df_temp
@@ -265,9 +274,7 @@ class ExnessDataProcessor:
 
         return rows_inserted
 
-    def _discover_missing_months(
-        self, pair: str, start_date: str
-    ) -> List[Tuple[int, int]]:
+    def _discover_missing_months(self, pair: str, start_date: str) -> List[Tuple[int, int]]:
         """
         Discover which months need to be downloaded.
 
@@ -284,6 +291,7 @@ class ExnessDataProcessor:
             # No database yet - need full historical download
             # From start_date to current month
             from datetime import datetime
+
             start = datetime.strptime(start_date, "%Y-%m-%d")
             today = datetime.now()
 
@@ -318,6 +326,7 @@ class ExnessDataProcessor:
 
                 # Need months before earliest or after latest
                 from datetime import datetime
+
                 start = datetime.strptime(start_date, "%Y-%m-%d")
                 today = datetime.now()
 
@@ -350,6 +359,7 @@ class ExnessDataProcessor:
             else:
                 # Empty database
                 from datetime import datetime
+
                 start = datetime.strptime(start_date, "%Y-%m-%d")
                 today = datetime.now()
 
@@ -371,7 +381,7 @@ class ExnessDataProcessor:
         pair: str = "EURUSD",
         start_date: str = "2022-01-01",
         force_redownload: bool = False,
-        delete_zip: bool = True
+        delete_zip: bool = True,
     ) -> Dict[str, Any]:
         """
         Update instrument database with latest data from Exness.
@@ -408,9 +418,9 @@ class ExnessDataProcessor:
             >>> result = processor.update_data("EURUSD")
             >>> print(f"Added {result['months_added']} new months")
         """
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Updating {pair} database")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
 
         # Step 1: Get or create database
         duckdb_path = self._get_or_create_db(pair)
@@ -429,7 +439,7 @@ class ExnessDataProcessor:
                 "raw_ticks_added": 0,
                 "standard_ticks_added": 0,
                 "ohlc_bars": 0,
-                "duckdb_size_mb": duckdb_path.stat().st_size / 1024 / 1024
+                "duckdb_size_mb": duckdb_path.stat().st_size / 1024 / 1024,
             }
 
         # Step 3: Download and append ticks
@@ -476,7 +486,7 @@ class ExnessDataProcessor:
 
         # Step 4: Regenerate OHLC for all new data
         if months_success > 0:
-            print(f"\nRegenerating OHLC (Phase7 9-column schema)...")
+            print("\nRegenerating OHLC (Phase7 9-column schema)...")
             self._regenerate_ohlc(duckdb_path)
             print("✓ OHLC regenerated")
 
@@ -487,9 +497,9 @@ class ExnessDataProcessor:
 
         duckdb_size_mb = duckdb_path.stat().st_size / 1024 / 1024
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print("Update Summary")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         print(f"Months added:     {months_success}")
         print(f"Raw_Spread ticks: {raw_ticks_total:,}")
         print(f"Standard ticks:   {standard_ticks_total:,}")
@@ -502,7 +512,7 @@ class ExnessDataProcessor:
             "raw_ticks_added": raw_ticks_total,
             "standard_ticks_added": standard_ticks_total,
             "ohlc_bars": ohlc_bars,
-            "duckdb_size_mb": duckdb_size_mb
+            "duckdb_size_mb": duckdb_size_mb,
         }
 
     def _regenerate_ohlc(self, duckdb_path: Path) -> None:
@@ -544,7 +554,7 @@ class ExnessDataProcessor:
         variant: str = "raw_spread",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        filter_sql: Optional[str] = None
+        filter_sql: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Query tick data with optional date range filtering.
@@ -597,7 +607,7 @@ class ExnessDataProcessor:
         pair: str = "EURUSD",
         timeframe: str = "1m",
         start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        end_date: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Query OHLC data with optional date range filtering and resampling.
@@ -732,7 +742,9 @@ class ExnessDataProcessor:
             'Exness Raw_Spread variant (execution prices, ~98% zero-spreads).
              Data source: https://ticks.ex2archive.com/ticks/{SYMBOL}_Raw_Spread/{YEAR}/{MONTH}/'
         """)
-        conn.execute("COMMENT ON COLUMN raw_spread_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'")
+        conn.execute(
+            "COMMENT ON COLUMN raw_spread_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'"
+        )
         conn.execute("COMMENT ON COLUMN raw_spread_ticks.Bid IS 'Bid price (execution price)'")
         conn.execute("COMMENT ON COLUMN raw_spread_ticks.Ask IS 'Ask price (execution price)'")
 
@@ -742,7 +754,9 @@ class ExnessDataProcessor:
             'Exness Standard variant (traditional quotes, 0% zero-spreads, always Bid < Ask).
              Data source: https://ticks.ex2archive.com/ticks/{SYMBOL}/{YEAR}/{MONTH}/'
         """)
-        conn.execute("COMMENT ON COLUMN standard_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'")
+        conn.execute(
+            "COMMENT ON COLUMN standard_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'"
+        )
         conn.execute("COMMENT ON COLUMN standard_ticks.Bid IS 'Bid price (always < Ask)'")
         conn.execute("COMMENT ON COLUMN standard_ticks.Ask IS 'Ask price (always > Bid)'")
 
@@ -751,7 +765,9 @@ class ExnessDataProcessor:
             COMMENT ON TABLE metadata IS
             'Database coverage tracking and statistics (earliest/latest dates, tick counts, etc.)'
         """)
-        conn.execute("COMMENT ON COLUMN metadata.key IS 'Metadata key identifier (e.g., earliest_date, latest_date)'")
+        conn.execute(
+            "COMMENT ON COLUMN metadata.key IS 'Metadata key identifier (e.g., earliest_date, latest_date)'"
+        )
         conn.execute("COMMENT ON COLUMN metadata.value IS 'Metadata value (string representation)'")
         conn.execute("COMMENT ON COLUMN metadata.updated_at IS 'Last update timestamp'")
 
@@ -766,10 +782,18 @@ class ExnessDataProcessor:
         conn.execute("COMMENT ON COLUMN ohlc_1m.High IS 'High price (max Raw_Spread Bid)'")
         conn.execute("COMMENT ON COLUMN ohlc_1m.Low IS 'Low price (min Raw_Spread Bid)'")
         conn.execute("COMMENT ON COLUMN ohlc_1m.Close IS 'Closing price (last Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)'")
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)'"
+        )
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)'"
+        )
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)'"
+        )
+        conn.execute(
+            "COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)'"
+        )
 
         conn.close()
         print(f"✓ Schema comments added to {pair}")
@@ -833,7 +857,7 @@ class ExnessDataProcessor:
                 "ohlc_bars": 0,
                 "earliest_date": None,
                 "latest_date": None,
-                "date_range_days": 0
+                "date_range_days": 0,
             }
 
         conn = duckdb.connect(str(duckdb_path), read_only=True)
@@ -871,5 +895,5 @@ class ExnessDataProcessor:
             "ohlc_bars": ohlc_count,
             "earliest_date": str(earliest) if earliest else None,
             "latest_date": str(latest) if latest else None,
-            "date_range_days": date_range_days
+            "date_range_days": date_range_days,
         }

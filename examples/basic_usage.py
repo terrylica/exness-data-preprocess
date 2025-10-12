@@ -15,6 +15,7 @@ Architecture v2.0.0:
 """
 
 from pathlib import Path
+
 import exness_data_preprocess as edp
 
 # Optional: Configure base directory (defaults to ~/eon/exness-data/)
@@ -41,7 +42,7 @@ result = processor.update_data(
     delete_zip=True,
 )
 
-print(f"\n✅ Initial download completed:")
+print("\n✅ Initial download completed:")
 print(f"   Database:      {result['duckdb_path']}")
 print(f"   Months added:  {result['months_added']}")
 print(f"   Raw ticks:     {result['raw_ticks_added']:,}")
@@ -62,7 +63,7 @@ result = processor.update_data(
     start_date="2022-01-01",
 )
 
-print(f"\n✅ Incremental update completed:")
+print("\n✅ Incremental update completed:")
 print(f"   Months added:  {result['months_added']} (0 if up to date)")
 print(f"   Database size: {result['duckdb_size_mb']:.2f} MB")
 
@@ -75,7 +76,7 @@ print("=" * 80)
 
 coverage = processor.get_data_coverage("EURUSD")
 
-print(f"\n📊 EURUSD Coverage:")
+print("\n📊 EURUSD Coverage:")
 print(f"   Database exists: {coverage['database_exists']}")
 print(f"   Raw_Spread ticks: {coverage['raw_spread_ticks']:,}")
 print(f"   Standard ticks:  {coverage['standard_ticks']:,}")
@@ -140,14 +141,14 @@ df_raw = processor.query_ticks(
 print(f"\nRaw_Spread ticks (Sep 2024): {len(df_raw):,} ticks")
 print(f"Columns:                     {list(df_raw.columns)}")
 print(f"Date range:                  {df_raw['Timestamp'].min()} to {df_raw['Timestamp'].max()}")
-print(f"\nFirst 5 ticks:")
+print("\nFirst 5 ticks:")
 print(df_raw.head())
 
 # Calculate spread statistics
-df_raw['Spread'] = df_raw['Ask'] - df_raw['Bid']
-zero_spread_pct = (df_raw['Spread'] == 0).sum() / len(df_raw) * 100
+df_raw["Spread"] = df_raw["Ask"] - df_raw["Bid"]
+zero_spread_pct = (df_raw["Spread"] == 0).sum() / len(df_raw) * 100
 
-print(f"\nRaw_Spread characteristics:")
+print("\nRaw_Spread characteristics:")
 print(f"   Zero-spreads:  {zero_spread_pct:.2f}%")
 print(f"   Mean spread:   {df_raw['Spread'].mean() * 10000:.4f} pips")
 print(f"   Max spread:    {df_raw['Spread'].max() * 10000:.2f} pips")
@@ -160,9 +161,9 @@ df_std = processor.query_ticks(
     end_date="2024-09-30",
 )
 
-df_std['Spread'] = df_std['Ask'] - df_std['Bid']
+df_std["Spread"] = df_std["Ask"] - df_std["Bid"]
 
-print(f"\nStandard variant characteristics:")
+print("\nStandard variant characteristics:")
 print(f"   Ticks:         {len(df_std):,}")
 print(f"   Zero-spreads:  {((df_std['Spread'] == 0).sum() / len(df_std) * 100):.2f}%")
 print(f"   Mean spread:   {df_std['Spread'].mean() * 10000:.2f} pips")

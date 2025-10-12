@@ -22,8 +22,8 @@ def test_processor_class_exists():
 
 def test_processor_instantiation():
     """Test that ExnessDataProcessor can be instantiated."""
-    from pathlib import Path
     import tempfile
+    from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmpdir:
         processor = edp.ExnessDataProcessor(base_dir=Path(tmpdir))
