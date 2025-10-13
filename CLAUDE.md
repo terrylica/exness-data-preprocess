@@ -1,8 +1,150 @@
-# exness-data-preprocess - Project Memory
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 **Architecture**: Professional forex tick data preprocessing with unified single-file DuckDB storage
 
 **Full Documentation**: [`README.md`](README.md) - Installation, usage, API reference
+
+---
+
+## Development Commands
+
+### Setup
+```bash
+# Install with development dependencies
+uv sync --dev
+
+# Or with pip
+pip install -e ".[dev]"
+```
+
+### Testing
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=exness_data_preprocess --cov-report=html
+
+# Run specific test file
+uv run pytest tests/test_processor.py -v
+
+# Run specific test
+uv run pytest tests/test_processor.py::test_compression_ratio -v
+```
+
+### Code Quality
+```bash
+# Format code
+uv run ruff format .
+
+# Check formatting without changes
+uv run ruff format --check .
+
+# Lint and auto-fix
+uv run ruff check --fix .
+
+# Lint without changes
+uv run ruff check .
+
+# Type checking
+uv run mypy src/
+```
+
+### Building and Publishing
+```bash
+# Build package
+uv build
+
+# Test installation locally
+uv tool install --editable .
+
+# Publish to PyPI (requires PYPI_TOKEN in environment)
+doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TOKEN"
+```
+
+---
+
+## Codebase Architecture
+
+### Module Structure
+
+**Core Components**:
+
+1. **`processor.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`) - Main `ExnessDataProcessor` class
+   - **Lines 29-899**: Complete processor implementation
+   - **Lines 75-113**: `download_exness_zip()` - Downloads monthly ZIP files from ticks.ex2archive.com
+   - **Lines 115-232**: `_get_or_create_db()` - Database initialization with schema and COMMENT ON statements
+   - **Lines 234-245**: `_load_ticks_from_zip()` - CSV parsing from ZIP files
+   - **Lines 247-275**: `_append_ticks_to_db()` - Tick insertion with PRIMARY KEY duplicate prevention
+   - **Lines 277-377**: `_discover_missing_months()` - Gap detection for incremental updates
+   - **Lines 379-516**: `update_data()` - Main entry point for downloading and updating data
+   - **Lines 518-549**: `_regenerate_ohlc()` - Phase7 9-column OHLC generation with LEFT JOIN
+   - **Lines 551-603**: `query_ticks()` - Tick queries with date range and SQL filters
+   - **Lines 605-706**: `query_ohlc()` - OHLC queries with on-demand resampling (1m/5m/15m/1h/4h/1d)
+   - **Lines 708-821**: `add_schema_comments()` / `add_schema_comments_all()` - Retrofit self-documentation
+   - **Lines 823-899**: `get_data_coverage()` - Coverage statistics and metadata
+
+2. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - Simple wrapper functions
+   - Convenience functions wrapping `ExnessDataProcessor` methods
+   - Legacy v1.0.0 API compatibility layer (to be deprecated)
+
+3. **`cli.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/cli.py`) - Command-line interface
+   - Entry point: `exness-preprocess` command
+   - Commands for download, query, coverage operations
+
+### Key Design Patterns
+
+**Unified Single-File Architecture** (v2.0.0):
+- ONE DuckDB file per instrument (e.g., `eurusd.duckdb`) containing all historical data
+- NO monthly file separation (major change from v1.0.0)
+- Incremental updates with automatic gap detection
+- PRIMARY KEY constraints prevent duplicates during updates
+
+**Phase7 9-Column OHLC Schema**:
+- BID-only OHLC from Raw_Spread variant
+- Dual spreads: `raw_spread_avg` and `standard_spread_avg`
+- Dual tick counts: `tick_count_raw_spread` and `tick_count_standard`
+- Generated via LEFT JOIN between Raw_Spread and Standard variants
+
+**Self-Documentation**:
+- All tables and columns have embedded `COMMENT ON` statements
+- Queryable via `duckdb_tables()` and `duckdb_columns()` system functions
+- Enables BI tools and IDEs to display inline help
+
+**Data Flow**:
+```
+Exness Repository (monthly ZIPs)
+  → Automatic Gap Detection
+  → Download Missing Months (Raw_Spread + Standard)
+  → DuckDB Storage (PRIMARY KEY prevents duplicates)
+  → Phase7 OHLC Generation
+  → Query Interface (date ranges, SQL filters, resampling)
+```
+
+### Database Schema (per instrument)
+
+Each `.duckdb` file contains:
+
+1. **`raw_spread_ticks`** table:
+   - Columns: `Timestamp` (PK), `Bid`, `Ask`
+   - Exness Raw_Spread variant (~98% zero-spreads, execution prices)
+   - Primary data source for OHLC construction
+
+2. **`standard_ticks`** table:
+   - Columns: `Timestamp` (PK), `Bid`, `Ask`
+   - Exness Standard variant (0% zero-spreads, always Bid < Ask)
+   - Reference data for spread comparison
+
+3. **`ohlc_1m`** table:
+   - Columns: `Timestamp` (PK), `Open`, `High`, `Low`, `Close`, `raw_spread_avg`, `standard_spread_avg`, `tick_count_raw_spread`, `tick_count_standard`
+   - Phase7 9-column schema
+   - Generated from Raw_Spread BID prices with dual-variant spreads
+
+4. **`metadata`** table:
+   - Columns: `key` (PK), `value`, `updated_at`
+   - Tracks coverage (earliest_date, latest_date, etc.)
 
 ---
 
@@ -22,7 +164,7 @@
 
 ### Development
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
-- **[tests/README.md](tests/README.md)** - Test suite documentation
+- **[tests/README.md](tests/README.md)** - Test suite documentation (v2.0.0 tests needed)
 
 ---
 
@@ -76,7 +218,7 @@
 - ✅ **Dual tick counts**: Records tick counts from both variants
 - ✅ **LEFT JOIN methodology**: Raw_Spread primary, Standard reference
 
-**Implementation**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 453-485)
+**Implementation**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 518-549)
 
 **Specification**: [`docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
 
@@ -111,7 +253,7 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 - `add_schema_comments(pair)` - Add comments to single database
 - `add_schema_comments_all()` - Batch-update all databases
 
-**Implementation**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 138-215, 698-797)
+**Implementation**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 138-229, 708-821)
 
 **Usage Example**: [`examples/add_schema_comments.py`](examples/add_schema_comments.py)
 
@@ -161,21 +303,6 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 
 ---
 
-## Development Setup
-
-**Quick Start**:
-```bash
-git clone https://github.com/Eon-Labs/exness-data-preprocess.git
-cd exness-data-preprocess
-uv sync --dev
-```
-
-**Complete Setup Guide**: [`README.md`](README.md) - Installation, testing, code quality, building
-
-**Contributing**: [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines and workflow
-
----
-
 ## Current Implementation Status
 
 ### v2.0.0 Architecture (✅ Completed 2025-10-12)
@@ -212,7 +339,7 @@ uv sync --dev
 
 ## File Locations
 
-**Project Root**: `/Users/terryli/eon/exness-data-preprocess/ `
+**Project Root**: `/Users/terryli/eon/exness-data-preprocess/`
 
 **Data Storage** (default): `~/eon/exness-data/`
 ```

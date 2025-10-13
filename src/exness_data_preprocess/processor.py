@@ -25,6 +25,14 @@ from urllib.request import urlretrieve
 import duckdb
 import pandas as pd
 
+from exness_data_preprocess.models import (
+    CoverageInfo,
+    PairType,
+    TimeframeType,
+    UpdateResult,
+    VariantType,
+)
+
 
 class ExnessDataProcessor:
     """
@@ -378,11 +386,11 @@ class ExnessDataProcessor:
 
     def update_data(
         self,
-        pair: str = "EURUSD",
+        pair: PairType = "EURUSD",
         start_date: str = "2022-01-01",
         force_redownload: bool = False,
         delete_zip: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> UpdateResult:
         """
         Update instrument database with latest data from Exness.
 
@@ -433,14 +441,14 @@ class ExnessDataProcessor:
 
         if not missing_months:
             print("\n✓ Database is up to date")
-            return {
-                "duckdb_path": duckdb_path,
-                "months_added": 0,
-                "raw_ticks_added": 0,
-                "standard_ticks_added": 0,
-                "ohlc_bars": 0,
-                "duckdb_size_mb": duckdb_path.stat().st_size / 1024 / 1024,
-            }
+            return UpdateResult(
+                duckdb_path=duckdb_path,
+                months_added=0,
+                raw_ticks_added=0,
+                standard_ticks_added=0,
+                ohlc_bars=0,
+                duckdb_size_mb=duckdb_path.stat().st_size / 1024 / 1024,
+            )
 
         # Step 3: Download and append ticks
         raw_ticks_total = 0
@@ -506,14 +514,14 @@ class ExnessDataProcessor:
         print(f"OHLC bars:        {ohlc_bars:,}")
         print(f"Database size:    {duckdb_size_mb:.2f} MB")
 
-        return {
-            "duckdb_path": duckdb_path,
-            "months_added": months_success,
-            "raw_ticks_added": raw_ticks_total,
-            "standard_ticks_added": standard_ticks_total,
-            "ohlc_bars": ohlc_bars,
-            "duckdb_size_mb": duckdb_size_mb,
-        }
+        return UpdateResult(
+            duckdb_path=duckdb_path,
+            months_added=months_success,
+            raw_ticks_added=raw_ticks_total,
+            standard_ticks_added=standard_ticks_total,
+            ohlc_bars=ohlc_bars,
+            duckdb_size_mb=duckdb_size_mb,
+        )
 
     def _regenerate_ohlc(self, duckdb_path: Path) -> None:
         """
@@ -550,8 +558,8 @@ class ExnessDataProcessor:
 
     def query_ticks(
         self,
-        pair: str = "EURUSD",
-        variant: str = "raw_spread",
+        pair: PairType = "EURUSD",
+        variant: VariantType = "raw_spread",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         filter_sql: Optional[str] = None,
@@ -604,8 +612,8 @@ class ExnessDataProcessor:
 
     def query_ohlc(
         self,
-        pair: str = "EURUSD",
-        timeframe: str = "1m",
+        pair: PairType = "EURUSD",
+        timeframe: TimeframeType = "1m",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> pd.DataFrame:
@@ -820,7 +828,7 @@ class ExnessDataProcessor:
 
         return results
 
-    def get_data_coverage(self, pair: str = "EURUSD") -> Dict[str, Any]:
+    def get_data_coverage(self, pair: PairType = "EURUSD") -> CoverageInfo:
         """
         Get data coverage information for an instrument.
 
@@ -848,17 +856,17 @@ class ExnessDataProcessor:
         duckdb_path = self.base_dir / f"{pair.lower()}.duckdb"
 
         if not duckdb_path.exists():
-            return {
-                "database_exists": False,
-                "duckdb_path": str(duckdb_path),
-                "duckdb_size_mb": 0,
-                "raw_spread_ticks": 0,
-                "standard_ticks": 0,
-                "ohlc_bars": 0,
-                "earliest_date": None,
-                "latest_date": None,
-                "date_range_days": 0,
-            }
+            return CoverageInfo(
+                database_exists=False,
+                duckdb_path=str(duckdb_path),
+                duckdb_size_mb=0,
+                raw_spread_ticks=0,
+                standard_ticks=0,
+                ohlc_bars=0,
+                earliest_date=None,
+                latest_date=None,
+                date_range_days=0,
+            )
 
         conn = duckdb.connect(str(duckdb_path), read_only=True)
 
@@ -886,14 +894,14 @@ class ExnessDataProcessor:
             latest = None
             date_range_days = 0
 
-        return {
-            "database_exists": True,
-            "duckdb_path": str(duckdb_path),
-            "duckdb_size_mb": duckdb_path.stat().st_size / 1024 / 1024,
-            "raw_spread_ticks": raw_count,
-            "standard_ticks": std_count,
-            "ohlc_bars": ohlc_count,
-            "earliest_date": str(earliest) if earliest else None,
-            "latest_date": str(latest) if latest else None,
-            "date_range_days": date_range_days,
-        }
+        return CoverageInfo(
+            database_exists=True,
+            duckdb_path=str(duckdb_path),
+            duckdb_size_mb=duckdb_path.stat().st_size / 1024 / 1024,
+            raw_spread_ticks=raw_count,
+            standard_ticks=std_count,
+            ohlc_bars=ohlc_count,
+            earliest_date=str(earliest) if earliest else None,
+            latest_date=str(latest) if latest else None,
+            date_range_days=date_range_days,
+        )

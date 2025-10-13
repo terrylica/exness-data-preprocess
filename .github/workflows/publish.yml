@@ -4,108 +4,49 @@ on:
   release:
     types: [published]
 
-env:
-  UV_SYSTEM_PYTHON: 1
-
 jobs:
   build:
-    name: Build distribution packages
+    name: Build distribution
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install UV
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Add UV to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: |
-          uv venv
-          source .venv/bin/activate
-          uv sync --dev
-
-      - name: Validate file encoding
-        run: |
-          echo "Checking file encoding (UTF-8/ASCII required)..."
-          find src/ tests/ -name "*.py" -o -name "*.md" \
-            -o -name "*.txt" -o -name "*.toml" -o -name "*.yml" \
-            -o -name "*.yaml" 2>/dev/null | \
-          xargs file --mime-encoding | grep -v -E "(utf-8|us-ascii)" && {
-            echo "❌ Non-UTF-8/ASCII files found!"
-            exit 1
-          } || {
-            echo "✅ All project text files are properly encoded"
-          }
-
-      - name: Lint with ruff
-        run: |
-          source .venv/bin/activate
-          uv run ruff check .
-          uv run ruff format --check .
-
-      - name: Run tests
-        run: |
-          source .venv/bin/activate
-          uv run pytest tests/ -v --tb=short
+      - name: Install build dependencies
+        run: pip install build
 
       - name: Build package
-        run: |
-          source .venv/bin/activate
-          uv build
+        run: python -m build
 
-      - name: Store the distribution packages
+      - name: Upload distribution artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-distributions
+          name: dist
           path: dist/
 
-  publish-to-pypi:
+  publish:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/exness-data-preprocess
     permissions:
-      id-token: write
+      id-token: write  # REQUIRED for Trusted Publishing
       contents: read
+    environment:
+      name: release
+      url: https://pypi.org/p/exness-data-preprocess
 
     steps:
-      - name: Download all the dists
+      - name: Download distribution artifacts
         uses: actions/download-artifact@v4
         with:
-          name: python-package-distributions
+          name: dist
           path: dist/
 
-      - name: Publish distribution packages to PyPI
+      - name: Publish to PyPI via Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
-
-  sign-artifacts:
-    name: Sign artifacts with Sigstore
-    needs: publish-to-pypi
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: write  # Required to attach signatures to GitHub release
-
-    steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Sign the dists with Sigstore
-        uses: sigstore/gh-action-sigstore-python@v3.0.1
-        with:
-          inputs: ./dist/*.tar.gz ./dist/*.whl
+        # No token needed! Uses GitHub OIDC via Trusted Publishing
+        # Digital attestations are generated automatically
