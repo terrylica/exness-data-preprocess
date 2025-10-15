@@ -22,7 +22,7 @@
 - ✅ **Maximum Simplicity**: ONE file = ONE instrument (eurusd.duckdb, xauusd.duckdb)
 - ✅ **Continuous Time Series**: No gaps between months, seamless queries across years
 - ✅ **Incremental Updates**: Check for new data on Exness, append automatically
-- ✅ **Phase7 Compliant**: Dual-variant 9-column schema
+- ✅ **Phase7 Compliant**: Dual-variant 13-column (v1.2.0) schema
 - ✅ **Scalable**: ~400-500 MB per instrument for 3 years (manageable)
 - ✅ **Simple Backups**: Copy one file to backup entire instrument history
 
@@ -587,7 +587,7 @@ Based on real data validation:
 - ✅ **Multi-year storage** (minimum 3 years)
 - ✅ **Incremental updates** (automatic gap detection)
 - ✅ **Duplicate prevention** (PRIMARY KEY constraints)
-- ✅ **Phase7 compliance** (9-column OHLC schema)
+- ✅ **Phase7 compliance** (13-column (v1.2.0) OHLC schema)
 - ✅ **Time-range queries** (start_date/end_date support)
 
 ### Performance

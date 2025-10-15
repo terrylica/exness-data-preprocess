@@ -24,7 +24,7 @@
 - ✅ **Incremental updates**: Automatic gap detection, download only missing months
 - ✅ **PRIMARY KEY constraints**: Prevents duplicates during incremental updates
 - ✅ **Performance**: <15ms queries for all timeframes
-- ✅ **Phase7 Compliant**: Dual-variant 9-column schema
+- ✅ **Phase7 Compliant**: Dual-variant 13-column (v1.2.0) schema
 - ✅ **SQL on Ticks**: Direct tick analysis with date range filtering
 - ✅ **Scalability**: 2.08 GB for 13 months, ~4.8 GB for 3 years
 
@@ -98,13 +98,9 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 - [`04-discoveries-and-plan-evolution.md`](research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md) - Version-tracked findings
 - [`data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) - OHLC specification
 
-**Phase7 Schema** (9 columns):
-
-```sql
-Timestamp, Open, High, Low, Close,
-raw_spread_avg, standard_spread_avg,
-tick_count_raw_spread, tick_count_standard
-```
+**Phase7 Schema** (13 columns, v1.2.0):
+- **Definition**: [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py)
+- **Comprehensive Guide**: [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)
 
 ---
 

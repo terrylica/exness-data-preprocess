@@ -1,9 +1,9 @@
-# Database Schema Documentation - exness-data-preprocess v2.0.0
+# Database Schema Documentation - exness-data-preprocess v1.2.0
 
 **Database Type**: DuckDB (embedded OLAP database)
 **Architecture**: Single-file per instrument (unified multi-year storage)
-**Schema Version**: 2.0.0 (Phase7 9-column OHLC)
-**Last Updated**: 2025-10-12
+**Schema Version**: v1.2.0 (Phase7 13-column OHLC with normalized metrics)
+**Last Updated**: 2025-10-14
 
 ---
 
@@ -11,7 +11,7 @@
 
 Each currency pair is stored in a **single DuckDB file** containing:
 - **All historical tick data** from both variants (Raw_Spread + Standard)
-- **Pre-computed 1-minute OHLC bars** with Phase7 9-column schema
+- **Pre-computed 1-minute OHLC bars** with Phase7 13-column schema (includes normalized spread metrics)
 - **Metadata** tracking coverage and update history
 
 **File Naming Convention**: `{instrument_lowercase}.duckdb`
@@ -229,25 +229,23 @@ ORDER BY hour;
 
 ## Table 3: `ohlc_1m`
 
-**Purpose**: Pre-computed 1-minute OHLC bars with Phase7 9-column schema
+**Purpose**: Pre-computed 1-minute OHLC bars with Phase7 13-column schema
 
 **Use Case**: Primary data source for backtesting and technical analysis
 
 **Generation Method**: Aggregated from `raw_spread_ticks` and `standard_ticks` tables
 
-### Schema (Phase7 9-Column)
+### Schema (Phase7 13-Column - v1.2.0)
 
-| Column                   | Type                       | Constraints   | Description                                           |
-|--------------------------|----------------------------|---------------|-------------------------------------------------------|
-| `Timestamp`              | TIMESTAMP WITH TIME ZONE   | PRIMARY KEY   | Minute-aligned bar timestamp                          |
-| `Open`                   | DOUBLE                     | NOT NULL      | Opening price (first Raw_Spread Bid)                  |
-| `High`                   | DOUBLE                     | NOT NULL      | High price (max Raw_Spread Bid)                       |
-| `Low`                    | DOUBLE                     | NOT NULL      | Low price (min Raw_Spread Bid)                        |
-| `Close`                  | DOUBLE                     | NOT NULL      | Closing price (last Raw_Spread Bid)                   |
-| `raw_spread_avg`         | DOUBLE                     | NULL          | Average spread from Raw_Spread variant (NULL if no ticks) |
-| `standard_spread_avg`    | DOUBLE                     | NULL          | Average spread from Standard variant (NULL if no Standard ticks for that minute) |
-| `tick_count_raw_spread`  | BIGINT                     | NULL          | Number of ticks from Raw_Spread variant (NULL if no ticks) |
-| `tick_count_standard`    | BIGINT                     | NULL          | Number of ticks from Standard variant (NULL if no Standard ticks for that minute) |
+**Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
+
+**Quick Summary**: 13 columns comprising:
+- **Core OHLC** (5): Timestamp, Open, High, Low, Close
+- **Dual Spreads** (2): raw_spread_avg, standard_spread_avg
+- **Dual Tick Counts** (2): tick_count_raw_spread, tick_count_standard
+- **Normalized Metrics** (4): range_per_spread, range_per_tick, body_per_spread, body_per_tick
+
+**Schema Version**: v1.2.0
 
 ### Indexes
 
@@ -258,27 +256,25 @@ ORDER BY hour;
 
 - **PRIMARY KEY on Timestamp**: Ensures unique 1-minute bars
 - **NOT NULL constraints**: Only on OHLC price columns (Open, High, Low, Close) to ensure price data integrity
-- **NULLABLE columns**: Spread and tick count columns (raw_spread_avg, standard_spread_avg, tick_count_raw_spread, tick_count_standard) can be NULL when LEFT JOIN with Standard ticks yields no matches for that minute
+- **NULLABLE columns**:
+  - Spread and tick count columns (raw_spread_avg, standard_spread_avg, tick_count_raw_spread, tick_count_standard) can be NULL when LEFT JOIN with Standard ticks yields no matches for that minute
+  - Normalized metrics (range_per_spread, range_per_tick, body_per_spread, body_per_tick) are NULL when Standard data is missing or when division by zero would occur
 
 ### Table Comments
 
-**Stored in Database**: The following comments are automatically added when the database is created (see `processor.py` lines 201-215).
+**Stored in Database**: All 13 column comments are automatically added when the database is created, dynamically generated from `schema.py` (see `OHLCSchema.get_column_comment_sqls()`).
 
 ```sql
 COMMENT ON TABLE ohlc_1m IS
-'Phase7 v1.1.0 1-minute OHLC bars (BID-only from Raw_Spread, dual-variant spreads and tick counts).
+'Phase7 v1.2.0 1-minute OHLC bars (BID-only from Raw_Spread, dual-variant spreads and tick counts, normalized metrics).
  OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard).';
 
--- Column comments
+-- All 13 column comments (see schema.py for complete definitions)
+-- Examples:
 COMMENT ON COLUMN ohlc_1m.Timestamp IS 'Minute-aligned bar timestamp';
 COMMENT ON COLUMN ohlc_1m.Open IS 'Opening price (first Raw_Spread Bid)';
-COMMENT ON COLUMN ohlc_1m.High IS 'High price (max Raw_Spread Bid)';
-COMMENT ON COLUMN ohlc_1m.Low IS 'Low price (min Raw_Spread Bid)';
-COMMENT ON COLUMN ohlc_1m.Close IS 'Closing price (last Raw_Spread Bid)';
-COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)';
-COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)';
-COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)';
-COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)';
+COMMENT ON COLUMN ohlc_1m.range_per_spread IS '(High-Low)/standard_spread_avg - Range normalized by spread (NULL if no Standard ticks)';
+-- ... (see schema.py OHLCSchema.COLUMNS for all 13 column comments)
 ```
 
 **Retrieve Comments**:
@@ -301,13 +297,68 @@ SELECT
     AVG(r.Ask - r.Bid) as raw_spread_avg,
     AVG(s.Ask - s.Bid) as standard_spread_avg,
     COUNT(r.Timestamp) as tick_count_raw_spread,
-    COUNT(s.Timestamp) as tick_count_standard
+    COUNT(s.Timestamp) as tick_count_standard,
+    -- Normalized spread metrics (v1.2.0) - NULL-safe calculations
+    CASE
+        WHEN AVG(s.Ask - s.Bid) > 0
+        THEN (MAX(r.Bid) - MIN(r.Bid)) / AVG(s.Ask - s.Bid)
+        ELSE NULL
+    END as range_per_spread,
+    CASE
+        WHEN COUNT(s.Timestamp) > 0
+        THEN (MAX(r.Bid) - MIN(r.Bid)) / COUNT(s.Timestamp)
+        ELSE NULL
+    END as range_per_tick,
+    CASE
+        WHEN AVG(s.Ask - s.Bid) > 0
+        THEN ABS(LAST(r.Bid ORDER BY r.Timestamp) - FIRST(r.Bid ORDER BY r.Timestamp)) / AVG(s.Ask - s.Bid)
+        ELSE NULL
+    END as body_per_spread,
+    CASE
+        WHEN COUNT(s.Timestamp) > 0
+        THEN ABS(LAST(r.Bid ORDER BY r.Timestamp) - FIRST(r.Bid ORDER BY r.Timestamp)) / COUNT(s.Timestamp)
+        ELSE NULL
+    END as body_per_tick
 FROM raw_spread_ticks r
 LEFT JOIN standard_ticks s
     ON DATE_TRUNC('minute', r.Timestamp) = DATE_TRUNC('minute', s.Timestamp)
 GROUP BY DATE_TRUNC('minute', r.Timestamp)
 ORDER BY Timestamp;
 ```
+
+###  Normalized Spread Metrics (v1.2.0+)
+
+**Purpose**: Normalize OHLC movements by market activity (spread and tick count) to enable comparison across different market conditions.
+
+**Calculations** (NULL-safe to handle missing Standard data):
+
+1. **`range_per_spread`** = (High - Low) / standard_spread_avg
+   - **Interpretation**: How many spreads wide is the bar's range?
+   - **High values**: Large price movement relative to typical spread
+   - **Example**: If range = 0.0002 and avg_spread = 0.00004, then range_per_spread = 5.0 spreads
+
+2. **`range_per_tick`** = (High - Low) / tick_count_standard
+   - **Interpretation**: Average price movement per tick
+   - **High values**: High volatility with few ticks (fast moves)
+   - **Low values**: Choppy price action with many ticks
+
+3. **`body_per_spread`** = abs(Close - Open) / standard_spread_avg
+   - **Interpretation**: How many spreads is the directional movement?
+   - **High values**: Strong directional movement relative to spread
+   - **Low values**: Indecision/ranging behavior
+
+4. **`body_per_tick`** = abs(Close - Open) / tick_count_standard
+   - **Interpretation**: Directional efficiency (movement per tick)
+   - **High values**: Strong directional movement per tick
+   - **Low values**: Many ticks but little net movement
+
+**NULL Handling**: All normalized metrics are NULL when `standard_spread_avg` or `tick_count_standard` are 0 or NULL (occurs when LEFT JOIN yields no Standard ticks for that minute).
+
+**Use Cases**:
+- Identify high-volatility bars independent of absolute price levels
+- Compare market activity across different sessions
+- Filter for significant directional moves
+- Detect ranging vs trending market conditions
 
 ### Characteristics
 
@@ -320,22 +371,29 @@ ORDER BY Timestamp;
 ### Example Data
 
 ```
-Timestamp            | Open    | High    | Low     | Close   | raw_spread_avg | standard_spread_avg | tick_count_raw_spread | tick_count_standard
----------------------|---------|---------|---------|---------|----------------|---------------------|-----------------------|--------------------
-2024-09-01 14:05:00  | 1.10500 | 1.10520 | 1.10495 | 1.10515 | 0.00001        | 0.00004             | 25                    | 28
-2024-09-01 14:06:00  | 1.10515 | 1.10525 | 1.10510 | 1.10520 | 0.00001        | 0.00004             | 23                    | 26
-2024-09-01 14:07:00  | 1.10520 | 1.10530 | 1.10515 | 1.10525 | 0.00001        | 0.00004             | 27                    | 30
+Timestamp            | Open    | High    | Low     | Close   | raw_spread_avg | standard_spread_avg | tick_count_raw_spread | tick_count_standard | range_per_spread | range_per_tick | body_per_spread | body_per_tick
+---------------------|---------|---------|---------|---------|----------------|---------------------|-----------------------|---------------------|------------------|----------------|-----------------|---------------
+2024-09-01 14:05:00  | 1.10500 | 1.10520 | 1.10495 | 1.10515 | 0.00001        | 0.00004             | 25                    | 28                  | 6.25             | 0.00089        | 3.75            | 0.00054
+2024-09-01 14:06:00  | 1.10515 | 1.10525 | 1.10510 | 1.10520 | 0.00001        | 0.00004             | 23                    | 26                  | 3.75             | 0.00058        | 1.25            | 0.00019
+2024-09-01 14:07:00  | 1.10520 | 1.10530 | 1.10515 | 1.10525 | 0.00001        | 0.00004             | 27                    | 30                  | 3.75             | 0.00050        | 1.25            | 0.00017
 ```
+
+**Notes**:
+- All 13 columns shown including normalized metrics (v1.2.0+)
+- `range_per_spread = (High-Low) / standard_spread_avg` (e.g., 0.00025 / 0.00004 = 6.25 spreads)
+- `range_per_tick = (High-Low) / tick_count_standard` (e.g., 0.00025 / 28 = 0.00089)
+- `body_per_spread = abs(Close-Open) / standard_spread_avg` (e.g., 0.00015 / 0.00004 = 3.75 spreads)
+- `body_per_tick = abs(Close-Open) / tick_count_standard` (e.g., 0.00015 / 28 = 0.00054)
 
 ### Query Examples
 
 ```sql
--- Get 1-minute bars for September 2024
+-- Get 1-minute bars for September 2024 (all 13 columns)
 SELECT * FROM ohlc_1m
 WHERE Timestamp >= '2024-09-01' AND Timestamp < '2024-10-01'
 ORDER BY Timestamp;
 
--- Resample to 1-hour bars
+-- Resample to 1-hour bars (all 13 columns)
 SELECT
     DATE_TRUNC('hour', Timestamp) as hour,
     FIRST(Open ORDER BY Timestamp) as Open,
@@ -345,21 +403,41 @@ SELECT
     AVG(raw_spread_avg) as raw_spread_avg,
     AVG(standard_spread_avg) as standard_spread_avg,
     SUM(tick_count_raw_spread) as tick_count_raw_spread,
-    SUM(tick_count_standard) as tick_count_standard
+    SUM(tick_count_standard) as tick_count_standard,
+    AVG(range_per_spread) as range_per_spread,
+    AVG(range_per_tick) as range_per_tick,
+    AVG(body_per_spread) as body_per_spread,
+    AVG(body_per_tick) as body_per_tick
 FROM ohlc_1m
 WHERE Timestamp >= '2024-09-01'
 GROUP BY hour
 ORDER BY hour;
 
--- Get daily statistics
+-- Filter high-volatility bars (range > 5 spreads)
+SELECT * FROM ohlc_1m
+WHERE Timestamp >= '2024-09-01'
+  AND range_per_spread > 5.0
+ORDER BY range_per_spread DESC
+LIMIT 10;
+
+-- Find strong directional bars (body > 3 spreads, high body efficiency)
+SELECT * FROM ohlc_1m
+WHERE Timestamp >= '2024-09-01'
+  AND body_per_spread > 3.0
+  AND body_per_tick > 0.0005
+ORDER BY body_per_spread DESC
+LIMIT 10;
+
+-- Compare normalized metrics across time periods
 SELECT
     DATE_TRUNC('day', Timestamp) as day,
     COUNT(*) as bar_count,
-    MIN(Low) as day_low,
-    MAX(High) as day_high,
+    AVG(range_per_spread) as avg_range_per_spread,
+    AVG(body_per_spread) as avg_body_per_spread,
     AVG(raw_spread_avg) * 10000 as avg_raw_spread_pips
 FROM ohlc_1m
 WHERE Timestamp >= '2024-09-01'
+  AND range_per_spread IS NOT NULL  -- Ensure Standard data exists
 GROUP BY day
 ORDER BY day;
 ```
@@ -703,10 +781,22 @@ print(f"Months added: {result['months_added']}")
 
 ## Version History
 
-### v2.0.0 (2025-10-12)
+### v1.2.0 (2025-10-14) - Current
+
+- **Added**: 4 normalized spread metrics to OHLC schema (range_per_spread, range_per_tick, body_per_spread, body_per_tick)
+- **Refactored**: Centralized schema definition in `schema.py` module
+- **OHLC Schema**: 13 columns (Phase7 with normalized metrics)
+- **Architecture**: Single source of truth for all schema definitions
+- **Breaking Change**: None - additive only (existing 9 columns unchanged)
+
+### v1.1.0 (2025-10-12) - Phase7 Initial
+
+- **Added**: Phase7 9-column OHLC schema (dual spreads + dual tick counts)
+- **OHLC Schema**: BID-only OHLC from Raw_Spread with dual-variant metrics
+
+### v2.0.0 (2025-10-12) - Unified Architecture
 
 - **Change**: Single-file per instrument (not monthly files)
-- **Added**: Phase7 9-column OHLC schema
 - **Added**: Dual-variant storage (Raw_Spread + Standard)
 - **Added**: PRIMARY KEY constraints for duplicate prevention
 - **Added**: Metadata table for coverage tracking
@@ -723,6 +813,7 @@ print(f"Months added: {result['months_added']}")
 
 ## Related Documentation
 
+- **Schema Definition**: [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) - Single source of truth for all schema definitions
 - **Architecture Plan**: [`UNIFIED_DUCKDB_PLAN_v2.md`](UNIFIED_DUCKDB_PLAN_v2.md)
 - **Phase7 OHLC Spec**: [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
 - **Data Sources**: [`EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)
@@ -731,6 +822,6 @@ print(f"Months added: {result['months_added']}")
 
 ---
 
-**Last Updated**: 2025-10-12
+**Last Updated**: 2025-10-14
 **Maintainer**: Terry Li <terry@eonlabs.com>
-**Schema Version**: 2.0.0
+**Schema Version**: v1.2.0 (Phase7 13-column OHLC with normalized metrics)

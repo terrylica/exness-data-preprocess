@@ -88,23 +88,19 @@ class TestPhase7OHLCSchema:
             timeframe="1m"
         )
 
-        # Verify Phase7 9-column schema
-        expected_cols = [
-            "Timestamp",
-            "Open",
-            "High",
-            "Low",
-            "Close",
-            "raw_spread_avg",
-            "standard_spread_avg",
-            "tick_count_raw_spread",
-            "tick_count_standard",
-        ]
+        # Verify Phase7 schema (v1.2.0: 13 columns) - using schema module for DRY
+        from exness_data_preprocess.schema import OHLCSchema
 
-        for col in expected_cols:
-            assert col in df.columns, f"Missing Phase7 column: {col}"
+        required_cols = OHLCSchema.get_required_columns()
 
-        assert len(df.columns) == 9, "Phase7 schema should have exactly 9 columns"
+        # Validate all required columns exist (flexible, allows future additions)
+        for col in required_cols:
+            assert col in df.columns, f"Missing required column: {col}"
+
+        # Validate no unexpected columns
+        unexpected = set(df.columns) - set(required_cols)
+        assert not unexpected, f"Unexpected columns: {unexpected}"
+
         assert len(df) > 0, "Should have OHLC bars"
 
     def test_phase7_dual_spreads(self, processor_with_real_data):

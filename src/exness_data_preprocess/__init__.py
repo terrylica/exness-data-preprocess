@@ -7,7 +7,7 @@ Architecture (v2.0.0+):
 - One DuckDB file per instrument (eurusd.duckdb, not monthly files)
 - Dual-variant storage (Raw_Spread + Standard) for Phase7 compliance
 - Incremental updates with automatic gap detection
-- Phase7 9-column OHLC schema with dual spreads and tick counts
+- Phase7 13-column OHLC schema (v1.2.0) with dual spreads, tick counts, and normalized metrics
 - Self-documenting database schema with embedded COMMENT ON statements
 - Pydantic models for validated API responses
 

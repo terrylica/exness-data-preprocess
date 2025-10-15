@@ -8,10 +8,11 @@ Architecture (v2.0.0 - Unified Single-File Multi-Year):
 4. Incremental updates with automatic gap detection
 5. Metadata table for coverage tracking
 
-Phase7 Schema (9 columns):
+Phase7 Schema (v1.2.0 - 13 columns):
 - Timestamp, Open, High, Low, Close (BID-based from Raw_Spread)
 - raw_spread_avg, standard_spread_avg (dual spread tracking)
 - tick_count_raw_spread, tick_count_standard (dual tick counts)
+- range_per_spread, range_per_tick, body_per_spread, body_per_tick (normalized metrics)
 
 Storage: ~135 MB/year, ~405 MB for 3 years per instrument
 """
@@ -32,6 +33,7 @@ from exness_data_preprocess.models import (
     UpdateResult,
     VariantType,
 )
+from exness_data_preprocess.schema import OHLCSchema
 
 
 class ExnessDataProcessor:
@@ -42,7 +44,7 @@ class ExnessDataProcessor:
     - One DuckDB file per instrument (eurusd.duckdb not monthly files)
     - Dual-variant storage (Raw_Spread + Standard) for Phase7
     - Incremental updates with automatic gap detection
-    - 9-column OHLC schema with dual spreads and tick counts
+    - 13-column OHLC schema (v1.2.0) with dual spreads, tick counts, and normalized metrics
     - 3-year minimum historical coverage
 
     Features:
@@ -127,7 +129,7 @@ class ExnessDataProcessor:
         Creates tables if they don't exist:
         - raw_spread_ticks (PRIMARY KEY on Timestamp)
         - standard_ticks (PRIMARY KEY on Timestamp)
-        - ohlc_1m (Phase7 9-column schema)
+        - ohlc_1m (Phase7 13-column schema v1.2.0)
         - metadata (coverage tracking)
         """
         duckdb_path = self.base_dir / f"{pair.lower()}.duckdb"
@@ -197,44 +199,13 @@ class ExnessDataProcessor:
         conn.execute("COMMENT ON COLUMN metadata.value IS 'Metadata value (string representation)'")
         conn.execute("COMMENT ON COLUMN metadata.updated_at IS 'Last update timestamp'")
 
-        # Create ohlc_1m table (initially empty, generated on demand)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS ohlc_1m (
-                Timestamp TIMESTAMP WITH TIME ZONE PRIMARY KEY,
-                Open DOUBLE NOT NULL,
-                High DOUBLE NOT NULL,
-                Low DOUBLE NOT NULL,
-                Close DOUBLE NOT NULL,
-                raw_spread_avg DOUBLE,
-                standard_spread_avg DOUBLE,
-                tick_count_raw_spread BIGINT,
-                tick_count_standard BIGINT
-            )
-        """)
+        # Create ohlc_1m table using schema definition (includes 13 columns in v1.2.0)
+        conn.execute(OHLCSchema.get_create_table_sql())
 
-        # Add table and column comments for ohlc_1m
-        conn.execute("""
-            COMMENT ON TABLE ohlc_1m IS
-            'Phase7 v1.1.0 1-minute OHLC bars (BID-only from Raw_Spread, dual-variant spreads and tick counts).
-             OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard).'
-        """)
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Timestamp IS 'Minute-aligned bar timestamp'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Open IS 'Opening price (first Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.High IS 'High price (max Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Low IS 'Low price (min Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Close IS 'Closing price (last Raw_Spread Bid)'")
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)'"
-        )
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)'"
-        )
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)'"
-        )
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)'"
-        )
+        # Add table and column comments
+        conn.execute(OHLCSchema.get_table_comment_sql())
+        for comment_sql in OHLCSchema.get_column_comment_sqls():
+            conn.execute(comment_sql)
 
         conn.close()
         return duckdb_path
@@ -494,7 +465,7 @@ class ExnessDataProcessor:
 
         # Step 4: Regenerate OHLC for all new data
         if months_success > 0:
-            print("\nRegenerating OHLC (Phase7 9-column schema)...")
+            print("\nRegenerating OHLC (Phase7 13-column schema v1.2.0)...")
             self._regenerate_ohlc(duckdb_path)
             print("✓ OHLC regenerated")
 
@@ -525,16 +496,17 @@ class ExnessDataProcessor:
 
     def _regenerate_ohlc(self, duckdb_path: Path) -> None:
         """
-        Regenerate OHLC table with Phase7 9-column schema.
+        Regenerate OHLC table with Phase7 schema (v1.2.0: 13 columns).
 
         Uses LEFT JOIN to combine Raw_Spread and Standard variants.
+        Includes normalized spread metrics (v1.2.0+).
         """
         conn = duckdb.connect(str(duckdb_path))
 
         # Delete existing OHLC data
         conn.execute("DELETE FROM ohlc_1m")
 
-        # Generate Phase7 9-column OHLC
+        # Generate Phase7 OHLC with normalized metrics (NULL-safe calculations)
         conn.execute("""
             INSERT INTO ohlc_1m
             SELECT
@@ -546,7 +518,28 @@ class ExnessDataProcessor:
                 AVG(r.Ask - r.Bid) as raw_spread_avg,
                 AVG(s.Ask - s.Bid) as standard_spread_avg,
                 COUNT(r.Timestamp) as tick_count_raw_spread,
-                COUNT(s.Timestamp) as tick_count_standard
+                COUNT(s.Timestamp) as tick_count_standard,
+                -- Normalized spread metrics (v1.2.0) - NULL-safe calculations
+                CASE
+                    WHEN AVG(s.Ask - s.Bid) > 0
+                    THEN (MAX(r.Bid) - MIN(r.Bid)) / AVG(s.Ask - s.Bid)
+                    ELSE NULL
+                END as range_per_spread,
+                CASE
+                    WHEN COUNT(s.Timestamp) > 0
+                    THEN (MAX(r.Bid) - MIN(r.Bid)) / COUNT(s.Timestamp)
+                    ELSE NULL
+                END as range_per_tick,
+                CASE
+                    WHEN AVG(s.Ask - s.Bid) > 0
+                    THEN ABS(LAST(r.Bid ORDER BY r.Timestamp) - FIRST(r.Bid ORDER BY r.Timestamp)) / AVG(s.Ask - s.Bid)
+                    ELSE NULL
+                END as body_per_spread,
+                CASE
+                    WHEN COUNT(s.Timestamp) > 0
+                    THEN ABS(LAST(r.Bid ORDER BY r.Timestamp) - FIRST(r.Bid ORDER BY r.Timestamp)) / COUNT(s.Timestamp)
+                    ELSE NULL
+                END as body_per_tick
             FROM raw_spread_ticks r
             LEFT JOIN standard_ticks s
                 ON DATE_TRUNC('minute', r.Timestamp) = DATE_TRUNC('minute', s.Timestamp)
@@ -627,7 +620,7 @@ class ExnessDataProcessor:
             end_date: End date (YYYY-MM-DD), inclusive
 
         Returns:
-            DataFrame with OHLC data (Phase7 9-column schema)
+            DataFrame with OHLC data (Phase7 13-column schema v1.2.0)
 
         Example:
             >>> processor = ExnessDataProcessor()
@@ -675,158 +668,31 @@ class ExnessDataProcessor:
 
             # For hour and day, use DATE_TRUNC directly
             if trunc_unit in ("hour", "day"):
+                time_expr = f"DATE_TRUNC('{trunc_unit}', Timestamp)"
+                select_clause = OHLCSchema.get_resampling_select_clause(time_expr)
                 df = conn.execute(f"""
                     SELECT
-                        DATE_TRUNC('{trunc_unit}', Timestamp) as Timestamp,
-                        FIRST(Open ORDER BY Timestamp) as Open,
-                        MAX(High) as High,
-                        MIN(Low) as Low,
-                        LAST(Close ORDER BY Timestamp) as Close,
-                        AVG(raw_spread_avg) as raw_spread_avg,
-                        AVG(standard_spread_avg) as standard_spread_avg,
-                        SUM(tick_count_raw_spread) as tick_count_raw_spread,
-                        SUM(tick_count_standard) as tick_count_standard
+                        {select_clause}
                     FROM ohlc_1m
                     WHERE {where_sql}
-                    GROUP BY DATE_TRUNC('{trunc_unit}', Timestamp)
+                    GROUP BY {time_expr}
                     ORDER BY Timestamp
                 """).df()
             else:
                 # For sub-hour intervals, use time bucketing
+                time_expr = f"TIME_BUCKET(INTERVAL '{minutes} minutes', Timestamp)"
+                select_clause = OHLCSchema.get_resampling_select_clause(time_expr)
                 df = conn.execute(f"""
                     SELECT
-                        TIME_BUCKET(INTERVAL '{minutes} minutes', Timestamp) as Timestamp,
-                        FIRST(Open ORDER BY Timestamp) as Open,
-                        MAX(High) as High,
-                        MIN(Low) as Low,
-                        LAST(Close ORDER BY Timestamp) as Close,
-                        AVG(raw_spread_avg) as raw_spread_avg,
-                        AVG(standard_spread_avg) as standard_spread_avg,
-                        SUM(tick_count_raw_spread) as tick_count_raw_spread,
-                        SUM(tick_count_standard) as tick_count_standard
+                        {select_clause}
                     FROM ohlc_1m
                     WHERE {where_sql}
-                    GROUP BY TIME_BUCKET(INTERVAL '{minutes} minutes', Timestamp)
+                    GROUP BY {time_expr}
                     ORDER BY Timestamp
                 """).df()
 
         conn.close()
         return df
-
-    def add_schema_comments(self, pair: str = "EURUSD") -> bool:
-        """
-        Add or update COMMENT ON statements to existing database.
-
-        This method is idempotent - it can be run multiple times safely.
-        Use this to retrofit self-documentation to existing databases.
-
-        Args:
-            pair: Currency pair
-
-        Returns:
-            True if successful, False if database doesn't exist
-
-        Example:
-            >>> processor = ExnessDataProcessor()
-            >>> # Add comments to existing database
-            >>> processor.add_schema_comments("EURUSD")
-            >>> # Verify comments were added
-            >>> conn = duckdb.connect("~/eon/exness-data/eurusd.duckdb", read_only=True)
-            >>> result = conn.execute("SELECT table_name, comment FROM duckdb_tables()").df()
-            >>> print(result)
-        """
-        duckdb_path = self.base_dir / f"{pair.lower()}.duckdb"
-
-        if not duckdb_path.exists():
-            print(f"Database not found: {duckdb_path}")
-            return False
-
-        print(f"Adding schema comments to: {duckdb_path}")
-        conn = duckdb.connect(str(duckdb_path))
-
-        # Add table and column comments for raw_spread_ticks
-        conn.execute("""
-            COMMENT ON TABLE raw_spread_ticks IS
-            'Exness Raw_Spread variant (execution prices, ~98% zero-spreads).
-             Data source: https://ticks.ex2archive.com/ticks/{SYMBOL}_Raw_Spread/{YEAR}/{MONTH}/'
-        """)
-        conn.execute(
-            "COMMENT ON COLUMN raw_spread_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'"
-        )
-        conn.execute("COMMENT ON COLUMN raw_spread_ticks.Bid IS 'Bid price (execution price)'")
-        conn.execute("COMMENT ON COLUMN raw_spread_ticks.Ask IS 'Ask price (execution price)'")
-
-        # Add table and column comments for standard_ticks
-        conn.execute("""
-            COMMENT ON TABLE standard_ticks IS
-            'Exness Standard variant (traditional quotes, 0% zero-spreads, always Bid < Ask).
-             Data source: https://ticks.ex2archive.com/ticks/{SYMBOL}/{YEAR}/{MONTH}/'
-        """)
-        conn.execute(
-            "COMMENT ON COLUMN standard_ticks.Timestamp IS 'Microsecond-precision tick timestamp (UTC)'"
-        )
-        conn.execute("COMMENT ON COLUMN standard_ticks.Bid IS 'Bid price (always < Ask)'")
-        conn.execute("COMMENT ON COLUMN standard_ticks.Ask IS 'Ask price (always > Bid)'")
-
-        # Add table and column comments for metadata
-        conn.execute("""
-            COMMENT ON TABLE metadata IS
-            'Database coverage tracking and statistics (earliest/latest dates, tick counts, etc.)'
-        """)
-        conn.execute(
-            "COMMENT ON COLUMN metadata.key IS 'Metadata key identifier (e.g., earliest_date, latest_date)'"
-        )
-        conn.execute("COMMENT ON COLUMN metadata.value IS 'Metadata value (string representation)'")
-        conn.execute("COMMENT ON COLUMN metadata.updated_at IS 'Last update timestamp'")
-
-        # Add table and column comments for ohlc_1m
-        conn.execute("""
-            COMMENT ON TABLE ohlc_1m IS
-            'Phase7 v1.1.0 1-minute OHLC bars (BID-only from Raw_Spread, dual-variant spreads and tick counts).
-             OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard).'
-        """)
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Timestamp IS 'Minute-aligned bar timestamp'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Open IS 'Opening price (first Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.High IS 'High price (max Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Low IS 'Low price (min Raw_Spread Bid)'")
-        conn.execute("COMMENT ON COLUMN ohlc_1m.Close IS 'Closing price (last Raw_Spread Bid)'")
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.raw_spread_avg IS 'Average spread from Raw_Spread variant (NULL if no ticks)'"
-        )
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.standard_spread_avg IS 'Average spread from Standard variant (NULL if no Standard ticks for that minute)'"
-        )
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.tick_count_raw_spread IS 'Number of ticks from Raw_Spread variant (NULL if no ticks)'"
-        )
-        conn.execute(
-            "COMMENT ON COLUMN ohlc_1m.tick_count_standard IS 'Number of ticks from Standard variant (NULL if no Standard ticks for that minute)'"
-        )
-
-        conn.close()
-        print(f"✓ Schema comments added to {pair}")
-        return True
-
-    def add_schema_comments_all(self) -> Dict[str, bool]:
-        """
-        Add schema comments to all DuckDB files in base_dir.
-
-        Returns:
-            Dictionary mapping pair names to success status
-
-        Example:
-            >>> processor = ExnessDataProcessor()
-            >>> results = processor.add_schema_comments_all()
-            >>> print(f"Updated {sum(results.values())} databases")
-        """
-        results = {}
-
-        # Find all .duckdb files
-        for db_path in self.base_dir.glob("*.duckdb"):
-            pair = db_path.stem.upper()
-            results[pair] = self.add_schema_comments(pair)
-
-        return results
 
     def get_data_coverage(self, pair: PairType = "EURUSD") -> CoverageInfo:
         """

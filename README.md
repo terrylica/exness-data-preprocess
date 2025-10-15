@@ -7,14 +7,14 @@
 [![Downloads](https://img.shields.io/pypi/dm/exness-data-preprocess.svg)](https://pypi.org/project/exness-data-preprocess/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-Professional forex tick data preprocessing with unified single-file DuckDB storage. Provides incremental updates, dual-variant storage (Raw_Spread + Standard), and Phase7 9-column OHLC schema with sub-15ms query performance.
+Professional forex tick data preprocessing with unified single-file DuckDB storage. Provides incremental updates, dual-variant storage (Raw_Spread + Standard), and Phase7 13-column OHLC schema (v1.2.0) with sub-15ms query performance.
 
 ## Features
 
 - **Unified Single-File Architecture**: One DuckDB file per instrument (eurusd.duckdb)
 - **Incremental Updates**: Automatic gap detection and download only missing months
 - **Dual-Variant Storage**: Raw_Spread (primary) + Standard (reference) in same database
-- **Phase7 OHLC Schema**: 9-column bars with dual spreads and dual tick counts
+- **Phase7 OHLC Schema**: 13-column bars (v1.2.0) with dual spreads, tick counts, and normalized metrics
 - **Fast Queries**: Date range queries with sub-15ms performance
 - **On-Demand Resampling**: Any timeframe (5m, 1h, 1d) resampled in <15ms
 - **PRIMARY KEY Constraints**: Prevents duplicate data during incremental updates
@@ -90,7 +90,7 @@ Download Only Missing Months (Raw_Spread + Standard)
            ↓
 DuckDB Single-File Storage (PRIMARY KEY prevents duplicates)
            ↓
-Phase7 9-Column OHLC Generation (dual spreads + dual tick counts)
+Phase7 13-Column OHLC Generation (v1.2.0 - dual spreads, tick counts, normalized metrics)
            ↓
 Query Interface (date ranges, SQL filters, on-demand resampling)
 ```
@@ -102,19 +102,13 @@ Query Interface (date ranges, SQL filters, on-demand resampling)
 **Schema**:
 - `raw_spread_ticks` table: Timestamp (PK), Bid, Ask
 - `standard_ticks` table: Timestamp (PK), Bid, Ask
-- `ohlc_1m` table: Phase7 9-column schema
+- `ohlc_1m` table: Phase7 13-column schema (v1.2.0)
 - `metadata` table: Coverage tracking
 
-**Phase7 9-Column OHLC**:
-1. `Timestamp` - Bar timestamp
-2. `Open` - Opening price
-3. `High` - High price
-4. `Low` - Low price
-5. `Close` - Closing price
-6. `raw_spread_avg` - Average spread from Raw_Spread variant
-7. `standard_spread_avg` - Average spread from Standard variant
-8. `tick_count_raw_spread` - Tick count from Raw_Spread variant
-9. `tick_count_standard` - Tick count from Standard variant
+**Phase7 13-Column OHLC (v1.2.0)**:
+- **Column Definitions**: See [`schema.py`](src/exness_data_preprocess/schema.py) - Single source of truth
+- **Comprehensive Reference**: See [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) - Query examples and usage patterns
+- **Key Features**: BID-only OHLC with dual spreads (Raw_Spread + Standard) and normalized spread metrics
 
 ### Directory Structure
 

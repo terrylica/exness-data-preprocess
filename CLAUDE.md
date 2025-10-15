@@ -80,7 +80,7 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
    - **Lines 247-275**: `_append_ticks_to_db()` - Tick insertion with PRIMARY KEY duplicate prevention
    - **Lines 277-377**: `_discover_missing_months()` - Gap detection for incremental updates
    - **Lines 379-516**: `update_data()` - Main entry point for downloading and updating data
-   - **Lines 518-549**: `_regenerate_ohlc()` - Phase7 9-column OHLC generation with LEFT JOIN
+   - **Lines 518-549**: `_regenerate_ohlc()` - Phase7 13-column OHLC (v1.2.0) generation with LEFT JOIN
    - **Lines 551-603**: `query_ticks()` - Tick queries with date range and SQL filters
    - **Lines 605-706**: `query_ohlc()` - OHLC queries with on-demand resampling (1m/5m/15m/1h/4h/1d)
    - **Lines 708-821**: `add_schema_comments()` / `add_schema_comments_all()` - Retrofit self-documentation
@@ -102,10 +102,11 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 - Incremental updates with automatic gap detection
 - PRIMARY KEY constraints prevent duplicates during updates
 
-**Phase7 9-Column OHLC Schema**:
+**Phase7 13-Column OHLC Schema** (v1.2.0):
 - BID-only OHLC from Raw_Spread variant
 - Dual spreads: `raw_spread_avg` and `standard_spread_avg`
 - Dual tick counts: `tick_count_raw_spread` and `tick_count_standard`
+- Normalized metrics: `range_per_spread`, `range_per_tick`, `body_per_spread`, `body_per_tick`
 - Generated via LEFT JOIN between Raw_Spread and Standard variants
 
 **Self-Documentation**:
@@ -138,9 +139,9 @@ Each `.duckdb` file contains:
    - Reference data for spread comparison
 
 3. **`ohlc_1m`** table:
-   - Columns: `Timestamp` (PK), `Open`, `High`, `Low`, `Close`, `raw_spread_avg`, `standard_spread_avg`, `tick_count_raw_spread`, `tick_count_standard`
-   - Phase7 9-column schema
-   - Generated from Raw_Spread BID prices with dual-variant spreads
+   - **Schema**: Phase7 13-column (v1.2.0) - See [`schema.py`](src/exness_data_preprocess/schema.py)
+   - **Details**: BID-only OHLC with dual-variant spreads, tick counts, and normalized metrics
+   - **Reference**: [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
 
 4. **`metadata`** table:
    - Columns: `key` (PK), `value`, `updated_at`
@@ -179,7 +180,7 @@ Each `.duckdb` file contains:
 - ✅ **Dual-variant storage**: Raw_Spread + Standard in same database
 - ✅ **PRIMARY KEY constraints**: Prevents duplicates during incremental updates
 - ✅ **Automatic gap detection**: Downloads only missing months
-- ✅ **Phase7 9-column OHLC**: Dual spreads + dual tick counts
+- ✅ **Phase7 13-column OHLC (v1.2.0)**: Dual spreads + dual tick counts
 - ✅ **Date range queries**: Sub-15ms query performance
 - ✅ **On-demand resampling**: Any timeframe (5m, 1h, 1d) in <15ms
 
@@ -206,11 +207,13 @@ Each `.duckdb` file contains:
 - `/tmp/exness-duckdb-test/test_refactored_processor.py` - Validation test
 - `/tmp/exness-duckdb-test/test_queries_only.py` - Query validation test
 
-### Phase7 9-Column OHLC Schema (✅ Implemented)
+### Phase7 13-Column OHLC Schema v1.2.0 (✅ Implemented)
 
-**Decision**: Dual-variant BID-only OHLC with 9 columns capturing both Raw_Spread and Standard characteristics
+**Decision**: Dual-variant BID-only OHLC with 13 columns capturing both Raw_Spread and Standard characteristics plus normalized metrics
 
-**Schema**: `Timestamp | Open | High | Low | Close | raw_spread_avg | standard_spread_avg | tick_count_raw_spread | tick_count_standard`
+**Schema**: Phase7 13-column (v1.2.0)
+- **Definition**: See [`schema.py`](src/exness_data_preprocess/schema.py)
+- **Documentation**: See [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
 
 **Key Features**:
 - ✅ **BID-only OHLC**: Uses Raw_Spread Bid prices (execution prices)
@@ -311,7 +314,7 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 - ✅ **Dual-variant storage** - Raw_Spread + Standard in same database
 - ✅ **PRIMARY KEY constraints** - Prevents duplicates during incremental updates
 - ✅ **Automatic gap detection** - Downloads only missing months
-- ✅ **Phase7 9-column OHLC** - Dual spreads + dual tick counts
+- ✅ **Phase7 13-column OHLC (v1.2.0)** - Dual spreads + dual tick counts
 - ✅ **Date range queries** - Sub-15ms query performance
 - ✅ **On-demand resampling** - Any timeframe in <15ms
 - ✅ **SQL filter support** - Direct SQL WHERE clauses on ticks
@@ -356,7 +359,7 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 eurusd.duckdb:
 ├── raw_spread_ticks   # Timestamp (PK), Bid, Ask
 ├── standard_ticks     # Timestamp (PK), Bid, Ask
-├── ohlc_1m            # Phase7 9-column schema
+├── ohlc_1m            # Phase7 13-column schema (v1.2.0)
 └── metadata           # Coverage tracking
 ```
 

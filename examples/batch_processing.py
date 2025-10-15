@@ -15,7 +15,7 @@ Architecture v2.0.0:
 - One DuckDB file per instrument (eurusd.duckdb, xauusd.duckdb)
 - Incremental updates with automatic gap detection
 - Dual-variant storage (Raw_Spread + Standard)
-- 9-column Phase7 OHLC schema
+- 13-column (v1.2.0) Phase7 OHLC schema
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
