@@ -87,7 +87,7 @@ COMMENT ON TABLE standard_ticks IS
  Used for: Position ratio calculation (ASOF merge with Raw_Spread)';
 ```
 
-**Table 3: `ohlc_1m`** (all historical data, phase7 9 columns)
+**Table 3: `ohlc_1m`** (all historical data, Phase7 13-column v1.2.0)
 
 ```sql
 CREATE TABLE ohlc_1m (
@@ -365,7 +365,7 @@ class ExnessDataProcessor:
             end_date: End date (YYYY-MM-DD), None = latest
 
         Returns:
-            DataFrame with OHLC data (phase7 9 columns)
+            DataFrame with OHLC data (Phase7 13-column v1.2.0)
 
         Example:
             >>> processor = ExnessDataProcessor()

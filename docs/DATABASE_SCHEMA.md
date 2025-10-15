@@ -787,11 +787,11 @@ print(f"Months added: {result['months_added']}")
 - **Refactored**: Centralized schema definition in `schema.py` module
 - **OHLC Schema**: 13 columns (Phase7 with normalized metrics)
 - **Architecture**: Single source of truth for all schema definitions
-- **Breaking Change**: None - additive only (existing 9 columns unchanged)
+- **Breaking Change**: None - additive only (existing Phase7 columns unchanged)
 
 ### v1.1.0 (2025-10-12) - Phase7 Initial
 
-- **Added**: Phase7 9-column OHLC schema (dual spreads + dual tick counts)
+- **Added**: Phase7 initial OHLC schema with dual spreads and dual tick counts
 - **OHLC Schema**: BID-only OHLC from Raw_Spread with dual-variant metrics
 
 ### v2.0.0 (2025-10-12) - Unified Architecture

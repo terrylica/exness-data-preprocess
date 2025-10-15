@@ -159,7 +159,7 @@ class UpdateResult(BaseModel):
     )
     ohlc_bars: int = Field(
         ge=0,
-        description="Total 1-minute OHLC bars in database (Phase7 9-column schema)"
+        description="Total 1-minute OHLC bars in database (Phase7 13-column v1.2.0 schema)"
     )
     duckdb_size_mb: float = Field(
         ge=0,
@@ -347,7 +347,7 @@ def update_data(
     1. Discover missing months between start_date and current month
     2. Download missing months from ticks.ex2archive.com (both variants)
     3. Insert ticks into DuckDB with PRIMARY KEY duplicate prevention
-    4. Regenerate Phase7 9-column OHLC with dual spreads
+    4. Regenerate Phase7 13-column (v1.2.0) OHLC with dual spreads and normalized metrics
     5. Update metadata table with coverage statistics
 
     Args:
@@ -559,13 +559,12 @@ def query_ohlc(
     timeframes. All resampling is performed in-database using DuckDB's window
     functions for optimal performance (<15ms for most queries).
 
-    The returned DataFrame contains Phase7 9-column schema:
-    - Timestamp: Bar timestamp (UTC)
-    - Open, High, Low, Close: BID prices from Raw_Spread variant
-    - raw_spread_avg: Average spread from Raw_Spread variant
-    - standard_spread_avg: Average spread from Standard variant
-    - tick_count_raw_spread: Tick count from Raw_Spread variant
-    - tick_count_standard: Tick count from Standard variant
+    The returned DataFrame contains Phase7 13-column (v1.2.0) schema:
+    - See schema.py for complete 13-column definition
+    - Core: Timestamp, Open, High, Low, Close (BID prices from Raw_Spread)
+    - Dual Spreads: raw_spread_avg, standard_spread_avg
+    - Dual Tick Counts: tick_count_raw_spread, tick_count_standard
+    - Normalized Metrics: range_per_spread, range_per_tick, body_per_spread, body_per_tick
 
     Args:
         pair: Currency pair (EURUSD, GBPUSD, XAUUSD, USDJPY, AUDUSD)
@@ -574,7 +573,7 @@ def query_ohlc(
         end_date: Optional end date in YYYY-MM-DD format (inclusive)
 
     Returns:
-        DataFrame with Phase7 9-column OHLC schema. Empty if no data in range.
+        DataFrame with Phase7 13-column (v1.2.0) OHLC schema. Empty if no data in range.
 
     Raises:
         FileNotFoundError: If database doesn't exist (call update_data first)

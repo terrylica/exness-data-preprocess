@@ -140,7 +140,7 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 - ✅ Irregular ticks (1µs to 130.61s intervals)
 - ✅ Regular OHLC (0 unaligned bars)
-- ✅ Phase7 schema (9 columns)
+- ✅ Phase7 13-column (v1.2.0) schema
 - ✅ Query performance (<15ms all timeframes)
 
 **Conclusion**: Unified DuckDB architecture is production-ready

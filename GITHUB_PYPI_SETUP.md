@@ -173,7 +173,7 @@ gh release create v0.1.0 \
 
 **Architecture v2.0.0:**
 - Unified single-file DuckDB storage per instrument
-- Phase7 9-column OHLC schema with dual-variant spreads
+- Phase7 13-column (v1.2.0) OHLC schema with dual-variant spreads and normalized metrics
 - Sub-15ms query performance with date range filtering
 - PRIMARY KEY constraints prevent duplicates
 - Automatic gap detection for incremental updates

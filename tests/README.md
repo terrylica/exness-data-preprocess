@@ -42,7 +42,7 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
    - `test_append_ticks_to_db()` - Test PRIMARY KEY constraint enforcement
 
 4. **OHLC Generation**
-   - `test_regenerate_ohlc()` - Test Phase7 9-column OHLC generation
+   - `test_regenerate_ohlc()` - Test Phase7 13-column (v1.2.0) OHLC generation
    - `test_ohlc_dual_variant_join()` - Test LEFT JOIN between Raw_Spread and Standard
 
 5. **Query Methods**
@@ -69,7 +69,7 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
 
 2. **Data Quality**
    - `test_no_duplicates()` - Verify PRIMARY KEY constraints work
-   - `test_phase7_schema()` - Verify 9-column OHLC schema
+   - `test_phase7_schema()` - Verify 13-column (v1.2.0) OHLC schema
    - `test_date_range_accuracy()` - Verify date range filtering accuracy
 
 ### API Tests (test_api.py)
