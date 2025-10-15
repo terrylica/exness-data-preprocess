@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+### ♻️ Refactoring
+
+- **schema**: Centralize OHLC schema in schema.py module - Create schema.py with OHLCSchema class as single source of truth - Reduce coupling from 42 to 5 update locations (88% reduction) - Replace hardcoded column lists in docs with pointers to schema.py - Delete obsolete PYDANTIC_TEST_STRATEGY.md (tests implemented) - Delete add_schema_comments.py (functionality merged into processor) - Update tests to use OHLCSchema.get_required_columns() - Achieve maximum DRY: future column additions require 1-2 file updates BREAKING CHANGE: None (additive refactoring, no API changes)
+
+
 ### ✨ Features
 
 - Implement pydantic v2 models with dual-variant e2e testing - Add Pydantic v2 models (UpdateResult, CoverageInfo) for type-safe API - Update processor to use Pydantic types (PairType, TimeframeType, VariantType) - Remove deprecated api.py module (broken functionality) - Implement comprehensive test suite (48 tests, 100% passing): * test_models.py - Pydantic model validation (13 tests) * test_types.py - Type safety and helpers (15 tests) * test_processor_pydantic.py - Integration tests (6 tests) * test_functional_regression.py - v2.0.0 regression tests (10 tests) - Fix Standard variant downloads (variant="" not "Standard") - Add true end-to-end testing with real Exness downloads - Test data: EURUSD August 2024 (815K Raw_Spread + 877K Standard ticks) - Update documentation and add refactoring status tracking - Coverage: models.py 100%, __init__.py 100%, processor.py 45% BREAKING CHANGE: api.py removed (use ExnessDataProcessor directly)
@@ -19,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🧰 Maintenance
 
 - **release**: Bump version 0.1.0 → 0.2.0 [skip ci]
+
+- **release**: Bump version 0.2.0 → 0.3.0 [skip ci]
 
 
 ### ✨ Features
