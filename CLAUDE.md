@@ -133,11 +133,13 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
    - **Class**: `QueryEngine`
    - **Methods**: `query_ticks()`, `query_ohlc()`, `get_data_coverage()`
 
-**Legacy Components**:
+**Compatibility Layer**:
 
-9. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - Simple wrapper functions
-   - Convenience functions wrapping `ExnessDataProcessor` methods
-   - Legacy v1.0.0 API compatibility layer (to be deprecated)
+9. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - v1.0.0 CLI compatibility wrappers (267 lines)
+   - **Responsibility**: Map v1.0.0 monthly-file API to v2.0.0 unified single-file API
+   - **SLOs**: Availability (raise on errors), Correctness (delegate to processor), Observability (processor logging), Maintainability (thin wrappers)
+   - **Functions**: `process_month()`, `process_date_range()`, `query_ohlc()`, `analyze_ticks()`, `get_storage_stats()`
+   - **Status**: Backward compatibility for CLI (will be deprecated when CLI is rewritten for v2.0.0)
 
 10. **`cli.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/cli.py`) - Command-line interface
     - Entry point: `exness-preprocess` command
@@ -223,7 +225,6 @@ Each `.duckdb` file contains:
 ### Code Examples
 - **[examples/basic_usage.py](examples/basic_usage.py)** - Download, query, coverage operations
 - **[examples/batch_processing.py](examples/batch_processing.py)** - Multi-instrument parallel processing
-- **[examples/add_schema_comments.py](examples/add_schema_comments.py)** - Retrofit self-documentation
 
 ### Development
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
@@ -322,13 +323,7 @@ SELECT table_name, comment FROM duckdb_tables();
 SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 ```
 
-**Retrofit Methods**:
-- `add_schema_comments(pair)` - Add comments to single database
-- `add_schema_comments_all()` - Batch-update all databases
-
-**Implementation**: [`src/exness_data_preprocess/database_manager.py`](src/exness_data_preprocess/database_manager.py) (schema comments in get_or_create_db method)
-
-**Usage Example**: [`examples/add_schema_comments.py`](examples/add_schema_comments.py)
+**Implementation**: [`src/exness_data_preprocess/database_manager.py`](src/exness_data_preprocess/database_manager.py) (schema comments added automatically via get_or_create_db method)
 
 **Complete Schema Reference**: [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) - Human-readable documentation with introspection queries
 
@@ -397,8 +392,6 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 **Basic Operations**: [`examples/basic_usage.py`](examples/basic_usage.py) - Download, query, coverage
 
 **Batch Processing**: [`examples/batch_processing.py`](examples/batch_processing.py) - Multi-instrument, parallel processing
-
-**Schema Comments**: [`examples/add_schema_comments.py`](examples/add_schema_comments.py) - Retrofit self-documentation to existing databases
 
 **Complete API Reference**: [`README.md`](README.md) - All methods, parameters, and usage patterns
 
