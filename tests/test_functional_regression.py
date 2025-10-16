@@ -9,13 +9,11 @@ SLO Coverage:
 - SLO-MA-4: True end-to-end testing from online source: Downloads real Exness data
 """
 
-import pytest
-from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from exness_data_preprocess.models import CoverageInfo, UpdateResult
-from exness_data_preprocess.processor import ExnessDataProcessor
+from exness_data_preprocess.models import CoverageInfo
 
 
 class TestSingleFileDatabaseCreation:
@@ -83,10 +81,7 @@ class TestPhase7OHLCSchema:
         processor_with_real_data._regenerate_ohlc(duckdb_path)
 
         # Query OHLC data
-        df = processor_with_real_data.query_ohlc(
-            pair="EURUSD",
-            timeframe="1m"
-        )
+        df = processor_with_real_data.query_ohlc(pair="EURUSD", timeframe="1m")
 
         # Verify Phase7 schema (v1.2.0: 13 columns) - using schema module for DRY
         from exness_data_preprocess.schema import OHLCSchema
@@ -137,7 +132,9 @@ class TestPhase7OHLCSchema:
         assert "tick_count_standard" in df.columns
         assert df["tick_count_raw_spread"].sum() > 0, "Should have tick count data"
         assert df["tick_count_standard"].sum() > 0, "Should have tick count data"
-        assert df["tick_count_raw_spread"].min() > 0, "All bars should have at least 1 Raw_Spread tick"
+        assert df["tick_count_raw_spread"].min() > 0, (
+            "All bars should have at least 1 Raw_Spread tick"
+        )
         # Standard ticks may be 0 for some bars due to LEFT JOIN (correct behavior)
         assert df["tick_count_standard"].min() >= 0, "Tick counts should be non-negative"
 
@@ -159,10 +156,7 @@ class TestQueryMethods:
         processor_with_real_data._append_ticks_to_db(duckdb_path, df_raw, "raw_spread_ticks")
 
         # Query ticks
-        df = processor_with_real_data.query_ticks(
-            pair="EURUSD",
-            variant="raw_spread"
-        )
+        df = processor_with_real_data.query_ticks(pair="EURUSD", variant="raw_spread")
 
         # Verify tick data structure
         assert len(df) > 0, "Should have ticks from downloaded data"
@@ -196,10 +190,7 @@ class TestQueryMethods:
         processor_with_real_data._regenerate_ohlc(duckdb_path)
 
         # Query OHLC
-        df = processor_with_real_data.query_ohlc(
-            pair="EURUSD",
-            timeframe="1m"
-        )
+        df = processor_with_real_data.query_ohlc(pair="EURUSD", timeframe="1m")
 
         # Verify DataFrame
         assert isinstance(df, pd.DataFrame)
@@ -317,6 +308,7 @@ class TestPRIMARYKEYDuplicatePrevention:
         processor_with_real_data._append_ticks_to_db(duckdb_path, df_raw, "raw_spread_ticks")
 
         import duckdb
+
         conn = duckdb.connect(str(duckdb_path), read_only=True)
         count1 = conn.execute("SELECT COUNT(*) FROM raw_spread_ticks").fetchone()[0]
         conn.close()
@@ -331,4 +323,6 @@ class TestPRIMARYKEYDuplicatePrevention:
         count2 = conn.execute("SELECT COUNT(*) FROM raw_spread_ticks").fetchone()[0]
         conn.close()
 
-        assert count2 == count1, f"PRIMARY KEY should prevent duplicates (still {count1} ticks, not {count2})"
+        assert count2 == count1, (
+            f"PRIMARY KEY should prevent duplicates (still {count1} ticks, not {count2})"
+        )

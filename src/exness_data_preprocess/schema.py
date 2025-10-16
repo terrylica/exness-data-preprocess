@@ -21,6 +21,9 @@ Architecture Benefits:
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+# Import exchange registry for dynamic session column generation (v1.5.0)
+from exness_data_preprocess.exchanges import EXCHANGES
+
 
 @dataclass
 class ColumnDefinition:
@@ -51,6 +54,9 @@ class OHLCSchema:
     Schema Version History:
         v1.1.0: 9 columns (Timestamp, OHLC, dual spreads, dual tick counts)
         v1.2.0: 13 columns (added 4 normalized spread metrics)
+        v1.3.0: 17 columns (added 4 timezone/session columns: ny_hour, london_hour, ny_session, london_session)
+        v1.4.0: 22 columns (added 3 holiday columns + 2 session flags: is_us_holiday, is_uk_holiday, is_major_holiday, is_nyse_session, is_lse_session)
+        v1.5.0: 30 columns (replaced 2 session flags with 10 dynamic exchange session flags from registry: nyse, lse, xswx, xfra, xtse, xnze, xtks, xasx, xhkg, xses)
 
     Usage:
         >>> # Generate CREATE TABLE statement
@@ -67,7 +73,7 @@ class OHLCSchema:
         >>> conn.execute(f"SELECT {select} FROM ohlc_1m GROUP BY {time_expr}")
     """
 
-    VERSION = "1.2.0"
+    VERSION = "1.5.0"
 
     # Single source of truth: Column definitions (update here, propagates everywhere)
     COLUMNS: Dict[str, ColumnDefinition] = {
@@ -137,14 +143,48 @@ class OHLCSchema:
             comment="abs(Close-Open)/tick_count_standard - Body normalized by tick count (NULL if no Standard ticks)",
             aggregation="AVG(body_per_tick)",
         ),
+        # NEW COLUMNS (v1.3.0): Timezone-aware session columns
+        "ny_hour": ColumnDefinition(
+            dtype="INTEGER",
+            comment="New York hour (0-23, handles EST/EDT DST automatically via DuckDB AT TIME ZONE)",
+            aggregation="MIN(ny_hour)",
+        ),
+        "london_hour": ColumnDefinition(
+            dtype="INTEGER",
+            comment="London hour (0-23, handles GMT/BST DST automatically via DuckDB AT TIME ZONE)",
+            aggregation="MIN(london_hour)",
+        ),
+        "ny_session": ColumnDefinition(
+            dtype="VARCHAR",
+            comment="NY trading session: NY_Session (9-16h), NY_After_Hours (17-20h), NY_Closed",
+            aggregation="MIN(ny_session)",
+        ),
+        "london_session": ColumnDefinition(
+            dtype="VARCHAR",
+            comment="London trading session: London_Session (8-16h), London_Closed",
+            aggregation="MIN(london_session)",
+        ),
+        # NEW COLUMNS (v1.4.0): Holiday tracking columns (dynamically generated via exchange_calendars)
+        "is_us_holiday": ColumnDefinition(
+            dtype="INTEGER",
+            comment="1 if NYSE closed (holiday), 0 otherwise - dynamically checked via exchange_calendars XNYS",
+            aggregation="MAX(is_us_holiday)",
+        ),
+        "is_uk_holiday": ColumnDefinition(
+            dtype="INTEGER",
+            comment="1 if LSE closed (holiday), 0 otherwise - dynamically checked via exchange_calendars XLON",
+            aggregation="MAX(is_uk_holiday)",
+        ),
+        "is_major_holiday": ColumnDefinition(
+            dtype="INTEGER",
+            comment="1 if both NYSE and LSE closed (major forex impact), 0 otherwise - logical AND of US + UK holidays",
+            aggregation="MAX(is_major_holiday)",
+        ),
     }
 
-    # Table-level comment
-    TABLE_COMMENT = (
-        f"Phase7 v{VERSION} 1-minute OHLC bars (BID-only from Raw_Spread, "
-        "dual-variant spreads and tick counts, normalized metrics). "
-        "OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard)."
-    )
+    # Table-level comment (v1.5.0: updated to reflect 10 exchanges)
+    # Will be overwritten after class definition with dynamic content
+    TABLE_COMMENT = "Phase7 v1.5.0 placeholder"
 
     @classmethod
     def get_create_table_sql(cls) -> str:
@@ -164,7 +204,8 @@ class OHLCSchema:
             )
         """
         col_defs = [f"{name} {col.dtype}" for name, col in cls.COLUMNS.items()]
-        return f"CREATE TABLE IF NOT EXISTS ohlc_1m (\n    {',\n    '.join(col_defs)}\n)"
+        col_list = ",\n    ".join(col_defs)
+        return f"CREATE TABLE IF NOT EXISTS ohlc_1m (\n    {col_list}\n)"
 
     @classmethod
     def get_table_comment_sql(cls) -> str:
@@ -207,7 +248,7 @@ class OHLCSchema:
         Generate SELECT clause for resampling queries.
 
         This method creates the column aggregations needed for resampling 1m OHLC
-        data to higher timeframes (5m, 1h, 1d, etc.). All 13 columns are automatically
+        data to higher timeframes (5m, 1h, 1d, etc.). All 17 columns are automatically
         included with their correct aggregation functions.
 
         Args:
@@ -247,10 +288,35 @@ class OHLCSchema:
         Example:
             >>> cols = OHLCSchema.get_required_columns()
             >>> len(cols)
-            13
+            17
             >>> 'Timestamp' in cols
             True
-            >>> 'range_per_spread' in cols
+            >>> 'ny_hour' in cols
             True
         """
         return list(cls.COLUMNS.keys())
+
+
+# Dynamic session column generation (v1.5.0)
+# This code runs at module import time to populate OHLCSchema.COLUMNS with exchange sessions
+# Pattern: is_{exchange_name}_session (e.g., is_nyse_session, is_lse_session, is_xswx_session, ...)
+for exchange_name, exchange_config in EXCHANGES.items():
+    OHLCSchema.COLUMNS[f"is_{exchange_name}_session"] = ColumnDefinition(
+        dtype="INTEGER",
+        comment=(
+            f"1 if {exchange_config.name} trading session (not weekend, not holiday), "
+            f"0 otherwise - dynamically checked via exchange_calendars {exchange_config.code}"
+        ),
+        aggregation=f"MAX(is_{exchange_name}_session)",
+    )
+
+# Update TABLE_COMMENT with dynamic exchange list (v1.5.0)
+exchange_list = ", ".join([cfg.code for cfg in EXCHANGES.values()])
+OHLCSchema.TABLE_COMMENT = (
+    f"Phase7 v{OHLCSchema.VERSION} 1-minute OHLC bars with {len(EXCHANGES)} global exchange sessions. "
+    "OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard). "
+    "Normalized metrics: range_per_spread, range_per_tick, body_per_spread, body_per_tick. "
+    "Timezone/session tracking: NY (EST/EDT), London (GMT/BST) with automatic DST handling. "
+    f"Holiday detection: Official holidays only ({exchange_list}). "
+    f"Trading day flags: Binary flags for {len(EXCHANGES)} exchanges (excludes weekends + holidays via exchange_calendars)."
+)

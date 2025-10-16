@@ -9,11 +9,11 @@ SLO Coverage:
 - SLO-MA-5: Test failures don't leave orphaned temp files: 100% cleanup success
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from exness_data_preprocess.models import CoverageInfo, UpdateResult
-from exness_data_preprocess.processor import ExnessDataProcessor
 
 
 class TestUpdateDataReturnsUpdateResult:
@@ -53,6 +53,7 @@ class TestUpdateDataReturnsUpdateResult:
 
         # Get coverage to create UpdateResult
         import duckdb
+
         conn = duckdb.connect(str(duckdb_path), read_only=True)
         raw_count = conn.execute("SELECT COUNT(*) FROM raw_spread_ticks").fetchone()[0]
         std_count = conn.execute("SELECT COUNT(*) FROM standard_ticks").fetchone()[0]

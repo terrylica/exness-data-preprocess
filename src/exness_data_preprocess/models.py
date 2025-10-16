@@ -206,9 +206,7 @@ class CoverageInfo(BaseModel):
         >>> print(coverage['database_exists'])
     """
 
-    database_exists: bool = Field(
-        description="Whether the DuckDB database file exists on disk"
-    )
+    database_exists: bool = Field(description="Whether the DuckDB database file exists on disk")
     duckdb_path: str = Field(
         description="Absolute path to the database file (string representation, may not exist)"
     )

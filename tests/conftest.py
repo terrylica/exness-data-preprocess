@@ -60,10 +60,7 @@ def processor_with_real_data(temp_dir):
     # Using August 2024 data (more likely to have both variants available)
     try:
         raw_spread_zip = processor.download_exness_zip(
-            pair="EURUSD",
-            variant="Raw_Spread",
-            year=2024,
-            month=8
+            pair="EURUSD", variant="Raw_Spread", year=2024, month=8
         )
         if raw_spread_zip is None or not raw_spread_zip.exists():
             pytest.skip("Could not download Exness Raw_Spread data: download returned None")
@@ -73,7 +70,7 @@ def processor_with_real_data(temp_dir):
             pair="EURUSD",
             variant="",  # Empty string for Standard variant
             year=2024,
-            month=8
+            month=8,
         )
         # Check if download actually succeeded
         if standard_zip is not None and standard_zip.exists():

@@ -7,8 +7,9 @@ SLO Coverage:
 - SLO-CR-4: JSON Schema generation produces valid schemas: 100% schema validity
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 from pydantic import ValidationError
 
 from exness_data_preprocess.models import CoverageInfo, UpdateResult
@@ -329,5 +330,9 @@ class TestCoverageInfo:
 
         # Verify optional fields (earliest_date, latest_date)
         # Optional fields are represented with anyOf: [type, null]
-        assert "anyOf" in schema["properties"]["earliest_date"] or schema["properties"]["earliest_date"].get("type") in ["string", ["string", "null"]]
-        assert "anyOf" in schema["properties"]["latest_date"] or schema["properties"]["latest_date"].get("type") in ["string", ["string", "null"]]
+        assert "anyOf" in schema["properties"]["earliest_date"] or schema["properties"][
+            "earliest_date"
+        ].get("type") in ["string", ["string", "null"]]
+        assert "anyOf" in schema["properties"]["latest_date"] or schema["properties"][
+            "latest_date"
+        ].get("type") in ["string", ["string", "null"]]

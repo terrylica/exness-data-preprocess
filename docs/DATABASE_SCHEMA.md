@@ -1,9 +1,9 @@
-# Database Schema Documentation - exness-data-preprocess v1.2.0
+# Database Schema Documentation - exness-data-preprocess v1.5.0
 
 **Database Type**: DuckDB (embedded OLAP database)
 **Architecture**: Single-file per instrument (unified multi-year storage)
-**Schema Version**: v1.2.0 (Phase7 13-column OHLC with normalized metrics)
-**Last Updated**: 2025-10-14
+**Schema Version**: v1.5.0 (Phase7 30-column OHLC with 10 global exchange sessions)
+**Last Updated**: 2025-10-15
 
 ---
 
@@ -11,7 +11,7 @@
 
 Each currency pair is stored in a **single DuckDB file** containing:
 - **All historical tick data** from both variants (Raw_Spread + Standard)
-- **Pre-computed 1-minute OHLC bars** with Phase7 13-column schema (includes normalized spread metrics)
+- **Pre-computed 1-minute OHLC bars** with Phase7 30-column schema (includes normalized spread metrics and 10 global exchange sessions)
 - **Metadata** tracking coverage and update history
 
 **File Naming Convention**: `{instrument_lowercase}.duckdb`
@@ -235,17 +235,22 @@ ORDER BY hour;
 
 **Generation Method**: Aggregated from `raw_spread_ticks` and `standard_ticks` tables
 
-### Schema (Phase7 13-Column - v1.2.0)
+### Schema (Phase7 30-Column - v1.5.0)
 
 **Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
 
-**Quick Summary**: 13 columns comprising:
+**Quick Summary**: 30 columns comprising:
 - **Core OHLC** (5): Timestamp, Open, High, Low, Close
 - **Dual Spreads** (2): raw_spread_avg, standard_spread_avg
 - **Dual Tick Counts** (2): tick_count_raw_spread, tick_count_standard
-- **Normalized Metrics** (4): range_per_spread, range_per_tick, body_per_spread, body_per_tick
+- **Normalized Metrics** (4): range_per_spread, range_per_tick, body_per_spread, body_per_tick (v1.2.0+)
+- **Timezone/Session Tracking** (4): ny_hour, london_hour, ny_session, london_session (v1.3.0+)
+- **Holiday Tracking** (3): is_us_holiday, is_uk_holiday, is_major_holiday (v1.4.0+)
+- **Global Exchange Sessions** (10): is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session covering 24-hour forex trading (v1.5.0)
 
-**Schema Version**: v1.2.0
+**Schema Version**: v1.5.0
+
+**Architecture**: Exchange Registry Pattern (v1.5.0) - Session columns dynamically generated from centralized EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
 
 ### Indexes
 
@@ -266,15 +271,16 @@ ORDER BY hour;
 
 ```sql
 COMMENT ON TABLE ohlc_1m IS
-'Phase7 v1.2.0 1-minute OHLC bars (BID-only from Raw_Spread, dual-variant spreads and tick counts, normalized metrics).
+'Phase7 v1.5.0 1-minute OHLC bars with 10 global exchange sessions (BID-only from Raw_Spread, dual-variant spreads and tick counts, normalized metrics).
  OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard).';
 
--- All 13 column comments (see schema.py for complete definitions)
+-- All 30 column comments (see schema.py for complete definitions)
 -- Examples:
 COMMENT ON COLUMN ohlc_1m.Timestamp IS 'Minute-aligned bar timestamp';
 COMMENT ON COLUMN ohlc_1m.Open IS 'Opening price (first Raw_Spread Bid)';
 COMMENT ON COLUMN ohlc_1m.range_per_spread IS '(High-Low)/standard_spread_avg - Range normalized by spread (NULL if no Standard ticks)';
--- ... (see schema.py OHLCSchema.COLUMNS for all 13 column comments)
+COMMENT ON COLUMN ohlc_1m.is_nyse_session IS '1 if New York Stock Exchange trading session (not weekend, not holiday), 0 otherwise';
+-- ... (see schema.py OHLCSchema.COLUMNS for all 30 column comments)
 ```
 
 **Retrieve Comments**:
@@ -326,7 +332,7 @@ GROUP BY DATE_TRUNC('minute', r.Timestamp)
 ORDER BY Timestamp;
 ```
 
-###  Normalized Spread Metrics (v1.2.0+)
+### Normalized Spread Metrics (v1.2.0+)
 
 **Purpose**: Normalize OHLC movements by market activity (spread and tick count) to enable comparison across different market conditions.
 
@@ -360,40 +366,89 @@ ORDER BY Timestamp;
 - Filter for significant directional moves
 - Detect ranging vs trending market conditions
 
+### Global Exchange Sessions (v1.5.0)
+
+**Purpose**: Binary flags indicating trading session status for 10 major global exchanges covering 24-hour forex trading.
+
+**Exchanges Covered**:
+- **North America**: XNYS (NYSE - USD), XTSE (TSX - CAD)
+- **Europe**: XLON (LSE - GBP), XSWX (SIX Swiss - CHF), XFRA (Frankfurt - EUR)
+- **Asia-Pacific**: XNZE (NZE - NZD), XTKS (TSE - JPY), XASX (ASX - AUD), XHKG (HKEX - HKD), XSES (SGX - SGD)
+
+**Calculation** (via exchange_calendars library):
+- **1**: Exchange is open (trading session) - excludes weekends and official holidays
+- **0**: Exchange is closed (weekend or holiday)
+
+**Architecture**: Exchange Registry Pattern
+- Session columns dynamically generated from EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
+- Adding new exchange requires only 1-line change to registry
+- Automatic DST handling via IANA timezone database
+
+**Use Cases**:
+- Filter bars during specific regional trading sessions (e.g., Asian session only)
+- Identify overlapping sessions (e.g., London-New York overlap)
+- Currency-specific filtering (e.g., AUD pairs during XASX sessions)
+- Holiday impact analysis (e.g., major holidays when both XNYS and XLON closed)
+
+**Example Queries**:
+```sql
+-- Filter for Asian session hours (XTKS, XASX, XHKG, XSES active)
+SELECT * FROM ohlc_1m
+WHERE Timestamp >= '2024-09-01'
+  AND (is_xtks_session = 1 OR is_xasx_session = 1 OR is_xhkg_session = 1 OR is_xses_session = 1);
+
+-- Find EUR/USD bars during London-New York overlap
+SELECT * FROM ohlc_1m
+WHERE Timestamp >= '2024-09-01'
+  AND is_lse_session = 1
+  AND is_nyse_session = 1;
+
+-- Identify major holidays (both XNYS and XLON closed)
+SELECT DATE(Timestamp) as date, COUNT(*) as bars
+FROM ohlc_1m
+WHERE Timestamp >= '2024-01-01'
+  AND is_nyse_session = 0
+  AND is_lse_session = 0
+GROUP BY DATE(Timestamp);
+```
+
 ### Characteristics
 
 - **Timeframe**: 1-minute bars (minute-aligned)
 - **OHLC Methodology**: BID-only from Raw_Spread variant
 - **Dual Spreads**: Both Raw_Spread and Standard spreads tracked
+- **Exchange Sessions**: 10 global exchanges covering 24-hour forex trading (v1.5.0)
+- **Holiday Detection**: Official holidays via exchange_calendars library (v1.4.0+)
 - **Monthly Volume**: ~30K - 32K bars per month
 - **Storage Size**: ~3 MB per year
 
 ### Example Data
 
 ```
-Timestamp            | Open    | High    | Low     | Close   | raw_spread_avg | standard_spread_avg | tick_count_raw_spread | tick_count_standard | range_per_spread | range_per_tick | body_per_spread | body_per_tick
----------------------|---------|---------|---------|---------|----------------|---------------------|-----------------------|---------------------|------------------|----------------|-----------------|---------------
-2024-09-01 14:05:00  | 1.10500 | 1.10520 | 1.10495 | 1.10515 | 0.00001        | 0.00004             | 25                    | 28                  | 6.25             | 0.00089        | 3.75            | 0.00054
-2024-09-01 14:06:00  | 1.10515 | 1.10525 | 1.10510 | 1.10520 | 0.00001        | 0.00004             | 23                    | 26                  | 3.75             | 0.00058        | 1.25            | 0.00019
-2024-09-01 14:07:00  | 1.10520 | 1.10530 | 1.10515 | 1.10525 | 0.00001        | 0.00004             | 27                    | 30                  | 3.75             | 0.00050        | 1.25            | 0.00017
+Timestamp            | Open    | High    | Low     | Close   | raw_spread_avg | standard_spread_avg | tick_count_raw_spread | tick_count_standard | range_per_spread | range_per_tick | body_per_spread | body_per_tick | ny_hour | london_hour | ny_session | london_session | is_us_holiday | is_uk_holiday | is_major_holiday | is_nyse_session | is_lse_session | is_xswx_session | is_xfra_session | is_xtse_session | is_xnze_session | is_xtks_session | is_xasx_session | is_xhkg_session | is_xses_session
+---------------------|---------|---------|---------|---------|----------------|---------------------|-----------------------|---------------------|------------------|----------------|-----------------|---------------|---------|-------------|------------|---------------|---------------|---------------|------------------|-----------------|---------------|----------------|----------------|----------------|----------------|----------------|----------------|----------------|----------------
+2024-09-01 14:05:00  | 1.10500 | 1.10520 | 1.10495 | 1.10515 | 0.00001        | 0.00004             | 25                    | 28                  | 6.25             | 0.00089        | 3.75            | 0.00054       | 10      | 15          | NY_Session | London_Session | 0             | 0             | 0                | 1               | 1              | 1               | 1               | 1               | 0               | 0               | 0               | 1               | 1
+2024-09-01 14:06:00  | 1.10515 | 1.10525 | 1.10510 | 1.10520 | 0.00001        | 0.00004             | 23                    | 26                  | 3.75             | 0.00058        | 1.25            | 0.00019       | 10      | 15          | NY_Session | London_Session | 0             | 0             | 0                | 1               | 1              | 1               | 1               | 1               | 0               | 0               | 0               | 1               | 1
+2024-09-01 14:07:00  | 1.10520 | 1.10530 | 1.10515 | 1.10525 | 0.00001        | 0.00004             | 27                    | 30                  | 3.75             | 0.00050        | 1.25            | 0.00017       | 10      | 15          | NY_Session | London_Session | 0             | 0             | 0                | 1               | 1              | 1               | 1               | 1               | 0               | 0               | 0               | 1               | 1
 ```
 
 **Notes**:
-- All 13 columns shown including normalized metrics (v1.2.0+)
+- All 30 columns shown including normalized metrics (v1.2.0+), timezone/session tracking (v1.3.0+), holiday flags (v1.4.0+), and 10 global exchange sessions (v1.5.0)
 - `range_per_spread = (High-Low) / standard_spread_avg` (e.g., 0.00025 / 0.00004 = 6.25 spreads)
 - `range_per_tick = (High-Low) / tick_count_standard` (e.g., 0.00025 / 28 = 0.00089)
 - `body_per_spread = abs(Close-Open) / standard_spread_avg` (e.g., 0.00015 / 0.00004 = 3.75 spreads)
 - `body_per_tick = abs(Close-Open) / tick_count_standard` (e.g., 0.00015 / 28 = 0.00054)
+- Example timestamp (14:05 UTC): NY_Session (10:05 EDT), London_Session (15:05 BST), both XNYS and XLON open (is_nyse_session=1, is_lse_session=1)
 
 ### Query Examples
 
 ```sql
--- Get 1-minute bars for September 2024 (all 13 columns)
+-- Get 1-minute bars for September 2024 (all 30 columns)
 SELECT * FROM ohlc_1m
 WHERE Timestamp >= '2024-09-01' AND Timestamp < '2024-10-01'
 ORDER BY Timestamp;
 
--- Resample to 1-hour bars (all 13 columns)
+-- Resample to 1-hour bars (all 30 columns)
 SELECT
     DATE_TRUNC('hour', Timestamp) as hour,
     FIRST(Open ORDER BY Timestamp) as Open,
@@ -407,7 +462,24 @@ SELECT
     AVG(range_per_spread) as range_per_spread,
     AVG(range_per_tick) as range_per_tick,
     AVG(body_per_spread) as body_per_spread,
-    AVG(body_per_tick) as body_per_tick
+    AVG(body_per_tick) as body_per_tick,
+    MIN(ny_hour) as ny_hour,
+    MIN(london_hour) as london_hour,
+    MIN(ny_session) as ny_session,
+    MIN(london_session) as london_session,
+    MAX(is_us_holiday) as is_us_holiday,
+    MAX(is_uk_holiday) as is_uk_holiday,
+    MAX(is_major_holiday) as is_major_holiday,
+    MAX(is_nyse_session) as is_nyse_session,
+    MAX(is_lse_session) as is_lse_session,
+    MAX(is_xswx_session) as is_xswx_session,
+    MAX(is_xfra_session) as is_xfra_session,
+    MAX(is_xtse_session) as is_xtse_session,
+    MAX(is_xnze_session) as is_xnze_session,
+    MAX(is_xtks_session) as is_xtks_session,
+    MAX(is_xasx_session) as is_xasx_session,
+    MAX(is_xhkg_session) as is_xhkg_session,
+    MAX(is_xses_session) as is_xses_session
 FROM ohlc_1m
 WHERE Timestamp >= '2024-09-01'
 GROUP BY hour
@@ -781,7 +853,31 @@ print(f"Months added: {result['months_added']}")
 
 ## Version History
 
-### v1.2.0 (2025-10-14) - Current
+### v1.5.0 (2025-10-15) - Current
+
+- **Added**: 8 exchange session columns (replaced is_nyse_session, is_lse_session with 10 global exchanges)
+- **Architecture**: Exchange Registry Pattern - session columns dynamically generated from EXCHANGES dict
+- **OHLC Schema**: 30 columns (Phase7 with 10 global exchange sessions)
+- **Exchanges**: XNYS (NYSE), XLON (LSE), XSWX (SIX Swiss), XFRA (Frankfurt), XTSE (TSX), XNZE (NZE), XTKS (TSE), XASX (ASX), XHKG (HKEX), XSES (SGX)
+- **Coverage**: 24-hour forex trading with North America, Europe, and Asia-Pacific exchanges
+- **Breaking Change**: None - is_nyse_session and is_lse_session retained for backward compatibility (now part of 10-exchange set)
+
+### v1.4.0 (2025-10-14)
+
+- **Added**: 3 holiday tracking columns (is_us_holiday, is_uk_holiday, is_major_holiday)
+- **Added**: 2 session flags (is_nyse_session, is_lse_session)
+- **OHLC Schema**: 22 columns (Phase7 with holiday tracking)
+- **Architecture**: Dynamic holiday detection via exchange_calendars library
+- **Breaking Change**: None - additive only
+
+### v1.3.0 (2025-10-14)
+
+- **Added**: 4 timezone/session tracking columns (ny_hour, london_hour, ny_session, london_session)
+- **OHLC Schema**: 17 columns (Phase7 with timezone tracking)
+- **Architecture**: Automatic DST handling via DuckDB AT TIME ZONE
+- **Breaking Change**: None - additive only
+
+### v1.2.0 (2025-10-14)
 
 - **Added**: 4 normalized spread metrics to OHLC schema (range_per_spread, range_per_tick, body_per_spread, body_per_tick)
 - **Refactored**: Centralized schema definition in `schema.py` module
@@ -822,6 +918,6 @@ print(f"Months added: {result['months_added']}")
 
 ---
 
-**Last Updated**: 2025-10-14
+**Last Updated**: 2025-10-15
 **Maintainer**: Terry Li <terry@eonlabs.com>
-**Schema Version**: v1.2.0 (Phase7 13-column OHLC with normalized metrics)
+**Schema Version**: v1.5.0 (Phase7 30-column OHLC with 10 global exchange sessions)

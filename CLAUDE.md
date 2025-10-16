@@ -68,33 +68,90 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 
 ## Codebase Architecture
 
-### Module Structure
+### Module Structure (v1.3.0 - Facade Pattern)
 
-**Core Components**:
+**Architecture**: Thin facade orchestrator with 7 focused modules (414 lines processor, 1,146 lines extracted)
 
-1. **`processor.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`) - Main `ExnessDataProcessor` class
-   - **Lines 29-899**: Complete processor implementation
-   - **Lines 75-113**: `download_exness_zip()` - Downloads monthly ZIP files from ticks.ex2archive.com
-   - **Lines 115-232**: `_get_or_create_db()` - Database initialization with schema and COMMENT ON statements
-   - **Lines 234-245**: `_load_ticks_from_zip()` - CSV parsing from ZIP files
-   - **Lines 247-275**: `_append_ticks_to_db()` - Tick insertion with PRIMARY KEY duplicate prevention
-   - **Lines 277-377**: `_discover_missing_months()` - Gap detection for incremental updates
-   - **Lines 379-516**: `update_data()` - Main entry point for downloading and updating data
-   - **Lines 518-549**: `_regenerate_ohlc()` - Phase7 13-column OHLC (v1.2.0) generation with LEFT JOIN
-   - **Lines 551-603**: `query_ticks()` - Tick queries with date range and SQL filters
-   - **Lines 605-706**: `query_ohlc()` - OHLC queries with on-demand resampling (1m/5m/15m/1h/4h/1d)
-   - **Lines 708-821**: `add_schema_comments()` / `add_schema_comments_all()` - Retrofit self-documentation
-   - **Lines 823-899**: `get_data_coverage()` - Coverage statistics and metadata
+**Core Facade**:
 
-2. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - Simple wrapper functions
+1. **`processor.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`) - Thin orchestrator facade (414 lines)
+   - **Responsibility**: Coordinate workflow, delegate to specialized modules
+   - **Pattern**: Facade pattern - all public methods delegate to modules
+   - **Lines 76-110**: `__init__()` - Initialize 7 module dependencies
+   - **Lines 111-132**: `download_exness_zip()` - Delegates to downloader module
+   - **Lines 134-145**: `_get_or_create_db()` - Delegates to database_manager module
+   - **Lines 147-150**: `_load_ticks_from_zip()` - Delegates to tick_loader module
+   - **Lines 152-162**: `_append_ticks_to_db()` - Delegates to database_manager module
+   - **Lines 164-176**: `_discover_missing_months()` - Delegates to gap_detector module
+   - **Lines 178-315**: `update_data()` - Main workflow orchestrator
+   - **Lines 317-326**: `_regenerate_ohlc()` - Delegates to ohlc_generator module
+   - **Lines 328-357**: `query_ticks()` - Delegates to query_engine module
+   - **Lines 359-386**: `query_ohlc()` - Delegates to query_engine module
+   - **Lines 388-414**: `get_data_coverage()` - Delegates to query_engine module
+
+**Specialized Modules**:
+
+2. **`downloader.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/downloader.py`) - HTTP download operations (89 lines)
+   - **Responsibility**: Download Exness ZIP files from ticks.ex2archive.com
+   - **SLOs**: Availability (raise on failure), Correctness (URL patterns), Observability (logging), Maintainability (httpx library)
+   - **Class**: `ExnessDownloader`
+   - **Methods**: `download_zip(year, month, pair, variant)`
+
+3. **`tick_loader.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/tick_loader.py`) - CSV parsing (67 lines)
+   - **Responsibility**: Load tick data from ZIP files into pandas DataFrames
+   - **SLOs**: Availability (raise on failure), Correctness (timestamp parsing), Observability (logging), Maintainability (pandas library)
+   - **Class**: `TickLoader`
+   - **Methods**: `load_from_zip(zip_path)` (static method)
+
+4. **`database_manager.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/database_manager.py`) - Database operations (213 lines)
+   - **Responsibility**: Database initialization, schema creation, tick insertion with PRIMARY KEY duplicate prevention
+   - **SLOs**: Availability (raise on failure), Correctness (schema integrity), Observability (DuckDB logging), Maintainability (DuckDB library)
+   - **Class**: `DatabaseManager`
+   - **Methods**: `get_or_create_db(pair)`, `append_ticks(duckdb_path, df, table_name)`
+
+5. **`session_detector.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py`) - Holiday and session detection (121 lines)
+   - **Responsibility**: Detect holidays (US, UK, major) and trading sessions for 10 global exchanges using exchange_calendars
+   - **SLOs**: Availability (raise on failure), Correctness (official calendars), Observability (logging), Maintainability (exchange_calendars library)
+   - **Class**: `SessionDetector`
+   - **Methods**: `detect_sessions_and_holidays(dates_df)`
+
+6. **`gap_detector.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/gap_detector.py`) - Incremental update logic (163 lines)
+   - **Responsibility**: Discover missing months for incremental database updates
+   - **SLOs**: Availability (raise on failure), Correctness (gap detection), Observability (logging), Maintainability (DuckDB library)
+   - **Class**: `GapDetector`
+   - **Methods**: `discover_missing_months(pair, start_date)`
+
+7. **`ohlc_generator.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py`) - OHLC generation (210 lines)
+   - **Responsibility**: Generate Phase7 30-column OHLC from dual-variant tick data with LEFT JOIN, normalized metrics, and exchange session detection
+   - **SLOs**: Availability (raise on failure), Correctness (Phase7 schema), Observability (logging), Maintainability (DuckDB + exchange_calendars)
+   - **Class**: `OHLCGenerator`
+   - **Methods**: `regenerate_ohlc(duckdb_path)`
+
+8. **`query_engine.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/query_engine.py`) - Query operations (283 lines)
+   - **Responsibility**: Query tick and OHLC data with date filtering, SQL filters, and on-demand resampling (1m/5m/15m/1h/4h/1d)
+   - **SLOs**: Availability (raise on failure), Correctness (SQL queries), Observability (DuckDB logging), Maintainability (DuckDB library)
+   - **Class**: `QueryEngine`
+   - **Methods**: `query_ticks()`, `query_ohlc()`, `get_data_coverage()`
+
+**Legacy Components**:
+
+9. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - Simple wrapper functions
    - Convenience functions wrapping `ExnessDataProcessor` methods
    - Legacy v1.0.0 API compatibility layer (to be deprecated)
 
-3. **`cli.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/cli.py`) - Command-line interface
-   - Entry point: `exness-preprocess` command
-   - Commands for download, query, coverage operations
+10. **`cli.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/cli.py`) - Command-line interface
+    - Entry point: `exness-preprocess` command
+    - Commands for download, query, coverage operations
 
 ### Key Design Patterns
+
+**Facade Pattern** (v1.3.0):
+- **processor.py** is a thin orchestrator (414 lines) coordinating 7 specialized modules
+- All public methods delegate to modules (no business logic in processor)
+- **Separation of concerns**: Each module has single responsibility
+- **SLO-based design**: All modules define SLOs (Availability, Correctness, Observability, Maintainability)
+- **Zero regressions**: All 48 tests pass after 7-module extraction (53% line reduction)
+- **Off-the-shelf libraries**: httpx, pandas, DuckDB, exchange_calendars (no custom implementations)
 
 **Unified Single-File Architecture** (v2.0.0):
 - ONE DuckDB file per instrument (e.g., `eurusd.duckdb`) containing all historical data
@@ -102,11 +159,14 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 - Incremental updates with automatic gap detection
 - PRIMARY KEY constraints prevent duplicates during updates
 
-**Phase7 13-Column OHLC Schema** (v1.2.0):
+**Phase7 30-Column OHLC Schema** (v1.5.0):
 - BID-only OHLC from Raw_Spread variant
 - Dual spreads: `raw_spread_avg` and `standard_spread_avg`
 - Dual tick counts: `tick_count_raw_spread` and `tick_count_standard`
 - Normalized metrics: `range_per_spread`, `range_per_tick`, `body_per_spread`, `body_per_tick`
+- Timezone/session tracking: `ny_hour`, `london_hour`, `ny_session`, `london_session` (v1.3.0+)
+- Holiday tracking: `is_us_holiday`, `is_uk_holiday`, `is_major_holiday` (v1.4.0+)
+- Global exchange sessions: 10 binary flags (`is_nyse_session`, `is_lse_session`, `is_xswx_session`, `is_xfra_session`, `is_xtse_session`, `is_xnze_session`, `is_xtks_session`, `is_xasx_session`, `is_xhkg_session`, `is_xses_session`) covering 24-hour forex trading (v1.5.0)
 - Generated via LEFT JOIN between Raw_Spread and Standard variants
 
 **Self-Documentation**:
@@ -114,14 +174,16 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 - Queryable via `duckdb_tables()` and `duckdb_columns()` system functions
 - Enables BI tools and IDEs to display inline help
 
-**Data Flow**:
+**Data Flow** (Module-Based Architecture v1.3.0):
 ```
 Exness Repository (monthly ZIPs)
-  → Automatic Gap Detection
-  → Download Missing Months (Raw_Spread + Standard)
-  → DuckDB Storage (PRIMARY KEY prevents duplicates)
-  → Phase7 OHLC Generation
-  → Query Interface (date ranges, SQL filters, resampling)
+  → gap_detector.py (discover missing months)
+  → downloader.py (download Raw_Spread + Standard)
+  → tick_loader.py (parse CSV from ZIP)
+  → database_manager.py (append to DuckDB, PRIMARY KEY prevents duplicates)
+  → ohlc_generator.py (Phase7 30-column OHLC with LEFT JOIN)
+  → session_detector.py (holidays + 10 exchange sessions)
+  → query_engine.py (tick/OHLC queries, date filters, resampling)
 ```
 
 ### Database Schema (per instrument)
@@ -139,8 +201,8 @@ Each `.duckdb` file contains:
    - Reference data for spread comparison
 
 3. **`ohlc_1m`** table:
-   - **Schema**: Phase7 13-column (v1.2.0) - See [`schema.py`](src/exness_data_preprocess/schema.py)
-   - **Details**: BID-only OHLC with dual-variant spreads, tick counts, and normalized metrics
+   - **Schema**: Phase7 30-column (v1.5.0) - See [`schema.py`](src/exness_data_preprocess/schema.py)
+   - **Details**: BID-only OHLC with dual-variant spreads, tick counts, normalized metrics, and 10 global exchange sessions
    - **Reference**: [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
 
 4. **`metadata`** table:
@@ -180,7 +242,7 @@ Each `.duckdb` file contains:
 - ✅ **Dual-variant storage**: Raw_Spread + Standard in same database
 - ✅ **PRIMARY KEY constraints**: Prevents duplicates during incremental updates
 - ✅ **Automatic gap detection**: Downloads only missing months
-- ✅ **Phase7 13-column OHLC (v1.2.0)**: Dual spreads + dual tick counts
+- ✅ **Phase7 30-column OHLC (v1.5.0)**: Dual spreads + dual tick counts + 10 global exchange sessions
 - ✅ **Date range queries**: Sub-15ms query performance
 - ✅ **On-demand resampling**: Any timeframe (5m, 1h, 1d) in <15ms
 
@@ -207,21 +269,29 @@ Each `.duckdb` file contains:
 - `/tmp/exness-duckdb-test/test_refactored_processor.py` - Validation test
 - `/tmp/exness-duckdb-test/test_queries_only.py` - Query validation test
 
-### Phase7 13-Column OHLC Schema v1.2.0 (✅ Implemented)
+### Phase7 30-Column OHLC Schema v1.5.0 (✅ Implemented)
 
-**Decision**: Dual-variant BID-only OHLC with 13 columns capturing both Raw_Spread and Standard characteristics plus normalized metrics
+**Decision**: Dual-variant BID-only OHLC with 30 columns capturing Raw_Spread and Standard characteristics, normalized metrics, and 10 global exchange sessions
 
-**Schema**: Phase7 13-column (v1.2.0)
+**Schema**: Phase7 30-column (v1.5.0)
 - **Definition**: See [`schema.py`](src/exness_data_preprocess/schema.py)
 - **Documentation**: See [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
+- **Architecture**: Exchange Registry Pattern for dynamic session column generation
 
 **Key Features**:
 - ✅ **BID-only OHLC**: Uses Raw_Spread Bid prices (execution prices)
 - ✅ **Dual spreads**: Tracks both Raw_Spread (zero-spreads) and Standard (market spreads)
 - ✅ **Dual tick counts**: Records tick counts from both variants
+- ✅ **Normalized metrics** (v1.2.0): range_per_spread, range_per_tick, body_per_spread, body_per_tick
+- ✅ **Timezone/session tracking** (v1.3.0): ny_hour, london_hour, ny_session, london_session with automatic DST handling
+- ✅ **Holiday tracking** (v1.4.0): is_us_holiday, is_uk_holiday, is_major_holiday via exchange_calendars
+- ✅ **10 Global Exchange Sessions** (v1.5.0): is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session covering 24-hour forex trading
 - ✅ **LEFT JOIN methodology**: Raw_Spread primary, Standard reference
 
-**Implementation**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 518-549)
+**Implementation**:
+- **OHLC Generation**: [`src/exness_data_preprocess/ohlc_generator.py`](src/exness_data_preprocess/ohlc_generator.py) (210 lines)
+- **Session Detection**: [`src/exness_data_preprocess/session_detector.py`](src/exness_data_preprocess/session_detector.py) (121 lines)
+- **Orchestration**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 317-326, delegation)
 
 **Specification**: [`docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
 
@@ -256,7 +326,7 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 - `add_schema_comments(pair)` - Add comments to single database
 - `add_schema_comments_all()` - Batch-update all databases
 
-**Implementation**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 138-229, 708-821)
+**Implementation**: [`src/exness_data_preprocess/database_manager.py`](src/exness_data_preprocess/database_manager.py) (schema comments in get_or_create_db method)
 
 **Usage Example**: [`examples/add_schema_comments.py`](examples/add_schema_comments.py)
 
@@ -314,7 +384,7 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 - ✅ **Dual-variant storage** - Raw_Spread + Standard in same database
 - ✅ **PRIMARY KEY constraints** - Prevents duplicates during incremental updates
 - ✅ **Automatic gap detection** - Downloads only missing months
-- ✅ **Phase7 13-column OHLC (v1.2.0)** - Dual spreads + dual tick counts
+- ✅ **Phase7 30-column OHLC (v1.5.0)** - Dual spreads + dual tick counts + 10 global exchange sessions
 - ✅ **Date range queries** - Sub-15ms query performance
 - ✅ **On-demand resampling** - Any timeframe in <15ms
 - ✅ **SQL filter support** - Direct SQL WHERE clauses on ticks
@@ -359,7 +429,7 @@ SELECT table_name, column_name, data_type, comment FROM duckdb_columns();
 eurusd.duckdb:
 ├── raw_spread_ticks   # Timestamp (PK), Bid, Ask
 ├── standard_ticks     # Timestamp (PK), Bid, Ask
-├── ohlc_1m            # Phase7 13-column schema (v1.2.0)
+├── ohlc_1m            # Phase7 30-column schema (v1.5.0)
 └── metadata           # Coverage tracking
 ```
 
@@ -399,6 +469,7 @@ eurusd.duckdb:
 
 ---
 
-**Version**: 2.0.0
-**Last Updated**: 2025-10-12
+**Version**: 2.0.0 (Architecture) + 1.3.0 (Implementation)
+**Last Updated**: 2025-10-15
 **Architecture**: Unified Single-File DuckDB Storage with Incremental Updates
+**Implementation**: Facade Pattern with 7 Specialized Modules (Phase 1-4 Complete)

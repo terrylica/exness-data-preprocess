@@ -36,6 +36,34 @@
 
 ---
 
+### Implementation Architecture v1.3.0
+
+**Refactoring Plans**:
+- [`plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md`](plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md) - Complete refactoring progress
+- [`plans/REFACTORING_CHECKLIST.md`](plans/REFACTORING_CHECKLIST.md) - Quick reference checklist
+
+**Pattern**: Facade with 7 specialized modules (414 lines processor, 1,146 lines extracted)
+
+**Key Modules**:
+- **processor.py** (414 lines) - Thin orchestrator facade, delegates to modules
+- **downloader.py** (89 lines) - HTTP download operations (httpx)
+- **tick_loader.py** (67 lines) - CSV parsing (pandas)
+- **database_manager.py** (213 lines) - Database operations (DuckDB)
+- **session_detector.py** (121 lines) - Holiday and session detection (exchange_calendars)
+- **gap_detector.py** (163 lines) - Incremental update logic
+- **ohlc_generator.py** (210 lines) - Phase7 30-column OHLC generation
+- **query_engine.py** (283 lines) - Query operations with on-demand resampling
+
+**Design Principles**:
+- ✅ **Separation of concerns**: Each module has single responsibility
+- ✅ **SLO-based design**: All modules define Availability, Correctness, Observability, Maintainability
+- ✅ **Off-the-shelf libraries**: httpx, pandas, DuckDB, exchange_calendars (no custom implementations)
+- ✅ **Zero regressions**: All 48 tests pass after 7-module extraction (53% line reduction)
+
+**Status**: Phase 4 Complete (2025-10-15)
+
+---
+
 ## Data Sources
 
 ### Exness Tick Data
@@ -98,9 +126,10 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 - [`04-discoveries-and-plan-evolution.md`](research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md) - Version-tracked findings
 - [`data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) - OHLC specification
 
-**Phase7 Schema** (13 columns, v1.2.0):
+**Phase7 Schema** (30 columns, v1.5.0):
 - **Definition**: [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py)
 - **Comprehensive Guide**: [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)
+- **Architecture**: Exchange Registry Pattern with 10 global exchange sessions
 
 ---
 
@@ -140,7 +169,7 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 - ✅ Irregular ticks (1µs to 130.61s intervals)
 - ✅ Regular OHLC (0 unaligned bars)
-- ✅ Phase7 13-column (v1.2.0) schema
+- ✅ Phase7 30-column (v1.5.0) schema with 10 global exchange sessions
 - ✅ Query performance (<15ms all timeframes)
 
 **Conclusion**: Unified DuckDB architecture is production-ready
@@ -189,5 +218,5 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ---
 
-**Last Updated**: 2025-10-12
+**Last Updated**: 2025-10-15
 **Maintainer**: Terry Li <terry@eonlabs.com>
