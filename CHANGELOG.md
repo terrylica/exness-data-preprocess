@@ -10,10 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **schema**: Centralize OHLC schema in schema.py module - Create schema.py with OHLCSchema class as single source of truth - Reduce coupling from 42 to 5 update locations (88% reduction) - Replace hardcoded column lists in docs with pointers to schema.py - Delete obsolete PYDANTIC_TEST_STRATEGY.md (tests implemented) - Delete add_schema_comments.py (functionality merged into processor) - Update tests to use OHLCSchema.get_required_columns() - Achieve maximum DRY: future column additions require 1-2 file updates BREAKING CHANGE: None (additive refactoring, no API changes)
 
+- Extract 7 specialized modules from processor.py (Phase 1-5) Refactor processor.py (885 → 414 lines, 53% reduction) using facade pattern with 7 focused modules implementing separation of concerns. Modules Created: - downloader.py (89 lines): HTTP download operations - tick_loader.py (67 lines): CSV parsing - database_manager.py (213 lines): Database operations - session_detector.py (121 lines): Holiday/session detection - gap_detector.py (163 lines): Incremental update logic - ohlc_generator.py (210 lines): Phase7 OHLC generation - query_engine.py (283 lines): Query operations Design Principles: - Facade pattern: processor.py delegates to specialized modules - SLO-based: All modules define Availability, Correctness, Observability, Maintainability - Off-the-shelf: httpx, pandas, DuckDB, exchange_calendars (no custom implementations) - Zero regressions: All 48 tests pass, all ruff checks pass Documentation: - Updated CLAUDE.md with module structure and facade pattern - Updated docs/README.md with implementation architecture v1.3.0 - Added planning documents (REFACTORING_CHECKLIST.md, PHASE7_v1.6.0_REFACTORING_PROGRESS.md) Version: 1.3.0 (Implementation) Validation: 48 tests pass, ruff checks pass, backward compatible
+
 
 ### ✨ Features
 
 - Implement pydantic v2 models with dual-variant e2e testing - Add Pydantic v2 models (UpdateResult, CoverageInfo) for type-safe API - Update processor to use Pydantic types (PairType, TimeframeType, VariantType) - Remove deprecated api.py module (broken functionality) - Implement comprehensive test suite (48 tests, 100% passing): * test_models.py - Pydantic model validation (13 tests) * test_types.py - Type safety and helpers (15 tests) * test_processor_pydantic.py - Integration tests (6 tests) * test_functional_regression.py - v2.0.0 regression tests (10 tests) - Fix Standard variant downloads (variant="" not "Standard") - Add true end-to-end testing with real Exness downloads - Test data: EURUSD August 2024 (815K Raw_Spread + 877K Standard ticks) - Update documentation and add refactoring status tracking - Coverage: models.py 100%, __init__.py 100%, processor.py 45% BREAKING CHANGE: api.py removed (use ExnessDataProcessor directly)
+
+
+### 📚 Documentation
+
+- Update all schema references from 9-column to 13-column (v1.2.0) Update outdated "9-column" or "Phase7 9 columns" references to "13-column (v1.2.0)" across all documentation files to reflect the current schema version with normalized spread metrics. Files updated: - GITHUB_PYPI_SETUP.md - Release notes reference - PYDANTIC_REFACTORING_PLAN.md - API documentation and examples (4 locations) - docs/DATABASE_SCHEMA.md - Version history (2 locations) - docs/README.md - Validation results - docs/UNIFIED_DUCKDB_PLAN_v2.md - Table descriptions and return types (2 locations) - tests/README.md - Test descriptions (2 locations) All outdated schema references now consistently reference the Phase7 13-column (v1.2.0) schema with normalized metrics (range_per_spread, range_per_tick, body_per_spread, body_per_tick). CHANGELOG.md and research/archive files intentionally preserved for historical accuracy.
 
 
 ### 🔧 Continuous Integration
@@ -26,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **release**: Bump version 0.1.0 → 0.2.0 [skip ci]
 
 - **release**: Bump version 0.2.0 → 0.3.0 [skip ci]
+
+- **release**: Bump version 0.3.0 → 0.3.1 [skip ci]
 
 
 ### ✨ Features
