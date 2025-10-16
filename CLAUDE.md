@@ -70,11 +70,11 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 
 ### Module Structure (v1.3.0 - Facade Pattern)
 
-**Architecture**: Thin facade orchestrator with 7 focused modules (412 lines processor, 1,124 lines extracted)
+**Architecture**: Thin facade orchestrator with 7 focused modules
 
 **Core Facade**:
 
-1. **`processor.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`) - Thin orchestrator facade (412 lines)
+1. **`processor.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`) - Thin orchestrator facade
    - **Responsibility**: Coordinate workflow, delegate to specialized modules
    - **Pattern**: Facade pattern - all public methods delegate to modules
    - **Lines 76-110**: `__init__()` - Initialize 7 module dependencies
@@ -91,43 +91,43 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 
 **Specialized Modules**:
 
-2. **`downloader.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/downloader.py`) - HTTP download operations (82 lines)
+2. **`downloader.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/downloader.py`) - HTTP download operations
    - **Responsibility**: Download Exness ZIP files from ticks.ex2archive.com
    - **SLOs**: Availability (raise on failure), Correctness (URL patterns), Observability (logging), Maintainability (httpx library)
    - **Class**: `ExnessDownloader`
    - **Methods**: `download_zip(year, month, pair, variant)`
 
-3. **`tick_loader.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/tick_loader.py`) - CSV parsing (67 lines)
+3. **`tick_loader.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/tick_loader.py`) - CSV parsing
    - **Responsibility**: Load tick data from ZIP files into pandas DataFrames
    - **SLOs**: Availability (raise on failure), Correctness (timestamp parsing), Observability (logging), Maintainability (pandas library)
    - **Class**: `TickLoader`
    - **Methods**: `load_from_zip(zip_path)` (static method)
 
-4. **`database_manager.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/database_manager.py`) - Database operations (208 lines)
+4. **`database_manager.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/database_manager.py`) - Database operations
    - **Responsibility**: Database initialization, schema creation, tick insertion with PRIMARY KEY duplicate prevention
    - **SLOs**: Availability (raise on failure), Correctness (schema integrity), Observability (DuckDB logging), Maintainability (DuckDB library)
    - **Class**: `DatabaseManager`
    - **Methods**: `get_or_create_db(pair)`, `append_ticks(duckdb_path, df, table_name)`
 
-5. **`session_detector.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py`) - Holiday and session detection (121 lines)
+5. **`session_detector.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py`) - Holiday and session detection
    - **Responsibility**: Detect holidays (US, UK, major) and trading sessions for 10 global exchanges using exchange_calendars
    - **SLOs**: Availability (raise on failure), Correctness (official calendars), Observability (logging), Maintainability (exchange_calendars library)
    - **Class**: `SessionDetector`
    - **Methods**: `detect_sessions_and_holidays(dates_df)`
 
-6. **`gap_detector.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/gap_detector.py`) - Incremental update logic (157 lines)
+6. **`gap_detector.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/gap_detector.py`) - Incremental update logic
    - **Responsibility**: Discover missing months for incremental database updates
    - **SLOs**: Availability (raise on failure), Correctness (gap detection), Observability (logging), Maintainability (DuckDB library)
    - **Class**: `GapDetector`
    - **Methods**: `discover_missing_months(pair, start_date)`
 
-7. **`ohlc_generator.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py`) - OHLC generation (199 lines)
+7. **`ohlc_generator.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py`) - OHLC generation
    - **Responsibility**: Generate Phase7 30-column OHLC from dual-variant tick data with LEFT JOIN, normalized metrics, and exchange session detection
    - **SLOs**: Availability (raise on failure), Correctness (Phase7 schema), Observability (logging), Maintainability (DuckDB + exchange_calendars)
    - **Class**: `OHLCGenerator`
    - **Methods**: `regenerate_ohlc(duckdb_path)`
 
-8. **`query_engine.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/query_engine.py`) - Query operations (290 lines)
+8. **`query_engine.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/query_engine.py`) - Query operations
    - **Responsibility**: Query tick and OHLC data with date filtering, SQL filters, and on-demand resampling (1m/5m/15m/1h/4h/1d)
    - **SLOs**: Availability (raise on failure), Correctness (SQL queries), Observability (DuckDB logging), Maintainability (DuckDB library)
    - **Class**: `QueryEngine`
@@ -135,7 +135,7 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 
 **Compatibility Layer**:
 
-9. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - v1.0.0 CLI compatibility wrappers (267 lines)
+9. **`api.py`** (`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`) - v1.0.0 CLI compatibility wrappers
    - **Responsibility**: Map v1.0.0 monthly-file API to v2.0.0 unified single-file API
    - **SLOs**: Availability (raise on errors), Correctness (delegate to processor), Observability (processor logging), Maintainability (thin wrappers)
    - **Functions**: `process_month()`, `process_date_range()`, `query_ohlc()`, `analyze_ticks()`, `get_storage_stats()`
@@ -145,10 +145,21 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
     - Entry point: `exness-preprocess` command
     - Commands for download, query, coverage operations
 
+**Module Statistics**:
+
+To get current line counts and metrics on-demand:
+```bash
+make module-stats       # Show current line counts
+make module-complexity  # Show cyclomatic complexity (requires radon)
+make module-deps        # Show dependency tree (requires pipdeptree)
+```
+
+See [`Makefile`](Makefile) for implementation details.
+
 ### Key Design Patterns
 
 **Facade Pattern** (v1.3.0):
-- **processor.py** is a thin orchestrator (414 lines) coordinating 7 specialized modules
+- **processor.py** is a thin orchestrator coordinating 7 specialized modules
 - All public methods delegate to modules (no business logic in processor)
 - **Separation of concerns**: Each module has single responsibility
 - **SLO-based design**: All modules define SLOs (Availability, Correctness, Observability, Maintainability)
@@ -290,8 +301,8 @@ Each `.duckdb` file contains:
 - ✅ **LEFT JOIN methodology**: Raw_Spread primary, Standard reference
 
 **Implementation**:
-- **OHLC Generation**: [`src/exness_data_preprocess/ohlc_generator.py`](src/exness_data_preprocess/ohlc_generator.py) (210 lines)
-- **Session Detection**: [`src/exness_data_preprocess/session_detector.py`](src/exness_data_preprocess/session_detector.py) (121 lines)
+- **OHLC Generation**: [`src/exness_data_preprocess/ohlc_generator.py`](src/exness_data_preprocess/ohlc_generator.py)
+- **Session Detection**: [`src/exness_data_preprocess/session_detector.py`](src/exness_data_preprocess/session_detector.py)
 - **Orchestration**: [`src/exness_data_preprocess/processor.py`](src/exness_data_preprocess/processor.py) (lines 317-326, delegation)
 
 **Specification**: [`docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
