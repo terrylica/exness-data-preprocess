@@ -1,8 +1,8 @@
 # Refactoring Checklist - Quick Reference
 
-**Current Status**: Phase 5 Complete ✅ - ALL REFACTORING DONE
+**Current Status**: Phase 5 Complete ✅ - ALL REFACTORING DONE (Released as v0.3.1)
 
-**Resume Point**: N/A - Refactoring complete, ready for commit
+**Resume Point**: N/A - All phases complete, released as v0.3.1 on 2025-10-16
 
 ---
 
@@ -16,17 +16,17 @@
 
 ---
 
-## Files Created So Far
+## Files Created (Actual Line Counts as of v0.3.1)
 
-- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/downloader.py` (89 lines)
+- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/downloader.py` (82 lines)
 - ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/tick_loader.py` (67 lines)
-- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/database_manager.py` (213 lines)
+- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/database_manager.py` (208 lines)
 - ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py` (121 lines)
-- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/gap_detector.py` (163 lines)
-- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py` (210 lines)
-- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/query_engine.py` (283 lines)
+- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/gap_detector.py` (157 lines)
+- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py` (199 lines)
+- ✅ `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/query_engine.py` (290 lines)
 
-**Total Extracted**: 1,146 lines across 7 focused modules
+**Total Extracted**: 1,124 lines across 7 focused modules (updated after ruff formatting and mypy fixes)
 
 ---
 
@@ -49,7 +49,7 @@
 ### Step 2.3: Test ✅
 - [x] Run: `uv run pytest -v --tb=short`
 - [x] Verify: 48 tests pass (Result: 48 passed in 101.98s)
-- [ ] Commit: `git commit -m "Phase 2: Extract database_manager module"`
+- [x] Commit: Part of Phase 1-5 commit (7054ae8)
 
 ---
 
@@ -72,7 +72,7 @@
 ### Step 3.3: Test ✅
 - [x] Run: `uv run pytest -v --tb=short`
 - [x] Verify: 48 tests pass (Result: 48 passed in 102.70s)
-- [ ] Commit: `git commit -m "Phase 3: Extract session_detector module"`
+- [x] Commit: Part of Phase 1-5 commit (7054ae8)
 
 ---
 
@@ -101,14 +101,14 @@
 ### Step 4.5: Test ✅
 - [x] Run: `uv run pytest -v --tb=short` after EACH module (Result: 48 passed in 111.02s)
 - [x] Verify: 48 tests pass after EACH module
-- [x] Commit: After each module extraction (Not yet committed - will be done in Phase 5)
+- [x] Commit: Part of Phase 1-5 commit (7054ae8)
 
 ---
 
 ## Phase 5 Todo (Finalize) - ✅ COMPLETE
 
 ### Step 5.1: Verify processor.py structure ✅
-- [x] Check line count: 414 lines (was 885) ✅ Thin facade achieved
+- [x] Check line count: 412 lines (was 885) ✅ Thin facade achieved (53% reduction)
 - [x] Check methods: All thin delegation methods ✅
 - [x] Check imports: All 7 modules imported ✅
 
@@ -135,7 +135,7 @@
 - [x] Run: `uv run ruff format .` (6 files formatted)
 - [x] Run: `uv run ruff check .` (all checks passed)
 - [x] Run: `uv run mypy src/` (8 pre-existing errors, 1 fixed)
-- [ ] Commit: `git commit -m "refactor: Phase 1-5 complete - 7 focused modules extracted from processor.py"` (READY)
+- [x] Commit: Phase 1-5 commit (7054ae8) - Released as v0.3.1
 
 ---
 
@@ -158,10 +158,10 @@ git reset --hard HEAD  # Rollback to last commit
 
 ---
 
-## Current Processor.py State
+## Current Processor.py State (v0.3.1)
 
-**Line Count**: 414 lines (was 885)
-**Reduced By**: 471 lines (Phases 1-4 combined, 53% reduction)
+**Line Count**: 412 lines (was 885)
+**Reduced By**: 473 lines (Phases 1-5 combined, 53% reduction)
 **Target**: Thin facade orchestrator ✅ ACHIEVED
 
 **All Extractions Complete**:
@@ -175,7 +175,7 @@ git reset --hard HEAD  # Rollback to last commit
 - ~~`query_ohlc()` - 89 lines~~ ✅ Extracted (Phase 4)
 - ~~`get_data_coverage()` - 76 lines~~ ✅ Extracted (Phase 4)
 
-**Total Extracted**: 1,146 lines across 7 focused modules ✅
+**Total Extracted**: 1,124 lines across 7 focused modules ✅ (after ruff/mypy fixes)
 
 ---
 
@@ -197,6 +197,6 @@ git reset --hard HEAD  # Rollback to last commit
 
 ---
 
-**Next Action**: Update documentation (CLAUDE.md and docs/README.md) and run final validation
+**Next Action**: N/A - All refactoring complete, released as v0.3.1
 
-**Last Updated**: 2025-10-15 (Phase 4 complete, Phase 5 in progress)
+**Last Updated**: 2025-10-15 (Phase 5 complete, v0.3.1 released)
