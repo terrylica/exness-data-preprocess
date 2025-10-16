@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Architecture**: Professional forex tick data preprocessing with unified single-file DuckDB storage
+**Architecture**: Forex tick data preprocessing with unified single-file DuckDB storage
 
 **Full Documentation**: [`README.md`](README.md) - Installation, usage, API reference
 
