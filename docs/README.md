@@ -42,17 +42,17 @@
 - [`plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md`](plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md) - Complete refactoring progress
 - [`plans/REFACTORING_CHECKLIST.md`](plans/REFACTORING_CHECKLIST.md) - Quick reference checklist
 
-**Pattern**: Facade with 7 specialized modules (414 lines processor, 1,146 lines extracted)
+**Pattern**: Facade with 7 specialized modules (412 lines processor, 1,124 lines extracted)
 
 **Key Modules**:
-- **processor.py** (414 lines) - Thin orchestrator facade, delegates to modules
-- **downloader.py** (89 lines) - HTTP download operations (httpx)
+- **processor.py** (412 lines) - Thin orchestrator facade, delegates to modules
+- **downloader.py** (82 lines) - HTTP download operations (httpx)
 - **tick_loader.py** (67 lines) - CSV parsing (pandas)
-- **database_manager.py** (213 lines) - Database operations (DuckDB)
+- **database_manager.py** (208 lines) - Database operations (DuckDB)
 - **session_detector.py** (121 lines) - Holiday and session detection (exchange_calendars)
-- **gap_detector.py** (163 lines) - Incremental update logic
-- **ohlc_generator.py** (210 lines) - Phase7 30-column OHLC generation
-- **query_engine.py** (283 lines) - Query operations with on-demand resampling
+- **gap_detector.py** (157 lines) - Incremental update logic
+- **ohlc_generator.py** (199 lines) - Phase7 30-column OHLC generation
+- **query_engine.py** (290 lines) - Query operations with on-demand resampling
 
 **Design Principles**:
 - ✅ **Separation of concerns**: Each module has single responsibility
@@ -60,7 +60,7 @@
 - ✅ **Off-the-shelf libraries**: httpx, pandas, DuckDB, exchange_calendars (no custom implementations)
 - ✅ **Zero regressions**: All 48 tests pass after 7-module extraction (53% line reduction)
 
-**Status**: Phase 4 Complete (2025-10-15)
+**Status**: Phase 5 Complete (Released as v0.3.1 on 2025-10-16)
 
 ---
 
