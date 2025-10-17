@@ -11,7 +11,7 @@ Architecture v2.0.0:
 - One DuckDB file per instrument (eurusd.duckdb, not monthly files)
 - Dual-variant storage (Raw_Spread + Standard) for Phase7
 - Automatic gap detection and incremental updates
-- 30-column (v1.5.0) OHLC schema with dual spreads, normalized metrics, timezone/session tracking, holiday tracking, and 10 global exchange sessions
+- 30-column (v1.6.0) OHLC schema with dual spreads, normalized metrics, timezone/session tracking, holiday tracking, and 10 global exchange sessions with trading hour detection
 """
 
 from pathlib import Path
@@ -33,7 +33,7 @@ print("=" * 80)
 #   1. Create eurusd.duckdb (single file)
 #   2. Download missing months from start_date to present
 #   3. Store dual variants (Raw_Spread + Standard)
-#   4. Generate Phase7 30-column (v1.5.0) OHLC
+#   4. Generate Phase7 30-column (v1.6.0) OHLC
 processor = edp.ExnessDataProcessor(base_dir=BASE_DIR)
 
 result = processor.update_data(
@@ -206,7 +206,7 @@ print("\nKey Features of v2.0.0:")
 print("   ✅ Single file per instrument (eurusd.duckdb)")
 print("   ✅ Automatic incremental updates")
 print("   ✅ Dual-variant storage (Phase7 compliant)")
-print("   ✅ 30-column (v1.5.0) OHLC schema")
+print("   ✅ 30-column (v1.6.0) OHLC schema with trading hour detection")
 print("   ✅ Date range queries")
 print("   ✅ On-demand resampling (<15ms)")
 print("   ✅ SQL filters on ticks")

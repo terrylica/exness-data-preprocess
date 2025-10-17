@@ -3,7 +3,7 @@ Database schema management, connections, and tick insertion.
 
 SLOs:
 - Availability: Database creation must succeed or raise exception (no silent failures)
-- Correctness: PRIMARY KEY constraints prevent duplicates, schema matches v1.5.0 exactly
+- Correctness: PRIMARY KEY constraints prevent duplicates, schema matches v1.6.0 exactly
 - Observability: All database operations use DuckDB native logging
 - Maintainability: Single module for all database operations, off-the-shelf DuckDB
 
@@ -12,7 +12,7 @@ Handles:
 - Schema initialization with PRIMARY KEY constraints
 - Self-documenting COMMENT ON statements
 - Tick data insertion with duplicate prevention
-- Phase7 30-column OHLC schema (v1.5.0)
+- Phase7 30-column OHLC schema (v1.6.0)
 """
 
 from pathlib import Path
@@ -31,7 +31,7 @@ class DatabaseManager:
     - Create database files with proper schema
     - Add self-documenting COMMENT statements
     - Insert tick data with duplicate prevention
-    - Ensure Phase7 30-column OHLC schema (v1.5.0)
+    - Ensure Phase7 30-column OHLC schema (v1.6.0)
 
     Example:
         >>> db_manager = DatabaseManager(base_dir=Path("~/eon/exness-data/"))
@@ -57,7 +57,7 @@ class DatabaseManager:
         Creates tables if they don't exist:
         - raw_spread_ticks (PRIMARY KEY on Timestamp)
         - standard_ticks (PRIMARY KEY on Timestamp)
-        - ohlc_1m (Phase7 30-column schema v1.5.0)
+        - ohlc_1m (Phase7 30-column schema v1.6.0)
         - metadata (coverage tracking)
 
         All tables include self-documenting COMMENT statements.

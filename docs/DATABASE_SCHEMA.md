@@ -1,9 +1,9 @@
-# Database Schema Documentation - exness-data-preprocess v1.5.0
+# Database Schema Documentation - exness-data-preprocess v1.6.0
 
 **Database Type**: DuckDB (embedded OLAP database)
 **Architecture**: Single-file per instrument (unified multi-year storage)
-**Schema Version**: v1.5.0 (Phase7 30-column OHLC with 10 global exchange sessions)
-**Last Updated**: 2025-10-15
+**Schema Version**: v1.6.0 (Phase7 30-column OHLC with 10 global exchange sessions - trading hour detection)
+**Last Updated**: 2025-10-17
 
 ---
 
@@ -229,13 +229,13 @@ ORDER BY hour;
 
 ## Table 3: `ohlc_1m`
 
-**Purpose**: Pre-computed 1-minute OHLC bars with Phase7 13-column schema
+**Purpose**: Pre-computed 1-minute OHLC bars with Phase7 30-column schema (v1.6.0)
 
 **Use Case**: Primary data source for backtesting and technical analysis
 
 **Generation Method**: Aggregated from `raw_spread_ticks` and `standard_ticks` tables
 
-### Schema (Phase7 30-Column - v1.5.0)
+### Schema (Phase7 30-Column - v1.6.0)
 
 **Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
 
@@ -246,11 +246,11 @@ ORDER BY hour;
 - **Normalized Metrics** (4): range_per_spread, range_per_tick, body_per_spread, body_per_tick (v1.2.0+)
 - **Timezone/Session Tracking** (4): ny_hour, london_hour, ny_session, london_session (v1.3.0+)
 - **Holiday Tracking** (3): is_us_holiday, is_uk_holiday, is_major_holiday (v1.4.0+)
-- **Global Exchange Sessions** (10): is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session covering 24-hour forex trading (v1.5.0)
+- **Global Exchange Sessions** (10): is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session covering 24-hour forex trading - checks both trading day and trading hours (v1.6.0)
 
-**Schema Version**: v1.5.0
+**Schema Version**: v1.6.0
 
-**Architecture**: Exchange Registry Pattern (v1.5.0) - Session columns dynamically generated from centralized EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
+**Architecture**: Exchange Registry Pattern (v1.6.0) - Session columns dynamically generated from centralized EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
 
 ### Indexes
 
@@ -271,7 +271,7 @@ ORDER BY hour;
 
 ```sql
 COMMENT ON TABLE ohlc_1m IS
-'Phase7 v1.5.0 1-minute OHLC bars with 10 global exchange sessions (BID-only from Raw_Spread, dual-variant spreads and tick counts, normalized metrics).
+'Phase7 v1.6.0 1-minute OHLC bars with 10 global exchange sessions (BID-only from Raw_Spread, dual-variant spreads and tick counts, normalized metrics).
  OHLC Source: Raw_Spread BID prices. Spreads: Dual-variant (Raw_Spread + Standard).';
 
 -- All 30 column comments (see schema.py for complete definitions)
@@ -279,7 +279,7 @@ COMMENT ON TABLE ohlc_1m IS
 COMMENT ON COLUMN ohlc_1m.Timestamp IS 'Minute-aligned bar timestamp';
 COMMENT ON COLUMN ohlc_1m.Open IS 'Opening price (first Raw_Spread Bid)';
 COMMENT ON COLUMN ohlc_1m.range_per_spread IS '(High-Low)/standard_spread_avg - Range normalized by spread (NULL if no Standard ticks)';
-COMMENT ON COLUMN ohlc_1m.is_nyse_session IS '1 if New York Stock Exchange trading session (not weekend, not holiday), 0 otherwise';
+COMMENT ON COLUMN ohlc_1m.is_nyse_session IS '1 if during New York Stock Exchange trading hours (09:30-16:00 America/New_York), 0 otherwise - checks both trading day and time via exchange_calendars XNYS';
 -- ... (see schema.py OHLCSchema.COLUMNS for all 30 column comments)
 ```
 
@@ -366,18 +366,18 @@ ORDER BY Timestamp;
 - Filter for significant directional moves
 - Detect ranging vs trending market conditions
 
-### Global Exchange Sessions (v1.5.0)
+### Global Exchange Sessions (v1.6.0)
 
-**Purpose**: Binary flags indicating trading session status for 10 major global exchanges covering 24-hour forex trading.
+**Purpose**: Binary flags indicating if timestamp falls during actual trading hours for 10 major global exchanges covering 24-hour forex trading.
 
 **Exchanges Covered**:
-- **North America**: XNYS (NYSE - USD), XTSE (TSX - CAD)
-- **Europe**: XLON (LSE - GBP), XSWX (SIX Swiss - CHF), XFRA (Frankfurt - EUR)
-- **Asia-Pacific**: XNZE (NZE - NZD), XTKS (TSE - JPY), XASX (ASX - AUD), XHKG (HKEX - HKD), XSES (SGX - SGD)
+- **North America**: XNYS (NYSE - USD, 9:30-16:00 ET), XTSE (TSX - CAD, 9:30-16:00 ET)
+- **Europe**: XLON (LSE - GBP, 8:00-16:30 GMT), XSWX (SIX Swiss - CHF, 9:00-17:30 CET), XFRA (Frankfurt - EUR, 9:00-17:30 CET)
+- **Asia-Pacific**: XNZE (NZE - NZD, 10:00-16:45 NZST), XTKS (TSE - JPY, 9:00-15:00 JST), XASX (ASX - AUD, 10:00-16:00 AEST), XHKG (HKEX - HKD, 9:30-16:00 HKT), XSES (SGX - SGD, 9:00-17:00 SGT)
 
-**Calculation** (via exchange_calendars library):
-- **1**: Exchange is open (trading session) - excludes weekends and official holidays
-- **0**: Exchange is closed (weekend or holiday)
+**Calculation** (via exchange_calendars library + timezone conversion):
+- **1**: Exchange is open and within trading hours (checks both day and time)
+- **0**: Exchange is closed (weekend, holiday, or outside trading hours)
 
 **Architecture**: Exchange Registry Pattern
 - Session columns dynamically generated from EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
@@ -417,7 +417,7 @@ GROUP BY DATE(Timestamp);
 - **Timeframe**: 1-minute bars (minute-aligned)
 - **OHLC Methodology**: BID-only from Raw_Spread variant
 - **Dual Spreads**: Both Raw_Spread and Standard spreads tracked
-- **Exchange Sessions**: 10 global exchanges covering 24-hour forex trading (v1.5.0)
+- **Exchange Sessions**: 10 global exchanges covering 24-hour forex trading with hour-based detection (v1.6.0)
 - **Holiday Detection**: Official holidays via exchange_calendars library (v1.4.0+)
 - **Monthly Volume**: ~30K - 32K bars per month
 - **Storage Size**: ~3 MB per year
@@ -433,12 +433,12 @@ Timestamp            | Open    | High    | Low     | Close   | raw_spread_avg | 
 ```
 
 **Notes**:
-- All 30 columns shown including normalized metrics (v1.2.0+), timezone/session tracking (v1.3.0+), holiday flags (v1.4.0+), and 10 global exchange sessions (v1.5.0)
+- All 30 columns shown including normalized metrics (v1.2.0+), timezone/session tracking (v1.3.0+), holiday flags (v1.4.0+), and 10 global exchange sessions with hour-based detection (v1.6.0)
 - `range_per_spread = (High-Low) / standard_spread_avg` (e.g., 0.00025 / 0.00004 = 6.25 spreads)
 - `range_per_tick = (High-Low) / tick_count_standard` (e.g., 0.00025 / 28 = 0.00089)
 - `body_per_spread = abs(Close-Open) / standard_spread_avg` (e.g., 0.00015 / 0.00004 = 3.75 spreads)
 - `body_per_tick = abs(Close-Open) / tick_count_standard` (e.g., 0.00015 / 28 = 0.00054)
-- Example timestamp (14:05 UTC): NY_Session (10:05 EDT), London_Session (15:05 BST), both XNYS and XLON open (is_nyse_session=1, is_lse_session=1)
+- Example timestamp (14:05 UTC): NY_Session (10:05 EDT), London_Session (15:05 BST), both XNYS and XLON open and within trading hours (is_nyse_session=1, is_lse_session=1)
 
 ### Query Examples
 
@@ -853,7 +853,17 @@ print(f"Months added: {result['months_added']}")
 
 ## Version History
 
-### v1.5.0 (2025-10-15) - Current
+### v1.6.0 (2025-10-17) - Current
+
+- **Fixed**: Exchange session columns now check trading HOURS not just trading DAYS (semantic correction)
+- **Breaking Change**: **YES** - `is_*_session` columns now return 1 only during actual trading hours, not all day
+- **Impact**: Databases must be regenerated with `processor.update_data()` to get corrected session values
+- **Implementation**: Added `open_hour`, `open_minute`, `close_hour`, `close_minute` to ExchangeConfig in `exchanges.py`
+- **Detection Logic**: `session_detector.py` now performs timezone conversion and hour checks for all 10 exchanges
+- **OHLC Schema**: 30 columns (unchanged column count, corrected semantics)
+- **Migration**: See audit document at `docs/plans/EXCHANGE_SESSION_AUDIT_2025-10-17.md` for complete details
+
+### v1.5.0 (2025-10-15)
 
 - **Added**: 8 exchange session columns (replaced is_nyse_session, is_lse_session with 10 global exchanges)
 - **Architecture**: Exchange Registry Pattern - session columns dynamically generated from EXCHANGES dict
@@ -918,6 +928,6 @@ print(f"Months added: {result['months_added']}")
 
 ---
 
-**Last Updated**: 2025-10-15
+**Last Updated**: 2025-10-17
 **Maintainer**: Terry Li <terry@eonlabs.com>
-**Schema Version**: v1.5.0 (Phase7 30-column OHLC with 10 global exchange sessions)
+**Schema Version**: v1.6.0 (Phase7 30-column OHLC with 10 global exchange sessions - trading hour detection)

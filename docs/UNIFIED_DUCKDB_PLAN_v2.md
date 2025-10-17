@@ -22,7 +22,7 @@
 - ✅ **Maximum Simplicity**: ONE file = ONE instrument (eurusd.duckdb, xauusd.duckdb)
 - ✅ **Continuous Time Series**: No gaps between months, seamless queries across years
 - ✅ **Incremental Updates**: Check for new data on Exness, append automatically
-- ✅ **Phase7 Compliant**: Dual-variant 13-column (v1.2.0) schema
+- ✅ **Phase7 Compliant**: Dual-variant 30-column (v1.6.0) schema with trading hour detection
 - ✅ **Scalable**: ~400-500 MB per instrument for 3 years (manageable)
 - ✅ **Simple Backups**: Copy one file to backup entire instrument history
 
@@ -87,7 +87,7 @@ COMMENT ON TABLE standard_ticks IS
  Used for: Position ratio calculation (ASOF merge with Raw_Spread)';
 ```
 
-**Table 3: `ohlc_1m`** (all historical data, Phase7 13-column v1.2.0)
+**Table 3: `ohlc_1m`** (all historical data, Phase7 30-column v1.6.0)
 
 ```sql
 CREATE TABLE ohlc_1m (
@@ -99,18 +99,23 @@ CREATE TABLE ohlc_1m (
     raw_spread_avg DOUBLE NOT NULL,
     standard_spread_avg DOUBLE NOT NULL,
     tick_count_raw_spread BIGINT NOT NULL,
-    tick_count_standard BIGINT NOT NULL
+    tick_count_standard BIGINT NOT NULL,
+    -- ... plus 21 additional columns (normalized metrics, timezone/session tracking,
+    -- holiday detection, 10 exchange session flags)
+    -- Full schema: docs/DATABASE_SCHEMA.md
 );
 
 CREATE INDEX idx_ohlc_timestamp ON ohlc_1m(Timestamp);
 
 COMMENT ON TABLE ohlc_1m IS
-'EURUSD 1-minute OHLC bars (Phase7 v1.1.0 dual-variant methodology).
+'EURUSD 1-minute OHLC bars (Phase7 v1.6.0 with 10 global exchange sessions - trading hour detection).
  Historical coverage: 2022-01-01 to present (regenerated after tick updates)
  Total bars: ~1.1M (3 years × 365 days × 1440 minutes)
  OHLC Source: Raw_Spread BID prices
  Spreads: Dual-variant (Raw_Spread + Standard)
- Tick Counts: Dual-variant for liquidity analysis';
+ Normalized metrics: range_per_spread, range_per_tick, body_per_spread, body_per_tick
+ Sessions: NY, London with DST handling + 10 global exchange flags (NYSE, LSE, etc.)
+ Complete schema: docs/DATABASE_SCHEMA.md';
 ```
 
 **Table 4: `metadata`** (tracks what data exists)
@@ -365,7 +370,7 @@ class ExnessDataProcessor:
             end_date: End date (YYYY-MM-DD), None = latest
 
         Returns:
-            DataFrame with OHLC data (Phase7 13-column v1.2.0)
+            DataFrame with OHLC data (Phase7 30-column v1.6.0)
 
         Example:
             >>> processor = ExnessDataProcessor()
@@ -587,7 +592,7 @@ Based on real data validation:
 - ✅ **Multi-year storage** (minimum 3 years)
 - ✅ **Incremental updates** (automatic gap detection)
 - ✅ **Duplicate prevention** (PRIMARY KEY constraints)
-- ✅ **Phase7 compliance** (13-column (v1.2.0) OHLC schema)
+- ✅ **Phase7 compliance** (30-column (v1.6.0) OHLC schema with trading hour detection)
 - ✅ **Time-range queries** (start_date/end_date support)
 
 ### Performance

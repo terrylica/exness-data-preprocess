@@ -7,14 +7,14 @@
 [![Downloads](https://img.shields.io/pypi/dm/exness-data-preprocess.svg)](https://pypi.org/project/exness-data-preprocess/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-Professional forex tick data preprocessing with unified single-file DuckDB storage. Provides incremental updates, dual-variant storage (Raw_Spread + Standard), and Phase7 30-column OHLC schema (v1.5.0) with 10 global exchange sessions and sub-15ms query performance.
+Professional forex tick data preprocessing with unified single-file DuckDB storage. Provides incremental updates, dual-variant storage (Raw_Spread + Standard), and Phase7 30-column OHLC schema (v1.6.0) with 10 global exchange sessions (trading hour detection) and sub-15ms query performance.
 
 ## Features
 
 - **Unified Single-File Architecture**: One DuckDB file per instrument (eurusd.duckdb)
 - **Incremental Updates**: Automatic gap detection and download only missing months
 - **Dual-Variant Storage**: Raw_Spread (primary) + Standard (reference) in same database
-- **Phase7 OHLC Schema**: 30-column bars (v1.5.0) with dual spreads, tick counts, normalized metrics, and 10 global exchange sessions
+- **Phase7 OHLC Schema**: 30-column bars (v1.6.0) with dual spreads, tick counts, normalized metrics, and 10 global exchange sessions with trading hour detection
 - **Fast Queries**: Date range queries with sub-15ms performance
 - **On-Demand Resampling**: Any timeframe (5m, 1h, 1d) resampled in <15ms
 - **PRIMARY KEY Constraints**: Prevents duplicate data during incremental updates
@@ -90,7 +90,7 @@ Download Only Missing Months (Raw_Spread + Standard)
            ↓
 DuckDB Single-File Storage (PRIMARY KEY prevents duplicates)
            ↓
-Phase7 30-Column OHLC Generation (v1.5.0 - dual spreads, tick counts, normalized metrics, 10 global exchange sessions)
+Phase7 30-Column OHLC Generation (v1.6.0 - dual spreads, tick counts, normalized metrics, 10 global exchange sessions with trading hour detection)
            ↓
 Query Interface (date ranges, SQL filters, on-demand resampling)
 ```
@@ -100,15 +100,17 @@ Query Interface (date ranges, SQL filters, on-demand resampling)
 **Single File Per Instrument**: `~/eon/exness-data/eurusd.duckdb`
 
 **Schema**:
+
 - `raw_spread_ticks` table: Timestamp (PK), Bid, Ask
 - `standard_ticks` table: Timestamp (PK), Bid, Ask
-- `ohlc_1m` table: Phase7 30-column schema (v1.5.0)
+- `ohlc_1m` table: Phase7 30-column schema (v1.6.0)
 - `metadata` table: Coverage tracking
 
-**Phase7 30-Column OHLC (v1.5.0)**:
+**Phase7 30-Column OHLC (v1.6.0)**:
+
 - **Column Definitions**: See [`schema.py`](src/exness_data_preprocess/schema.py) - Single source of truth
 - **Comprehensive Reference**: See [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) - Query examples and usage patterns
-- **Key Features**: BID-only OHLC with dual spreads (Raw_Spread + Standard), normalized spread metrics, and 10 global exchange sessions (XNYS, XLON, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
+- **Key Features**: BID-only OHLC with dual spreads (Raw_Spread + Standard), normalized spread metrics, and 10 global exchange sessions with trading hour detection (XNYS, XLON, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
 
 ### Directory Structure
 
@@ -124,6 +126,7 @@ Query Interface (date ranges, SQL filters, on-demand resampling)
 ```
 
 **Why Single-File Per Instrument?**
+
 - **Unified Storage**: All years in one database
 - **Incremental Updates**: Automatic gap detection and download only missing months
 - **No Duplicates**: PRIMARY KEY constraints prevent duplicate data
@@ -346,6 +349,7 @@ uv tool install --editable .
 ## Data Source
 
 Data is sourced from Exness's public tick data repository:
+
 - **URL**: https://ticks.ex2archive.com/
 - **Format**: Monthly ZIP files with CSV tick data
 - **Variants**: Raw_Spread (zero-spreads) + Standard (market spreads)
@@ -356,35 +360,35 @@ Data is sourced from Exness's public tick data repository:
 
 ### Database Size (3-Year History, EURUSD)
 
-| Metric | Value |
-|--------|-------|
-| Raw_Spread ticks | ~18.6M |
-| Standard ticks | ~19.6M |
-| OHLC bars (1m) | ~413K |
-| Database size | ~2.08 GB |
-| Date range | 2022-01-01 to 2025-01-10 |
+| Metric           | Value                    |
+| ---------------- | ------------------------ |
+| Raw_Spread ticks | ~18.6M                   |
+| Standard ticks   | ~19.6M                   |
+| OHLC bars (1m)   | ~413K                    |
+| Database size    | ~2.08 GB                 |
+| Date range       | 2022-01-01 to 2025-01-10 |
 
 ### Query Performance
 
-| Operation | Time |
-|-----------|------|
+| Operation                  | Time  |
+| -------------------------- | ----- |
 | Query 880K ticks (1 month) | <15ms |
-| Query 1m OHLC (1 month) | <10ms |
-| Resample to 1h (1 month) | <15ms |
-| Resample to 1d (1 year) | <20ms |
+| Query 1m OHLC (1 month)    | <10ms |
+| Resample to 1h (1 month)   | <15ms |
+| Resample to 1d (1 year)    | <20ms |
 
 ### Architecture Benefits
 
-| Feature | Benefit |
-|---------|---------|
-| Single file per instrument | Unified storage, no file fragmentation |
-| PRIMARY KEY constraints | Prevents duplicates during incremental updates |
-| Automatic gap detection | Download only missing months |
-| Dual-variant storage | Raw_Spread + Standard in same database |
-| Phase7 OHLC schema | Dual spreads + dual tick counts |
-| Date range queries | Efficient filtering without loading entire dataset |
-| On-demand resampling | Any timeframe in <15ms |
-| SQL filter support | Direct SQL WHERE clauses on ticks |
+| Feature                    | Benefit                                            |
+| -------------------------- | -------------------------------------------------- |
+| Single file per instrument | Unified storage, no file fragmentation             |
+| PRIMARY KEY constraints    | Prevents duplicates during incremental updates     |
+| Automatic gap detection    | Download only missing months                       |
+| Dual-variant storage       | Raw_Spread + Standard in same database             |
+| Phase7 OHLC schema         | Dual spreads + dual tick counts                    |
+| Date range queries         | Efficient filtering without loading entire dataset |
+| On-demand resampling       | Any timeframe in <15ms                             |
+| SQL filter support         | Direct SQL WHERE clauses on ticks                  |
 
 ## API Reference
 
@@ -413,16 +417,19 @@ processor = edp.ExnessDataProcessor(base_dir="~/eon/exness-data")
 ## Migration from v1.0.0
 
 **v1.0.0 (Legacy)**:
+
 - Monthly DuckDB files: `eurusd_ohlc_2024_08.duckdb`
 - Parquet tick storage: `eurusd_ticks_2024_08.parquet`
 - Functions: `process_month()`, `process_date_range()`, `analyze_ticks()`
 
 **v2.0.0 (Current)**:
+
 - Single DuckDB file: `eurusd.duckdb`
 - No Parquet files (everything in DuckDB)
 - Unified API: `processor.update_data()`, `processor.query_ohlc()`, `processor.query_ticks()`
 
 **Migration Steps**:
+
 1. Run `processor.update_data(pair, start_date)` to create new unified database
 2. Delete old monthly files: `rm eurusd_ohlc_2024_*.duckdb eurusd_ticks_2024_*.parquet`
 3. Update code to use new API methods

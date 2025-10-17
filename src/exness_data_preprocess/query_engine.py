@@ -129,7 +129,7 @@ class QueryEngine:
             end_date: End date (YYYY-MM-DD), inclusive
 
         Returns:
-            DataFrame with OHLC data (Phase7 30-column schema v1.5.0)
+            DataFrame with OHLC data (Phase7 30-column schema v1.6.0)
 
         Raises:
             FileNotFoundError: If database does not exist

@@ -21,7 +21,7 @@ Architecture Benefits:
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-# Import exchange registry for dynamic session column generation (v1.5.0)
+# Import exchange registry for dynamic session column generation (v1.6.0)
 from exness_data_preprocess.exchanges import EXCHANGES
 
 
@@ -44,7 +44,7 @@ class ColumnDefinition:
 
 class OHLCSchema:
     """
-    Phase7 OHLC schema v1.2.0 - Centralized definition for ohlc_1m table.
+    Phase7 OHLC schema v1.6.0 - Centralized definition for ohlc_1m table.
 
     This class provides a single source of truth for the OHLC schema, including:
     - Column names, types, and constraints
@@ -57,6 +57,7 @@ class OHLCSchema:
         v1.3.0: 17 columns (added 4 timezone/session columns: ny_hour, london_hour, ny_session, london_session)
         v1.4.0: 22 columns (added 3 holiday columns + 2 session flags: is_us_holiday, is_uk_holiday, is_major_holiday, is_nyse_session, is_lse_session)
         v1.5.0: 30 columns (replaced 2 session flags with 10 dynamic exchange session flags from registry: nyse, lse, xswx, xfra, xtse, xnze, xtks, xasx, xhkg, xses)
+        v1.6.0: 30 columns (fixed session flags to check trading HOURS not just trading DAYS - semantic correction)
 
     Usage:
         >>> # Generate CREATE TABLE statement
@@ -73,7 +74,7 @@ class OHLCSchema:
         >>> conn.execute(f"SELECT {select} FROM ohlc_1m GROUP BY {time_expr}")
     """
 
-    VERSION = "1.5.0"
+    VERSION = "1.6.0"
 
     # Single source of truth: Column definitions (update here, propagates everywhere)
     COLUMNS: Dict[str, ColumnDefinition] = {
@@ -297,20 +298,20 @@ class OHLCSchema:
         return list(cls.COLUMNS.keys())
 
 
-# Dynamic session column generation (v1.5.0)
+# Dynamic session column generation (v1.6.0)
 # This code runs at module import time to populate OHLCSchema.COLUMNS with exchange sessions
 # Pattern: is_{exchange_name}_session (e.g., is_nyse_session, is_lse_session, is_xswx_session, ...)
 for exchange_name, exchange_config in EXCHANGES.items():
     OHLCSchema.COLUMNS[f"is_{exchange_name}_session"] = ColumnDefinition(
         dtype="INTEGER",
         comment=(
-            f"1 if {exchange_config.name} trading session (not weekend, not holiday), "
-            f"0 otherwise - dynamically checked via exchange_calendars {exchange_config.code}"
+            f"1 if during {exchange_config.name} trading hours ({exchange_config.open_hour:02d}:{exchange_config.open_minute:02d}-{exchange_config.close_hour:02d}:{exchange_config.close_minute:02d} {exchange_config.timezone}), "
+            f"0 otherwise - checks both trading day and time via exchange_calendars {exchange_config.code}"
         ),
         aggregation=f"MAX(is_{exchange_name}_session)",
     )
 
-# Update TABLE_COMMENT with dynamic exchange list (v1.5.0)
+# Update TABLE_COMMENT with dynamic exchange list (v1.6.0)
 exchange_list = ", ".join([cfg.code for cfg in EXCHANGES.values()])
 OHLCSchema.TABLE_COMMENT = (
     f"Phase7 v{OHLCSchema.VERSION} 1-minute OHLC bars with {len(EXCHANGES)} global exchange sessions. "
@@ -318,5 +319,5 @@ OHLCSchema.TABLE_COMMENT = (
     "Normalized metrics: range_per_spread, range_per_tick, body_per_spread, body_per_tick. "
     "Timezone/session tracking: NY (EST/EDT), London (GMT/BST) with automatic DST handling. "
     f"Holiday detection: Official holidays only ({exchange_list}). "
-    f"Trading day flags: Binary flags for {len(EXCHANGES)} exchanges (excludes weekends + holidays via exchange_calendars)."
+    f"Trading hour flags: Binary flags for {len(EXCHANGES)} exchanges (checks both trading day + time within exchange hours via exchange_calendars)."
 )

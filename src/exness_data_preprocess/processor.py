@@ -8,14 +8,14 @@ Architecture (v2.0.0 - Unified Single-File Multi-Year):
 4. Incremental updates with automatic gap detection
 5. Metadata table for coverage tracking
 
-Phase7 Schema (v1.5.0 - 30 columns):
+Phase7 Schema (v1.6.0 - 30 columns):
 - Timestamp, Open, High, Low, Close (BID-based from Raw_Spread)
 - raw_spread_avg, standard_spread_avg (dual spread tracking)
 - tick_count_raw_spread, tick_count_standard (dual tick counts)
 - range_per_spread, range_per_tick, body_per_spread, body_per_tick (normalized metrics)
 - ny_hour, london_hour, ny_session, london_session (timezone/session tracking)
 - is_us_holiday, is_uk_holiday, is_major_holiday (official holidays only)
-- is_{exchange}_session for 10 exchanges (nyse, lse, xswx, xfra, xtse, xnze, xtks, xasx, xhkg, xses)
+- is_{exchange}_session for 10 exchanges with trading hour detection (nyse, lse, xswx, xfra, xtse, xnze, xtks, xasx, xhkg, xses)
 
 Storage: ~135 MB/year, ~405 MB for 3 years per instrument
 """
@@ -50,7 +50,7 @@ class ExnessDataProcessor:
     - One DuckDB file per instrument (eurusd.duckdb not monthly files)
     - Dual-variant storage (Raw_Spread + Standard) for Phase7
     - Incremental updates with automatic gap detection
-    - 30-column OHLC schema (v1.5.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday detection, and 10 global exchange session flags
+    - 30-column OHLC schema (v1.6.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday detection, and 10 global exchange session flags with trading hour detection
     - 3-year minimum historical coverage
 
     Features:
@@ -97,7 +97,7 @@ class ExnessDataProcessor:
         # Initialize gap detector module for incremental update logic
         self.gap_detector = GapDetector(self.base_dir)
 
-        # Initialize session detector module for holiday and session detection (v1.5.0)
+        # Initialize session detector module for holiday and session detection (v1.6.0)
         self.session_detector = SessionDetector()
 
         # Initialize OHLC generator module with session detector dependency
@@ -136,7 +136,7 @@ class ExnessDataProcessor:
         Creates tables if they don't exist:
         - raw_spread_ticks (PRIMARY KEY on Timestamp)
         - standard_ticks (PRIMARY KEY on Timestamp)
-        - ohlc_1m (Phase7 30-column schema v1.5.0)
+        - ohlc_1m (Phase7 30-column schema v1.6.0)
         - metadata (coverage tracking)
         """
         # Delegate to database_manager module
@@ -283,7 +283,7 @@ class ExnessDataProcessor:
 
         # Step 4: Regenerate OHLC for all new data
         if months_success > 0:
-            print("\nRegenerating OHLC (Phase7 30-column schema v1.5.0)...")
+            print("\nRegenerating OHLC (Phase7 30-column schema v1.6.0)...")
             self._regenerate_ohlc(duckdb_path)
             print("✓ OHLC regenerated")
 
@@ -314,11 +314,11 @@ class ExnessDataProcessor:
 
     def _regenerate_ohlc(self, duckdb_path: Path) -> None:
         """
-        Regenerate OHLC table with Phase7 schema (v1.5.0: 30 columns).
+        Regenerate OHLC table with Phase7 schema (v1.6.0: 30 columns).
 
         Uses LEFT JOIN to combine Raw_Spread and Standard variants.
         Includes normalized spread metrics (v1.2.0+), timezone/session tracking (v1.3.0+),
-        holiday detection (v1.4.0+), and 10 global exchange session flags (v1.5.0+).
+        holiday detection (v1.4.0+), and 10 global exchange session flags with trading hour detection (v1.6.0+).
         """
         # Delegate to ohlc_generator module
         self.ohlc_generator.regenerate_ohlc(duckdb_path)
@@ -371,7 +371,7 @@ class ExnessDataProcessor:
             end_date: End date (YYYY-MM-DD), inclusive
 
         Returns:
-            DataFrame with OHLC data (Phase7 30-column schema v1.5.0)
+            DataFrame with OHLC data (Phase7 30-column schema v1.6.0)
 
         Example:
             >>> processor = ExnessDataProcessor()

@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **[docs/README.md](docs/README.md)** - Architecture, planning, research findings
 - **[docs/MODULE_ARCHITECTURE.md](docs/MODULE_ARCHITECTURE.md)** - Complete module documentation with SLOs
 - **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema with self-documentation
+- **[docs/RESEARCH_PATTERNS.md](docs/RESEARCH_PATTERNS.md)** - Research lifecycle and tool selection (v1.0.0)
 - **[docs/UNIFIED_DUCKDB_PLAN_v2.md](docs/UNIFIED_DUCKDB_PLAN_v2.md)** - v2.0.0 architecture specification
 - **[docs/EXNESS_DATA_SOURCES.md](docs/EXNESS_DATA_SOURCES.md)** - Data source variants and URLs
 - **[Makefile](Makefile)** - Module introspection commands (module-stats, module-complexity, module-deps)
@@ -61,11 +62,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Complete Details**: [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)
 
-### Schema (v1.5.0)
+### Schema (v1.6.0)
 - **Phase7 30-column OHLC** with dual-variant spreads
 - **BID-only OHLC** from Raw_Spread execution prices
 - **Normalized metrics** (range_per_spread, range_per_tick, body_per_spread, body_per_tick)
-- **10 global exchange sessions** (NYSE, LSE, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
+- **10 global exchange sessions with trading hour detection** (NYSE, LSE, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
 - **Holiday tracking** (US, UK, major holidays)
 - **Self-documenting** via COMMENT ON statements
 
@@ -78,6 +79,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Format**: Monthly ZIP files with microsecond-precision CSV
 
 **Complete Guide**: [`docs/EXNESS_DATA_SOURCES.md`](docs/EXNESS_DATA_SOURCES.md)
+
+### Research Patterns (v1.0.0)
+- **Lifecycle**: Explore (pandas/Polars) → Validate → Graduate (DuckDB) → Query (SQL)
+- **ASOF Performance**: pandas/Polars 0.04s, DuckDB 0.89s at 880K ticks (24x difference)
+- **Tool Selection**: pandas/Polars for tick-level temporal matching, DuckDB for materialized results
+- **Hybrid Pattern**: ASOF operations stay in pandas, validated findings materialize to DuckDB tables
+- **Single Source of Truth**: DuckDB stores validated research outcomes with COMMENT ON documentation
+
+**Complete Specification**: [`docs/RESEARCH_PATTERNS.md`](docs/RESEARCH_PATTERNS.md)
 
 ---
 
@@ -101,7 +111,7 @@ uv run pytest
 uv run pytest --cov=exness_data_preprocess --cov-report=html
 
 # Run specific test file
-uv run pytest tests/test_processor.py -v
+uv run pytest tests/test_basic.py -v
 ```
 
 ### Code Quality
@@ -153,7 +163,8 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 
 ---
 
-**Version**: 2.0.0 (Architecture) + 1.3.0 (Implementation)
-**Last Updated**: 2025-10-16
+**Version**: 2.0.0 (Architecture) + 1.3.0 (Implementation) + 1.0.0 (Research Patterns)
+**Last Updated**: 2025-10-17
 **Architecture**: Unified Single-File DuckDB Storage with Incremental Updates
 **Implementation**: Facade Pattern with 7 Specialized Modules
+**Research**: Hybrid Materialization (pandas/Polars exploration, DuckDB validated results)

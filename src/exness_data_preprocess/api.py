@@ -163,7 +163,7 @@ def query_ohlc(
         base_dir: Base directory for data storage
 
     Returns:
-        DataFrame with OHLC data (30-column v1.5.0 schema)
+        DataFrame with OHLC data (30-column v1.6.0 schema)
 
     Raises:
         Any exception from processor.query_ohlc()

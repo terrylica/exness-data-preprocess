@@ -8,13 +8,13 @@ SLOs:
 - Maintainability: Single module for all OHLC logic, off-the-shelf DuckDB and exchange_calendars
 
 Handles:
-- Phase7 30-column OHLC schema (v1.5.0)
+- Phase7 30-column OHLC schema (v1.6.0)
 - BID-only OHLC construction from Raw_Spread variant
 - LEFT JOIN with Standard variant for dual spread tracking
 - Normalized metrics (range_per_spread, range_per_tick, body_per_spread, body_per_tick)
 - Timezone/session tracking (NY and London sessions)
 - Holiday detection (US, UK, major holidays via exchange_calendars)
-- 10 global exchange session flags (NYSE, LSE, SIX, FWB, TSX, NZX, JPX, ASX, HKEX, SGX)
+- 10 global exchange session flags with trading hour detection (NYSE, LSE, SIX, FWB, TSX, NZX, JPX, ASX, HKEX, SGX)
 """
 
 from pathlib import Path
@@ -58,11 +58,11 @@ class OHLCGenerator:
 
     def regenerate_ohlc(self, duckdb_path: Path) -> None:
         """
-        Regenerate OHLC table with Phase7 schema (v1.5.0: 30 columns).
+        Regenerate OHLC table with Phase7 schema (v1.6.0: 30 columns).
 
         Uses LEFT JOIN to combine Raw_Spread and Standard variants.
         Includes normalized spread metrics (v1.2.0+), timezone/session tracking (v1.3.0+),
-        holiday detection (v1.4.0+), and 10 global exchange session flags (v1.5.0+).
+        holiday detection (v1.4.0+), and 10 global exchange session flags with trading hour detection (v1.6.0+).
 
         Args:
             duckdb_path: Path to DuckDB file
@@ -80,7 +80,7 @@ class OHLCGenerator:
         # Delete existing OHLC data
         conn.execute("DELETE FROM ohlc_1m")
 
-        # Generate session column initializations dynamically from exchange registry (v1.5.0)
+        # Generate session column initializations dynamically from exchange registry (v1.6.0)
         session_inits = ",\n                ".join(
             [f"0 as is_{name}_session" for name in EXCHANGES.keys()]
         )
@@ -135,7 +135,7 @@ class OHLCGenerator:
                 0 as is_us_holiday,
                 0 as is_uk_holiday,
                 0 as is_major_holiday,
-                -- Trading session flags (v1.5.0) - initialized to 0, then updated dynamically for {len(EXCHANGES)} exchanges
+                -- Trading session flags (v1.6.0) - initialized to 0, then updated dynamically for {len(EXCHANGES)} exchanges
                 {session_inits}
             FROM raw_spread_ticks r
             LEFT JOIN standard_ticks s
@@ -145,7 +145,7 @@ class OHLCGenerator:
         """
         conn.execute(insert_sql)
 
-        # Dynamic holiday and session detection (v1.5.0) using exchange_calendars
+        # Dynamic holiday and session detection (v1.6.0) using exchange_calendars
         print(f"  Detecting holidays and sessions for {len(EXCHANGES)} exchanges...")
 
         # Get all unique dates from ohlc_1m

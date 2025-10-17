@@ -1,7 +1,7 @@
 """
-Exchange registry for dynamic session column generation (v1.5.0).
+Exchange registry for dynamic session column generation (v1.6.0).
 
-Schema Version: v1.5.0
+Schema Version: v1.6.0
 Purpose: Single source of truth for all supported exchanges and metadata
 Pattern: Adding new exchange requires ONLY updating EXCHANGES dict
 
@@ -28,6 +28,10 @@ class ExchangeConfig:
         currency: Primary currency (e.g., "USD")
         timezone: IANA timezone (e.g., "America/New_York")
         country: Country name (e.g., "United States")
+        open_hour: Trading start hour in local time (24-hour format)
+        open_minute: Trading start minute in local time
+        close_hour: Trading close hour in local time (24-hour format)
+        close_minute: Trading close minute in local time
 
     Validation: frozen=True prevents modification after instantiation
     """
@@ -37,9 +41,13 @@ class ExchangeConfig:
     currency: str
     timezone: str
     country: str
+    open_hour: int
+    open_minute: int
+    close_hour: int
+    close_minute: int
 
 
-# Registry: v1.5.0 supports 10 major forex exchanges
+# Registry: v1.6.0 supports 10 major forex exchanges
 # Order: NYSE, LSE (existing v1.4.0) + 8 new exchanges
 # Maintenance: Add new exchanges here ONLY (propagates to schema + processor)
 EXCHANGES: Dict[str, ExchangeConfig] = {
@@ -50,6 +58,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="USD",
         timezone="America/New_York",
         country="United States",
+        open_hour=9,
+        open_minute=30,
+        close_hour=16,
+        close_minute=0,
     ),
     "lse": ExchangeConfig(
         code="XLON",
@@ -57,14 +69,22 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="GBP",
         timezone="Europe/London",
         country="United Kingdom",
+        open_hour=8,
+        open_minute=0,
+        close_hour=16,
+        close_minute=30,
     ),
-    # New v1.5.0 exchanges (8 additions)
+    # New v1.6.0 exchanges (8 additions)
     "xswx": ExchangeConfig(
         code="XSWX",
         name="SIX Swiss Exchange",
         currency="CHF",
         timezone="Europe/Zurich",
         country="Switzerland",
+        open_hour=9,
+        open_minute=0,
+        close_hour=17,
+        close_minute=30,
     ),
     "xfra": ExchangeConfig(
         code="XFRA",
@@ -72,6 +92,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="EUR",
         timezone="Europe/Berlin",
         country="Germany",
+        open_hour=9,
+        open_minute=0,
+        close_hour=17,
+        close_minute=30,
     ),
     "xtse": ExchangeConfig(
         code="XTSE",
@@ -79,6 +103,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="CAD",
         timezone="America/Toronto",
         country="Canada",
+        open_hour=9,
+        open_minute=30,
+        close_hour=16,
+        close_minute=0,
     ),
     "xnze": ExchangeConfig(
         code="XNZE",
@@ -86,6 +114,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="NZD",
         timezone="Pacific/Auckland",
         country="New Zealand",
+        open_hour=10,
+        open_minute=0,
+        close_hour=16,
+        close_minute=45,
     ),
     "xtks": ExchangeConfig(
         code="XTKS",
@@ -93,6 +125,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="JPY",
         timezone="Asia/Tokyo",
         country="Japan",
+        open_hour=9,
+        open_minute=0,
+        close_hour=15,
+        close_minute=0,
     ),
     "xasx": ExchangeConfig(
         code="XASX",
@@ -100,6 +136,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="AUD",
         timezone="Australia/Sydney",
         country="Australia",
+        open_hour=10,
+        open_minute=0,
+        close_hour=16,
+        close_minute=0,
     ),
     "xhkg": ExchangeConfig(
         code="XHKG",
@@ -107,6 +147,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="HKD",
         timezone="Asia/Hong_Kong",
         country="Hong Kong",
+        open_hour=9,
+        open_minute=30,
+        close_hour=16,
+        close_minute=0,
     ),
     "xses": ExchangeConfig(
         code="XSES",
@@ -114,6 +158,10 @@ EXCHANGES: Dict[str, ExchangeConfig] = {
         currency="SGD",
         timezone="Asia/Singapore",
         country="Singapore",
+        open_hour=9,
+        open_minute=0,
+        close_hour=17,
+        close_minute=0,
     ),
 }
 

@@ -10,6 +10,22 @@
 
 ## Architecture & Planning
 
+### Research Patterns v1.0.0
+
+**Comprehensive Specification**: [`RESEARCH_PATTERNS.md`](RESEARCH_PATTERNS.md)
+
+**Architecture Principle**: DuckDB as single source of truth for validated research outcomes (materialized results), not exploratory tools (pandas/Polars ASOF operations).
+
+**Research Lifecycle**:
+1. **Explore**: pandas/Polars for tick-level ASOF merges (0.04s at 880K ticks)
+2. **Validate**: Confirm statistical significance, temporal stability
+3. **Graduate**: Materialize results to DuckDB tables with COMMENT ON
+4. **Query**: SQL views on materialized data (sub-15ms)
+
+**Key Finding**: pandas/Polars are 24x faster than DuckDB for tick-level ASOF joins (0.04s vs 0.89s at 880K ticks). Use pandas/Polars for exploration, DuckDB for validated results.
+
+---
+
 ### Unified Single-File DuckDB Architecture v2.0.0
 
 **Comprehensive Plan**: [`UNIFIED_DUCKDB_PLAN_v2.md`](UNIFIED_DUCKDB_PLAN_v2.md)
@@ -126,10 +142,10 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 - [`04-discoveries-and-plan-evolution.md`](research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md) - Version-tracked findings
 - [`data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) - OHLC specification
 
-**Phase7 Schema** (30 columns, v1.5.0):
+**Phase7 Schema** (30 columns, v1.6.0):
 - **Definition**: [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py)
 - **Comprehensive Guide**: [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)
-- **Architecture**: Exchange Registry Pattern with 10 global exchange sessions
+- **Architecture**: Exchange Registry Pattern with 10 global exchange sessions (trading hour detection)
 
 ---
 
@@ -169,7 +185,7 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 - ✅ Irregular ticks (1µs to 130.61s intervals)
 - ✅ Regular OHLC (0 unaligned bars)
-- ✅ Phase7 30-column (v1.5.0) schema with 10 global exchange sessions
+- ✅ Phase7 30-column (v1.6.0) schema with 10 global exchange sessions (trading hour detection)
 - ✅ Query performance (<15ms all timeframes)
 
 **Conclusion**: Unified DuckDB architecture validated with 13 months real data (Oct 2024 - Oct 2025)
@@ -180,8 +196,10 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 | Topic                       | Document                                                                                                                                                                             | Type                   |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| **Research Patterns**       | [`RESEARCH_PATTERNS.md`](RESEARCH_PATTERNS.md)                                                                                                                                        | ⭐ Architecture Decision |
 | **v2.0.0 Architecture**     | [`UNIFIED_DUCKDB_PLAN_v2.md`](UNIFIED_DUCKDB_PLAN_v2.md)                                                                                                                             | ⭐ Implementation Plan |
 | **Database Schema**         | [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)                                                                                                                                            | ⭐ Schema Reference    |
+| **Module Architecture**     | [`MODULE_ARCHITECTURE.md`](MODULE_ARCHITECTURE.md)                                                                                                                                    | Implementation Details |
 | **v1.0.0 Architecture**     | [`archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md`](archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md)                                                                                       | Archived Plan          |
 | **Data Sources**            | [`EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)                                                                                                                                   | Guide                  |
 | **Compression**             | [`research/compression-benchmarks/README.md`](research/compression-benchmarks/README.md)                                                                                             | Research               |
@@ -218,5 +236,5 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ---
 
-**Last Updated**: 2025-10-16
+**Last Updated**: 2025-10-17
 **Maintainer**: Terry Li <terry@eonlabs.com>

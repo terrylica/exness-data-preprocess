@@ -7,7 +7,7 @@ Architecture (v2.0.0+):
 - One DuckDB file per instrument (eurusd.duckdb, not monthly files)
 - Dual-variant storage (Raw_Spread + Standard) for Phase7 compliance
 - Incremental updates with automatic gap detection
-- Phase7 30-column OHLC schema (v1.5.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday tracking, and 10 global exchange sessions
+- Phase7 30-column OHLC schema (v1.6.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday tracking, and 10 global exchange sessions with trading hour detection
 - Self-documenting database schema with embedded COMMENT ON statements
 - Pydantic models for validated API responses
 
@@ -54,7 +54,7 @@ AI Agent Discovery:
     >>> print(get_args(TimeframeType))  # ('1m', '5m', '15m', ...)
 """
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 __author__ = "Terry Li <terry@eonlabs.com>"
 __license__ = "MIT"
 
