@@ -246,7 +246,7 @@ ORDER BY hour;
 - **Normalized Metrics** (4): range_per_spread, range_per_tick, body_per_spread, body_per_tick (v1.2.0+)
 - **Timezone/Session Tracking** (4): ny_hour, london_hour, ny_session, london_session (v1.3.0+)
 - **Holiday Tracking** (3): is_us_holiday, is_uk_holiday, is_major_holiday (v1.4.0+)
-- **Global Exchange Sessions** (10): is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session covering 24-hour forex trading - checks both trading day and trading hours (v1.6.0)
+- **Global Exchange Sessions** (10): is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session covering 24-hour forex trading - checks trading day, hours, and lunch breaks (v1.6.0+lunch breaks)
 
 **Schema Version**: v1.6.0
 
@@ -373,11 +373,17 @@ ORDER BY Timestamp;
 **Exchanges Covered**:
 - **North America**: XNYS (NYSE - USD, 9:30-16:00 ET), XTSE (TSX - CAD, 9:30-16:00 ET)
 - **Europe**: XLON (LSE - GBP, 8:00-16:30 GMT), XSWX (SIX Swiss - CHF, 9:00-17:30 CET), XFRA (Frankfurt - EUR, 9:00-17:30 CET)
-- **Asia-Pacific**: XNZE (NZE - NZD, 10:00-16:45 NZST), XTKS (TSE - JPY, 9:00-15:00 JST), XASX (ASX - AUD, 10:00-16:00 AEST), XHKG (HKEX - HKD, 9:30-16:00 HKT), XSES (SGX - SGD, 9:00-17:00 SGT)
+- **Asia-Pacific**: XNZE (NZE - NZD, 10:00-16:45 NZST), XTKS (TSE - JPY, 9:00-11:30 & 12:30-15:30 JST with lunch 11:30-12:30), XASX (ASX - AUD, 10:00-16:00 AEST), XHKG (HKEX - HKD, 9:30-12:00 & 13:00-16:00 HKT with lunch 12:00-13:00), XSES (SGX - SGD, 9:00-12:00 & 13:00-17:00 SGT with lunch 12:00-13:00)
 
-**Calculation** (via exchange_calendars library + timezone conversion):
-- **1**: Exchange is open and within trading hours (checks both day and time)
-- **0**: Exchange is closed (weekend, holiday, or outside trading hours)
+**Calculation** (via exchange_calendars library):
+- **1**: Exchange is open and within trading hours (checks day, time, AND lunch breaks)
+- **0**: Exchange is closed (weekend, holiday, outside trading hours, OR during lunch break)
+
+**Lunch Breaks** (automatically handled by exchange_calendars):
+- **Tokyo (XTKS)**: 11:30-12:30 JST (session flags = 0 during lunch)
+- **Hong Kong (XHKG)**: 12:00-13:00 HKT (session flags = 0 during lunch)
+- **Singapore (XSES)**: 12:00-13:00 SGT (session flags = 0 during lunch)
+- **Western exchanges**: No lunch breaks (continuous trading)
 
 **Architecture**: Exchange Registry Pattern
 - Session columns dynamically generated from EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)

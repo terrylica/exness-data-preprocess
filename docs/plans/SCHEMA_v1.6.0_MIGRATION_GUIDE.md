@@ -274,3 +274,138 @@ processor_v16 = edp.ExnessDataProcessor(base_dir="~/eon/exness-data-v1.6.0")
 - Added 10 global exchange session flags
 - Replaced hardcoded NYSE/LSE with dynamic exchange registry
 - 30-column Phase7 OHLC schema
+
+---
+
+## 🔧 v1.6.0 Enhancement: Lunch Break Support (2025-10-17)
+
+### Issue Discovered
+
+During comprehensive audit of v1.6.0 implementation, discovered that 3 Asian exchanges have **1-hour lunch breaks** that were not respected in session detection:
+
+- **Tokyo (XTKS)**: Lunch 11:30-12:30 JST
+- **Hong Kong (XHKG)**: Lunch 12:00-13:00 HKT
+- **Singapore (XSES)**: Lunch 12:00-13:00 SGT
+
+**Impact**: Session flags incorrectly showed `1` during lunch breaks when exchanges were actually closed.
+
+### Solution Implemented
+
+Research revealed that `exchange_calendars` v4.11.1 (the library we already use) has **built-in lunch break support** via `is_open_on_minute()` method.
+
+**Before** (manual hour checking):
+```python
+# Manually compared hours/minutes (DIDN'T CHECK LUNCH BREAKS)
+open_minutes = exchange_config.open_hour * 60 + exchange_config.open_minute
+close_minutes = exchange_config.close_hour * 60 + exchange_config.close_minute
+return int(open_minutes <= current_minutes < close_minutes)
+```
+
+**After** (using exchange_calendars API):
+```python
+# Uses exchange_calendars built-in method (handles lunch breaks automatically)
+return int(calendar.is_open_on_minute(ts))
+```
+
+### Benefits
+
+1. ✅ **Lunch breaks correctly excluded** for Tokyo, Hong Kong, Singapore
+2. ✅ **Simpler implementation** (6 lines vs 16 lines)
+3. ✅ **Auto-updates** for trading hour changes (e.g., Tokyo extended to 15:30 on Nov 5, 2024)
+4. ✅ **Single source of truth**: Upstream library maintains all exchange hours
+5. ✅ **Zero regressions**: All 48 tests pass
+
+### Verification
+
+**Tokyo Stock Exchange**:
+- Before Nov 5, 2024: Closes at 15:00 JST ✅
+- After Nov 5, 2024: Closes at 15:30 JST ✅ (extended hours automatically handled)
+- Lunch break 11:30-12:30 JST: `is_xtks_session = 0` ✅
+
+**Hong Kong Stock Exchange**:
+- Lunch break 12:00-13:00 HKT: `is_xhkg_session = 0` ✅
+
+### Database Regeneration
+
+**Required**: Yes, if you generated databases with v1.6.0 before this fix.
+
+**Why**: The initial v1.6.0 release (before lunch break fix) had partially broken session flags that didn't respect lunch breaks. This enhancement completes the v1.6.0 implementation.
+
+**How to verify if your database needs regeneration**:
+```python
+import pandas as pd
+from exness_data_preprocess import ExnessDataProcessor
+
+processor = ExnessDataProcessor()
+
+# Query Tokyo trading hours on a trading day
+df = processor.query_ohlc("EURUSD", timeframe="1m", start_date="2024-01-05", end_date="2024-01-05")
+
+# Check if lunch break (11:30-12:30 JST = 02:30-03:30 UTC) is excluded
+df_tokyo_lunch = df[(df['ts'].dt.hour == 2) & (df['ts'].dt.minute >= 30) |
+                     (df['ts'].dt.hour == 3) & (df['ts'].dt.minute < 30)]
+
+if df_tokyo_lunch['is_xtks_session'].sum() > 0:
+    print("❌ Database needs regeneration - lunch breaks not excluded")
+else:
+    print("✅ Database is up-to-date - lunch breaks correctly excluded")
+```
+
+### Version Clarification
+
+**Package version remains 0.4.0** (no bump needed):
+- This enhancement completes the v1.6.0 implementation as originally intended
+- No breaking changes to API or database schema
+- Users who haven't regenerated v1.6.0 databases yet will get the corrected version automatically
+
+### End-to-End Validation (2025-10-17)
+
+**Test Environment**:
+- Generated fresh EURUSD database with 15 months of data (Aug 2024 - Oct 2025)
+- Total OHLC bars: 450,431
+- Database size: 2.28 GB
+- Validation performed with explicit UTC timezone handling
+
+**Validation Results**:
+
+1. **Tokyo Lunch Break (11:30-12:30 JST = 02:30-03:30 UTC)**:
+   - Timestamps queried: 61
+   - `is_xtks_session=1` count: 0
+   - **✅ PASS**: All lunch hour timestamps correctly excluded
+
+2. **Hong Kong Lunch Break (12:00-13:00 HKT = 04:00-05:00 UTC)**:
+   - Timestamps queried: 61
+   - `is_xhkg_session=1` count: 0
+   - **✅ PASS**: All lunch hour timestamps correctly excluded
+
+3. **Singapore Lunch Break (12:00-13:00 SGT = 04:00-05:00 UTC)**:
+   - Timestamps queried: 61
+   - `is_xses_session=1` count: 0
+   - **✅ PASS**: All lunch hour timestamps correctly excluded
+
+4. **Database Direct Verification** (UTC timestamps):
+   ```sql
+   -- Query: 02:30-03:30 UTC (11:30-12:30 JST)
+   SELECT COUNT(*) FROM ohlc_1m
+   WHERE Timestamp AT TIME ZONE 'UTC' >= '2024-08-05 02:30:00'
+   AND Timestamp AT TIME ZONE 'UTC' < '2024-08-05 03:30:00'
+   AND is_xtks_session = 1
+   -- Result: 0 (correctly excluded)
+   ```
+
+**Key Findings**:
+- Session detection works correctly with `exchange_calendars.is_open_on_minute()`
+- Lunch breaks for Tokyo, Hong Kong, and Singapore are properly excluded
+- Database timestamps stored with timezone info (may display in local timezone but UTC values are correct)
+- All 48 unit tests pass
+- Zero regressions in OHLC generation
+
+**Testing**:
+```bash
+# Tokyo: 9:00-11:30 OPEN, 11:30-12:30 CLOSED, 12:30-15:30 OPEN
+# Hong Kong: 9:30-12:00 OPEN, 12:00-13:00 CLOSED, 13:00-16:00 OPEN
+# Singapore: 9:00-12:00 OPEN, 12:00-13:00 CLOSED, 13:00-17:00 OPEN
+
+uv run pytest
+# ✓ 48 passed
+```
