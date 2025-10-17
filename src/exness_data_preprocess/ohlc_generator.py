@@ -148,21 +148,23 @@ class OHLCGenerator:
         # Dynamic holiday and session detection (v1.6.0) using exchange_calendars
         print(f"  Detecting holidays and sessions for {len(EXCHANGES)} exchanges...")
 
-        # Get all unique dates from ohlc_1m
-        dates_df = conn.execute(
-            "SELECT DISTINCT DATE(Timestamp) as date FROM ohlc_1m ORDER BY date"
+        # Get ALL timestamps from ohlc_1m (not just unique dates)
+        # This enables minute-level session detection (v1.6.0 requirement)
+        timestamps_df = conn.execute(
+            "SELECT Timestamp FROM ohlc_1m ORDER BY Timestamp"
         ).df()
 
-        if len(dates_df) > 0:
-            # Convert to timezone-naive timestamps for exchange_calendars
-            dates_df["ts"] = pd.to_datetime(dates_df["date"])
+        if len(timestamps_df) > 0:
+            # Prepare DataFrame for session_detector compatibility
+            timestamps_df["ts"] = timestamps_df["Timestamp"]
+            timestamps_df["date"] = timestamps_df["Timestamp"].dt.date
 
-            # Delegate to session_detector module
-            dates_df = self.session_detector.detect_sessions_and_holidays(dates_df)
+            # Delegate to session_detector module (checks each minute individually)
+            timestamps_df = self.session_detector.detect_sessions_and_holidays(timestamps_df)
 
             # Calculate session counts for reporting
             session_counts = {
-                name: dates_df[f"is_{name}_session"].sum() for name in EXCHANGES.keys()
+                name: timestamps_df[f"is_{name}_session"].sum() for name in EXCHANGES.keys()
             }
 
             # Generate dynamic UPDATE query with SET clauses for all exchanges
@@ -170,8 +172,8 @@ class OHLCGenerator:
                 [f"is_{name}_session = hf.is_{name}_session" for name in EXCHANGES.keys()]
             )
 
-            # Update database with holiday and session flags
-            conn.register("holiday_flags", dates_df)
+            # Update database with holiday and session flags (exact timestamp match)
+            conn.register("holiday_flags", timestamps_df)
             update_sql = f"""
                 UPDATE ohlc_1m
                 SET
@@ -180,20 +182,21 @@ class OHLCGenerator:
                     is_major_holiday = hf.is_major_holiday,
                     {session_sets}
                 FROM holiday_flags hf
-                WHERE DATE(ohlc_1m.Timestamp) = hf.date
+                WHERE ohlc_1m.Timestamp = hf.Timestamp
             """
             conn.execute(update_sql)
 
             # Report holiday and session counts
-            us_holidays = dates_df["is_us_holiday"].sum()
-            uk_holidays = dates_df["is_uk_holiday"].sum()
-            major_holidays = dates_df["is_major_holiday"].sum()
+            # Count unique dates for holidays (not timestamps, since holidays apply to entire days)
+            us_holidays = timestamps_df[timestamps_df["is_us_holiday"] == 1]["date"].nunique()
+            uk_holidays = timestamps_df[timestamps_df["is_uk_holiday"] == 1]["date"].nunique()
+            major_holidays = timestamps_df[timestamps_df["is_major_holiday"] == 1]["date"].nunique()
             print(f"  ✓ Holidays: {us_holidays} US, {uk_holidays} UK, {major_holidays} major")
 
-            # Report session counts for all exchanges
+            # Report session counts for all exchanges (counts trading minutes, not days)
             session_summary = ", ".join(
                 [f"{name.upper()}: {count}" for name, count in session_counts.items()]
             )
-            print(f"  ✓ Trading days: {session_summary}")
+            print(f"  ✓ Trading minutes: {session_summary}")
 
         conn.close()
