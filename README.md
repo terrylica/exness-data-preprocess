@@ -454,6 +454,8 @@ Contributions are welcome! Please see CONTRIBUTING.md for guidelines.
 
 ## Additional Documentation
 
+**[📚 Complete Documentation Hub](DOCUMENTATION.md)** - Organized guide from beginner to advanced (72+ documents)
+
 - **Basic Usage Examples**: See `examples/basic_usage.py`
 - **Batch Processing**: See `examples/batch_processing.py`
 - **Architecture Details**: See `docs/UNIFIED_DUCKDB_PLAN_v2.md`
