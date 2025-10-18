@@ -20,7 +20,6 @@ Handles:
 from pathlib import Path
 
 import duckdb
-import pandas as pd
 
 from exness_data_preprocess.exchanges import EXCHANGES
 from exness_data_preprocess.session_detector import SessionDetector
@@ -150,9 +149,7 @@ class OHLCGenerator:
 
         # Get ALL timestamps from ohlc_1m (not just unique dates)
         # This enables minute-level session detection (v1.6.0 requirement)
-        timestamps_df = conn.execute(
-            "SELECT Timestamp FROM ohlc_1m ORDER BY Timestamp"
-        ).df()
+        timestamps_df = conn.execute("SELECT Timestamp FROM ohlc_1m ORDER BY Timestamp").df()
 
         if len(timestamps_df) > 0:
             # Prepare DataFrame for session_detector compatibility

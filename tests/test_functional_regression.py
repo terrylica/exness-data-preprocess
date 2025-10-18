@@ -9,7 +9,6 @@ SLO Coverage:
 - SLO-MA-4: True end-to-end testing from online source: Downloads real Exness data
 """
 
-
 import pandas as pd
 import pytest
 

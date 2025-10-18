@@ -140,7 +140,7 @@ class SessionDetector:
                 """
                 # Ensure timezone-aware (localize if naive, assume UTC)
                 if ts.tz is None:
-                    ts = ts.tz_localize('UTC')
+                    ts = ts.tz_localize("UTC")
 
                 # Use exchange_calendars built-in method (handles all edge cases correctly)
                 return int(calendar.is_open_on_minute(ts))

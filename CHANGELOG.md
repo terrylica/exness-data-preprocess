@@ -66,4 +66,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🧰 Maintenance
 
 - Prepare v0.1.0 release
-
