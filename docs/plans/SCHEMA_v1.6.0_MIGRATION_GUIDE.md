@@ -277,6 +277,140 @@ processor_v16 = edp.ExnessDataProcessor(base_dir="~/eon/exness-data-v1.6.0")
 
 ---
 
+## 🚨 v1.6.0 Critical Bug Fix: Midnight Detection Issue (2025-10-17)
+
+### Critical Bug Discovered
+
+During comprehensive validation of v1.6.0 lunch break support, discovered a **CRITICAL ARCHITECTURAL BUG** in `ohlc_generator.py` that caused ALL session flags to be incorrectly set to `0` for most exchanges.
+
+**Bug Location**: `src/exness_data_preprocess/ohlc_generator.py` lines 151-184
+
+**Root Cause**:
+1. Code queried unique DATES from ohlc_1m table (not timestamps)
+2. Created MIDNIGHT timestamps from those dates (`pd.to_datetime(date)` → `2024-08-05 00:00:00`)
+3. Checked if midnight was during trading hours
+4. Applied the midnight result to ALL 1,440 minutes of that day
+
+**Impact**:
+- **Tokyo (9:00-15:00 JST)**: Midnight is NEVER during trading hours → ALL flags = 0 ❌
+- **Hong Kong (9:30-16:00 HKT)**: Midnight is NEVER during trading hours → ALL flags = 0 ❌
+- **Singapore (9:00-17:00 SGT)**: Midnight is NEVER during trading hours → ALL flags = 0 ❌
+- **All exchanges**: Only exchanges where midnight falls within trading hours would work correctly
+
+**Example**:
+```python
+# BROKEN CODE (before fix):
+dates_df = conn.execute("SELECT DISTINCT DATE(Timestamp) as date FROM ohlc_1m").df()
+dates_df["ts"] = pd.to_datetime(dates_df["date"])  # Creates 2024-08-05 00:00:00
+
+# For Tokyo (9:00-15:00 JST):
+# - Checks if 00:00 JST is during 9:00-15:00 JST → FALSE
+# - Sets is_xtks_session = 0 for the entire day
+# - All 1,440 minutes of Aug 5, 2024 incorrectly flagged as 0
+```
+
+### Fix Implemented (commit b7c4867)
+
+**Changed from date-level to minute-level detection**:
+
+```python
+# FIXED CODE (after):
+timestamps_df = conn.execute("SELECT Timestamp FROM ohlc_1m").df()
+timestamps_df["ts"] = timestamps_df["Timestamp"]
+timestamps_df["date"] = timestamps_df["Timestamp"].dt.date
+
+# For each timestamp:
+# - Checks if THAT SPECIFIC MINUTE is during trading hours
+# - 9:00 JST → TRUE, 12:00 JST (lunch) → FALSE, 13:00 JST → TRUE
+# - Correct minute-by-minute detection
+```
+
+**Database Update Change**:
+```python
+# BEFORE: Match by DATE (applies midnight flag to all minutes)
+WHERE DATE(ohlc_1m.Timestamp) = hf.date
+
+# AFTER: Match by exact TIMESTAMP
+WHERE ohlc_1m.Timestamp = hf.Timestamp
+```
+
+### Validation Results (After Fix)
+
+Generated fresh test database (15 months, 450K OHLC bars) and verified:
+
+**Tokyo Stock Exchange (XTKS)**:
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| Lunch (11:30-12:29 JST) | 0 flags | 0/60 | ✅ PASS |
+| Morning (9:00-11:29 JST) | >0 flags | 150/150 | ✅ PASS |
+| Afternoon (12:30-15:00 JST) | >0 flags | 150/151 | ✅ PASS |
+
+**Tokyo Extended Hours (Nov 5, 2024 Transition)**:
+| Test | Expected | Actual | Status |
+|------|----------|--------|--------|
+| Before Nov 5 | Closes 15:00 JST | 14:59 JST | ✅ PASS |
+| After Nov 5 | Closes 15:30 JST | 15:29 JST | ✅ PASS |
+| Extended hours (15:00-15:30) | >0 flags | 30/31 | ✅ PASS |
+
+**Test Suite**: ✅ All 48 tests pass with zero regressions
+
+### Database Regeneration Required
+
+**CRITICAL**: Databases generated with v1.6.0 code BEFORE commit b7c4867 have broken session flags and MUST be regenerated.
+
+**Affected versions**:
+- Any database generated between commit ca956ae (v1.6.0 initial) and commit b7c4867 (midnight fix)
+- This includes databases generated with commit a89f755 (lunch break implementation)
+
+**How to check if your database needs regeneration**:
+```python
+import pandas as pd
+from exness_data_preprocess import ExnessDataProcessor
+
+processor = ExnessDataProcessor()
+
+# Check if Tokyo morning hours are detected
+df = processor.query_ohlc("EURUSD", "1m",
+    pd.Timestamp("2024-08-05 00:00:00", tz="UTC"),  # 9:00 JST
+    pd.Timestamp("2024-08-05 02:00:00", tz="UTC"))  # 11:00 JST
+
+morning_flags = df["is_xtks_session"].sum()
+
+if morning_flags == 0:
+    print("❌ CRITICAL: Database has broken session flags - regenerate immediately")
+elif morning_flags > 100:
+    print(f"✅ Database is correct - {morning_flags} trading minutes detected")
+else:
+    print(f"⚠️  PARTIAL: Only {morning_flags} minutes detected - verify implementation")
+```
+
+### Timeline: Two-Phase Fix
+
+**Phase 1: Lunch Break Support** (commit a89f755)
+- ✅ Implemented `exchange_calendars.is_open_on_minute()` in session_detector.py
+- ✅ Correctly handles lunch breaks when called
+- ❌ **BUT** ohlc_generator.py wasn't calling it correctly (midnight bug)
+- **Result**: Implementation was correct, but integration was broken
+
+**Phase 2: Midnight Bug Fix** (commit b7c4867)
+- ✅ Fixed ohlc_generator.py to query ALL timestamps (not just dates)
+- ✅ session_detector now checks each minute individually
+- ✅ Database updates with exact timestamp match
+- **Result**: Complete v1.6.0 implementation now works correctly
+
+### Research Backing
+
+Spawned 5 parallel research agents to analyze solution options:
+1. **Option A** (Minute-level Python): ✅ Recommended & Implemented
+2. **Option B** (SQL-based): ❌ Rejected (181+ lines, no holiday support)
+3. **Option C** (Hybrid): ✅ Recommended (current approach)
+4. **exchange_calendars optimization**: Binary search on cached arrays, acceptable performance
+5. **Industry best practices**: Unanimous consensus for calendar abstraction libraries
+
+**Consensus**: Current implementation follows industry standards with acceptable performance (30-60s for 450K rows).
+
+---
+
 ## 🔧 v1.6.0 Enhancement: Lunch Break Support (2025-10-17)
 
 ### Issue Discovered
