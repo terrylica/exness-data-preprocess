@@ -243,6 +243,7 @@ class ExnessDataProcessor:
         raw_ticks_total = 0
         standard_ticks_total = 0
         months_success = 0
+        earliest_added_month = None  # Track earliest month for incremental OHLC
 
         for year, month in missing_months:
             print(f"\n--- Processing {year}-{month:02d} ---")
@@ -276,16 +277,25 @@ class ExnessDataProcessor:
             standard_ticks_total += std_added
             months_success += 1
 
+            # Track earliest added month for incremental OHLC generation
+            if earliest_added_month is None:
+                earliest_added_month = f"{year}-{month:02d}-01"
+
             # Delete ZIPs
             if delete_zip:
                 raw_zip.unlink()
                 std_zip.unlink()
 
-        # Step 4: Regenerate OHLC for all new data
+        # Step 4: Generate OHLC for new data (incremental if possible)
         if months_success > 0:
-            print("\nRegenerating OHLC (Phase7 30-column schema v1.6.0)...")
-            self._regenerate_ohlc(duckdb_path)
-            print("✓ OHLC regenerated")
+            if earliest_added_month:
+                print(f"\nGenerating OHLC for new data starting from {earliest_added_month} (Phase7 30-column schema v1.6.0)...")
+                self._regenerate_ohlc(duckdb_path, start_date=earliest_added_month)
+                print(f"✓ OHLC generated incrementally from {earliest_added_month}")
+            else:
+                print("\nRegenerating OHLC (Phase7 30-column schema v1.6.0)...")
+                self._regenerate_ohlc(duckdb_path)
+                print("✓ OHLC regenerated")
 
         # Step 5: Get final stats
         conn = duckdb.connect(str(duckdb_path), read_only=True)
