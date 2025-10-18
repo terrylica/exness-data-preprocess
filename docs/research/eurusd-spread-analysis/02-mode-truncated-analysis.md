@@ -37,6 +37,8 @@
 - Std Dev (mode-truncated): 1.12 pips
 - **CV (mode-truncated): 118.1%**
 
+**Methodological Note**: This high CV is driven by outliers in the tail (P95-P99.9: 3.68-13.4 pips), not uniform spread variability. The non-modal distribution exhibits secondary clustering at 0.69 pips (P1-P90), indicating a bimodal structure. The 118.1% CV reflects outlier-driven variance rather than continuous spread dynamics. For multimodal-aware analysis, see Methodology Limitations §6.
+
 ### Signal Quality Score
 
 ```

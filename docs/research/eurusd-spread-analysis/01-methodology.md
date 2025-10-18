@@ -218,6 +218,9 @@ ELSE:
 1. **Sensitive to bin width**: Modal bin definition affects results (use histogram bins)
 2. **Assumes mode = static**: May underestimate signal if mode itself varies over time
 3. **Single mode focus**: Multimodal distributions require segmentation
+   - **Standard variant exhibits bimodal structure**: Primary mode at 0.56 pips (77.5%), secondary clustering at 0.69 pips (P1-P90 of non-modal = ~20% of total)
+   - **CV interpretation**: The 118.1% mode-truncated CV reflects outlier-driven variance (P95-P99.9: 3.68-13.4 pips), not continuous spread dynamics
+   - **Recommendation**: For Standard, interpret CV as outlier sensitivity rather than uniform variability; secondary mode at 0.69 pips represents distinct regime
 
 ### Hurdle Model
 

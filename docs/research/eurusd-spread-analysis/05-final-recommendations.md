@@ -43,6 +43,8 @@
 - **CV: 118.1%** (extreme variability)
 - Range: 0.69p → 13.4p
 
+**CV Interpretation Note**: The 118.1% CV is driven by tail outliers (P95-P99.9: 3.68-13.4 pips) rather than uniform variability. The non-modal distribution exhibits secondary clustering at 0.69 pips (P1-P90), indicating bimodal structure. This CV reflects outlier sensitivity, making it suitable for detecting rare extreme spread events. See Methodology §6 Limitations for multimodal considerations.
+
 **Regime Transitions**:
 - Frequent switching (22.5% excursion rate)
 - High variance during excursions
@@ -97,8 +99,8 @@
 - Near-deterministic behavior
 
 **Low Mode-Truncated CV** (48.9%):
-- 2.4× lower than Standard (118%)
-- Minimal spread dynamics
+- 2.4× lower than Standard (118% outlier-driven CV)
+- Minimal spread dynamics even in non-modal tail
 - Poor feature discrimination
 
 **Signal Quality Score** (0.78):
