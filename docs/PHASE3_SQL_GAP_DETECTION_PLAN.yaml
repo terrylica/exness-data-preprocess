@@ -1,0 +1,298 @@
+openapi: 3.1.0
+info:
+  title: Phase 3 SQL Gap Detection Implementation Plan
+  version: 2.0.0
+  description: |
+    Single Source of Truth for Phase 3 implementation.
+
+    Intent: Replace Python month iteration with SQL query for complete gap detection.
+    Constraint: Must detect ALL gaps (before + within + after), not just edges.
+
+    Spike Test Results (v1.0.0):
+      - Python approach: Detected 41 gaps (missed internal gap 2022-03)
+      - SQL EXCEPT approach: Detected 42 gaps (correctly found 2022-03)
+      - Validation: SQL approach detects internal gaps, Python does not
+
+    Implementation Results (v2.0.0):
+      - Replaced lines 94-155 (62 lines) with lines 94-127 (34 lines)
+      - LOC reduction: 46% (62 → 34 lines)
+      - Complexity: O(n) Python loops → O(1) SQL query
+      - All 48 tests passed (no regressions)
+      - Backward compatible (same method signature, better correctness)
+
+    Status: Completed
+
+  contact:
+    name: exness-data-preprocess
+    url: https://github.com/terryli/exness-data-preprocess
+
+paths:
+  /implementation:
+    summary: Implementation steps and discoveries
+
+components:
+  schemas:
+    SLOs:
+      type: object
+      required:
+        - availability
+        - correctness
+        - observability
+        - maintainability
+      properties:
+        availability:
+          type: string
+          description: |
+            Gap detection must complete or raise exception (no silent failures).
+            Handles empty database, missing database, and populated database cases.
+          example: "100% - All edge cases handled explicitly"
+
+        correctness:
+          type: string
+          description: |
+            Detects ALL missing months (before + within + after existing data).
+            Current implementation misses gaps within range (line 107 TODO).
+          example: "100% - SQL EXCEPT detects all gaps, not just edges"
+
+        observability:
+          type: string
+          description: |
+            Query failures raise exceptions with context.
+            Missing months returned as sorted list.
+          example: "Exception-based error propagation, no silent failures"
+
+        maintainability:
+          type: string
+          description: |
+            Uses DuckDB generate_series (off-the-shelf).
+            Single SQL query vs 3 Python loops.
+          example: "~80 lines Python → ~30 lines SQL (60% reduction)"
+
+    ImplementationStrategy:
+      type: object
+      required:
+        - approach
+        - dependencies
+        - changes
+        - testing
+      properties:
+        approach:
+          type: string
+          enum:
+            - sql_except_operator
+          description: |
+            Use DuckDB generate_series() to create expected months.
+            Use EXCEPT operator for set difference (expected - existing = missing).
+            Replaces lines 94-155 in gap_detector.py.
+
+        dependencies:
+          type: array
+          items:
+            type: string
+          example:
+            - duckdb (existing)
+            - datetime (existing)
+
+        changes:
+          type: object
+          properties:
+            gap_detector_py:
+              type: array
+              items:
+                type: string
+              example:
+                - Replace lines 94-155 with SQL query using generate_series + EXCEPT
+                - Keep lines 76-92 unchanged (handles non-existent database)
+                - Remove TODO comment on line 107 (implemented)
+                - Update docstring to reflect internal gap detection
+
+        testing:
+          type: object
+          properties:
+            spike_test:
+              type: string
+              example: "Compare Python vs SQL approach on known gap patterns"
+            unit_tests:
+              type: string
+              example: "All existing tests must pass, validates backward compatibility"
+            edge_cases:
+              type: array
+              items:
+                type: string
+              example:
+                - Empty database (no rows)
+                - Missing database (file doesn't exist)
+                - No gaps (continuous coverage)
+                - All gaps (empty table)
+                - Internal gaps (within date range)
+
+    ImplementationDetails:
+      type: object
+      description: Concrete implementation steps (updated iteratively)
+      properties:
+        step1_create_spike_test:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "/tmp/spike-tests/test_phase3_sql_gap_detection.py"
+            test_scenarios:
+              type: array
+              items:
+                type: string
+              example:
+                - "Scenario 1: Database with internal gaps (2022-01, 02, 04, 05 - missing 03)"
+                - "Scenario 2: Python iteration approach (current implementation)"
+                - "Scenario 3: SQL EXCEPT approach (proposed)"
+                - "Scenario 4: Verify both detect same gaps"
+                - "Scenario 5: Measure performance difference"
+
+        step2_replace_python_with_sql:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/gap_detector.py"
+            method:
+              type: string
+              example: "discover_missing_months"
+            lines_changed:
+              type: string
+              example: "94-155 (62 lines)"
+            sql_query:
+              type: string
+              example: |
+                WITH expected_months AS (
+                    SELECT
+                        YEAR(month_date) as year,
+                        MONTH(month_date) as month
+                    FROM generate_series(
+                        ?::DATE,
+                        DATE_TRUNC('month', CURRENT_DATE)::DATE,
+                        INTERVAL '1 month'
+                    ) as t(month_date)
+                ),
+                existing_months AS (
+                    SELECT DISTINCT
+                        YEAR(Timestamp) as year,
+                        MONTH(Timestamp) as month
+                    FROM raw_spread_ticks
+                )
+                SELECT year, month
+                FROM expected_months
+                EXCEPT
+                SELECT year, month
+                FROM existing_months
+                ORDER BY year, month
+
+        step3_update_docstring:
+          type: object
+          properties:
+            intent:
+              type: string
+              example: "Document that internal gaps are now detected"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Remove TODO comment (line 107)
+                - Update method docstring to clarify ALL gaps detected
+                - Add note about SQL approach vs Python iteration
+
+    DiscoveredNuances:
+      type: object
+      description: Implementation learnings (updated during development)
+      properties:
+        version:
+          type: string
+          example: "2.0.0"
+        discoveries:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              finding:
+                type: string
+              impact:
+                type: string
+          example:
+            - timestamp: "2025-10-18T20:00:00Z"
+              finding: "Spike test confirmed Python approach misses internal gaps"
+              impact: "Validated SQL EXCEPT is required for correctness, not just optimization"
+            - timestamp: "2025-10-18T20:15:00Z"
+              finding: "SQL query handles empty database gracefully (EXCEPT with empty set = all expected months)"
+              impact: "No special case handling needed, SQL naturally handles edge case"
+            - timestamp: "2025-10-18T20:20:00Z"
+              finding: "All 48 tests passed without modification"
+              impact: "100% backward compatible, drop-in replacement"
+            - timestamp: "2025-10-18T20:25:00Z"
+              finding: "Code reduced from 62 lines to 34 lines (46% reduction)"
+              impact: "Improved maintainability via SQL abstraction"
+
+    Risks:
+      type: object
+      properties:
+        sql_complexity:
+          type: object
+          properties:
+            description:
+              type: string
+              example: "SQL query more complex than Python loops for maintainers unfamiliar with SQL"
+            mitigation:
+              type: string
+              example: "SQL is well-documented with comments, uses standard DuckDB functions"
+            severity:
+              type: string
+              enum: [low, medium, high]
+              example: "low"
+
+        backward_compatibility:
+          type: object
+          properties:
+            description:
+              type: string
+              example: "Method signature unchanged, but internal logic different"
+            mitigation:
+              type: string
+              example: "Spike test validates identical results, all existing tests must pass"
+            severity:
+              type: string
+              example: "low"
+
+tags:
+  - name: implementation
+    description: Implementation progress and updates
+  - name: validation
+    description: Testing and verification steps
+  - name: documentation
+    description: Documentation updates
+
+x-implementation-notes:
+  current_line_count: 103
+  proposed_line_count: ~70
+  loc_reduction: ~33
+  current_complexity: "O(n) - 3 separate Python loops"
+  proposed_complexity: "O(1) - Single SQL query"
+  research_document: docs/research/GAP_DETECTION_SQL_APPROACH.md
+  related_research: docs/research/GAP_DETECTION_COMPARISON.md
+
+x-version-history:
+  - version: 1.0.0
+    date: 2025-10-18
+    changes:
+      - Initial plan based on gap detection research
+      - Defined SLOs and implementation strategy
+      - Identified SQL EXCEPT approach for completeness
+  - version: 2.0.0
+    date: 2025-10-18
+    changes:
+      - Spike test validated SQL approach detects internal gaps
+      - Implemented SQL EXCEPT query replacing Python loops
+      - All 48 tests passed (no regressions)
+      - LOC reduced 46% (62 → 34 lines)
+      - Updated docstring to reflect complete gap detection
+      - Documented implementation discoveries

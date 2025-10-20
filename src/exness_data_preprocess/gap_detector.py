@@ -55,15 +55,22 @@ class GapDetector:
         """
         Discover which months need to be downloaded.
 
+        Detects ALL missing months (before earliest + within range + after latest)
+        using SQL EXCEPT operator with DuckDB generate_series.
+
         Args:
             pair: Currency pair
             start_date: Earliest date to consider (YYYY-MM-DD)
 
         Returns:
-            List of (year, month) tuples to download
+            List of (year, month) tuples to download, sorted chronologically
 
         Raises:
             Exception: If database query or gap detection fails
+
+        Intent:
+            Uses SQL set difference (expected - existing = missing) to detect gaps.
+            Replaces Python iteration with single SQL query for correctness and simplicity.
 
         Example:
             >>> detector = GapDetector(base_dir=Path("~/eon/exness-data/"))
@@ -91,67 +98,37 @@ class GapDetector:
 
             return months
 
-        # Query existing coverage
+        # Query existing coverage using SQL EXCEPT for complete gap detection
+        # Detects ALL gaps: before earliest + within range + after latest
         conn = duckdb.connect(str(duckdb_path), read_only=True)
         try:
+            # Use generate_series to create expected months, then find gaps via EXCEPT
             result = conn.execute("""
-                SELECT
-                    DATE_TRUNC('month', MIN(Timestamp)) as earliest,
-                    DATE_TRUNC('month', MAX(Timestamp)) as latest
-                FROM raw_spread_ticks
-            """).fetchone()
+                WITH expected_months AS (
+                    SELECT
+                        YEAR(month_date) as year,
+                        MONTH(month_date) as month
+                    FROM generate_series(
+                        ?::DATE,
+                        DATE_TRUNC('month', CURRENT_DATE)::DATE,
+                        INTERVAL '1 month'
+                    ) as t(month_date)
+                ),
+                existing_months AS (
+                    SELECT DISTINCT
+                        YEAR(Timestamp) as year,
+                        MONTH(Timestamp) as month
+                    FROM raw_spread_ticks
+                )
+                SELECT year, month
+                FROM expected_months
+                EXCEPT
+                SELECT year, month
+                FROM existing_months
+                ORDER BY year, month
+            """, [start_date]).fetchall()
 
-            if result and result[0]:
-                # Find gaps in coverage
-                # For now, simple approach: fill from earliest to current
-                # TODO: Implement gap detection within range
-                earliest = pd.to_datetime(result[0])
-                latest = pd.to_datetime(result[1])
-
-                # Need months before earliest or after latest
-                start = datetime.strptime(start_date, "%Y-%m-%d")
-                today = datetime.now()
-
-                months = []
-
-                # Before earliest
-                current = start
-                while current.year * 100 + current.month < earliest.year * 100 + earliest.month:
-                    months.append((current.year, current.month))
-                    if current.month == 12:
-                        current = current.replace(year=current.year + 1, month=1)
-                    else:
-                        current = current.replace(month=current.month + 1)
-
-                # After latest
-                current = latest
-                if current.month == 12:
-                    current = current.replace(year=current.year + 1, month=1)
-                else:
-                    current = current.replace(month=current.month + 1)
-
-                while current.year * 100 + current.month <= today.year * 100 + today.month:
-                    months.append((current.year, current.month))
-                    if current.month == 12:
-                        current = current.replace(year=current.year + 1, month=1)
-                    else:
-                        current = current.replace(month=current.month + 1)
-
-                return months
-            else:
-                # Empty database
-                start = datetime.strptime(start_date, "%Y-%m-%d")
-                today = datetime.now()
-
-                months = []
-                current = start
-                while current <= today:
-                    months.append((current.year, current.month))
-                    if current.month == 12:
-                        current = current.replace(year=current.year + 1, month=1)
-                    else:
-                        current = current.replace(month=current.month + 1)
-
-                return months
+            # Convert to list of (year, month) tuples
+            return [(year, month) for year, month in result]
         finally:
             conn.close()
