@@ -1,0 +1,268 @@
+openapi: 3.1.0
+info:
+  title: Phase 2 Session Vectorization Implementation Plan
+  version: 2.0.0
+  description: |
+    Single Source of Truth for Phase 2 implementation.
+
+    Intent: Replace per-timestamp session detection with pre-computed lookup.
+    Constraint: Must preserve accuracy (lunch breaks, trading hour changes, holidays).
+
+    Spike Test Results (v1.0.0):
+      - Speedup: 2.2x (5.99s → 2.69s for 302K bars)
+      - Accuracy: 100% match across 10 exchanges
+      - Combined Phase 1+2: ~16x total speedup
+
+    Implementation Results (v2.0.0):
+      - All 48 tests passed (no regressions)
+      - Backward compatible API (detect_sessions_and_holidays signature unchanged)
+      - Pre-computation transparent to callers
+      - Session detection delegated to exchange_calendars (maintainable)
+
+    Status: Completed
+
+  contact:
+    name: exness-data-preprocess
+    url: https://github.com/terryli/exness-data-preprocess
+
+paths:
+  /implementation:
+    summary: Implementation steps and discoveries
+
+components:
+  schemas:
+    SLOs:
+      type: object
+      required:
+        - availability
+        - correctness
+        - observability
+        - maintainability
+      properties:
+        availability:
+          type: string
+          description: |
+            API surface remains backward compatible.
+            SessionDetector.detect_sessions_and_holidays() accepts same inputs/outputs.
+          example: "100% - No breaking changes"
+
+        correctness:
+          type: string
+          description: |
+            Session flags match existing implementation exactly.
+            All 10 exchanges produce identical trading minute counts.
+          example: "100% - Spike test validated exact match"
+
+        observability:
+          type: string
+          description: |
+            Print statements show pre-computation progress.
+            Log trading minute counts per exchange.
+          example: "Info-level logging for pre-computation phase"
+
+        maintainability:
+          type: string
+          description: |
+            Uses exchange_calendars API (no hard-coded trading hours).
+            Code follows existing module patterns.
+          example: "Delegates edge cases to exchange_calendars library"
+
+    ImplementationStrategy:
+      type: object
+      required:
+        - approach
+        - dependencies
+        - changes
+        - testing
+      properties:
+        approach:
+          type: string
+          enum:
+            - pre_compute_then_lookup
+          description: |
+            Pre-compute all trading minutes during initialization.
+            Use vectorized .isin() for session detection.
+
+        dependencies:
+          type: array
+          items:
+            type: string
+          example:
+            - exchange_calendars (existing)
+            - pandas (existing)
+
+        changes:
+          type: object
+          properties:
+            session_detector_py:
+              type: array
+              items:
+                type: string
+              example:
+                - Add _precompute_trading_minutes() helper method
+                - Replace .apply() loop with .isin() lookup in detect_sessions_and_holidays()
+                - Preserve holiday detection logic (unchanged)
+
+        testing:
+          type: object
+          properties:
+            unit_tests:
+              type: string
+              example: "All 48 existing tests must pass"
+            validation:
+              type: string
+              example: "Session counts match for all 10 exchanges"
+
+    ImplementationDetails:
+      type: object
+      description: Concrete implementation steps (updated iteratively)
+      properties:
+        step1_add_precompute_method:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/session_detector.py"
+            method:
+              type: string
+              example: "_precompute_trading_minutes"
+            signature:
+              type: string
+              example: "def _precompute_trading_minutes(self, start_date: date, end_date: date) -> Dict[str, Set[pd.Timestamp]]"
+            intent:
+              type: string
+              example: "Pre-compute set of trading minutes for each exchange in date range"
+            dependencies:
+              type: array
+              items:
+                type: string
+              example:
+                - calendar.sessions_in_range()
+                - calendar.session_open()
+                - calendar.session_close()
+                - calendar.is_open_on_minute()
+
+        step2_replace_apply_with_isin:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/session_detector.py"
+            method:
+              type: string
+              example: "detect_sessions_and_holidays"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Call _precompute_trading_minutes(start_date, end_date)
+                - Replace "dates_df[col].apply(is_trading_hour)" with "dates_df['ts'].isin(trading_minutes[exchange]).astype(int)"
+                - Keep holiday detection unchanged
+
+        step3_update_docstring:
+          type: object
+          properties:
+            intent:
+              type: string
+              example: "Document pre-computation behavior and performance characteristics"
+            sections:
+              type: array
+              items:
+                type: string
+              example:
+                - Add note about pre-computation phase
+                - Clarify that accuracy is preserved
+
+    DiscoveredNuances:
+      type: object
+      description: Implementation learnings (updated during development)
+      properties:
+        version:
+          type: string
+          example: "2.0.0"
+        discoveries:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              finding:
+                type: string
+              impact:
+                type: string
+          example:
+            - timestamp: "2025-10-18T19:00:00Z"
+              finding: "dates_df['ts'].min() returns Timestamp object, needs .date() for exchange_calendars compatibility"
+              impact: "Changed line 156: start_date = dates_df['ts'].min().date()"
+            - timestamp: "2025-10-18T19:05:00Z"
+              finding: "All 48 existing tests pass without modification (100% backward compatible)"
+              impact: "No test changes required, implementation is transparent drop-in replacement"
+            - timestamp: "2025-10-18T19:10:00Z"
+              finding: "Pre-computation adds ~2.69s overhead but amortized across all lookups"
+              impact: "Net benefit for datasets with multiple OHLC generation calls on same date range"
+
+    Risks:
+      type: object
+      properties:
+        memory_usage:
+          type: object
+          properties:
+            description:
+              type: string
+              example: "Pre-computed sets may consume more memory for large date ranges"
+            mitigation:
+              type: string
+              example: "Sets are small (~500K timestamps per exchange for 7 months = ~40KB per exchange)"
+            severity:
+              type: string
+              enum: [low, medium, high]
+              example: "low"
+
+        initialization_time:
+          type: object
+          properties:
+            description:
+              type: string
+              example: "Pre-computation adds 2.69s overhead during first call"
+            mitigation:
+              type: string
+              example: "Only called once per date range, amortized over all lookups"
+            severity:
+              type: string
+              example: "low"
+
+tags:
+  - name: implementation
+    description: Implementation progress and updates
+  - name: validation
+    description: Testing and verification steps
+  - name: documentation
+    description: Documentation updates
+
+x-implementation-notes:
+  spike_test_location: /tmp/spike-tests/test_phase2_session_vectorization.py
+  validation_results: /Users/terryli/eon/exness-data-preprocess/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md
+  related_phase1:
+    commit: 08202d4
+    speedup: 7.3x
+  combined_speedup: 16x
+
+x-version-history:
+  - version: 1.0.0
+    date: 2025-10-18
+    changes:
+      - Initial plan based on spike test results
+      - Defined SLOs and implementation strategy
+      - Identified 2.2x speedup target (not 224x)
+  - version: 2.0.0
+    date: 2025-10-18
+    changes:
+      - Implementation completed
+      - Added _precompute_trading_minutes helper method
+      - Replaced .apply() loop with vectorized .isin() lookups
+      - All 48 tests passed (no regressions)
+      - Documented implementation discoveries
+      - Backward compatible API (no breaking changes)
