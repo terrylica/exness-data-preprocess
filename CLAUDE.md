@@ -17,12 +17,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### AI Assistant Documentation
 - **[docs/README.md](docs/README.md)** - Architecture, planning, research findings
-- **[docs/MODULE_ARCHITECTURE.md](docs/MODULE_ARCHITECTURE.md)** - Complete module documentation with SLOs
+- **[docs/MODULE_ARCHITECTURE.md](docs/MODULE_ARCHITECTURE.md)** - Complete module documentation with SLOs (v1.7.0)
 - **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema with self-documentation
 - **[docs/RESEARCH_PATTERNS.md](docs/RESEARCH_PATTERNS.md)** - Research lifecycle and tool selection (v1.0.0)
 - **[docs/UNIFIED_DUCKDB_PLAN_v2.md](docs/UNIFIED_DUCKDB_PLAN_v2.md)** - v2.0.0 architecture specification
 - **[docs/EXNESS_DATA_SOURCES.md](docs/EXNESS_DATA_SOURCES.md)** - Data source variants and URLs
 - **[Makefile](Makefile)** - Module introspection commands (module-stats, module-complexity, module-deps)
+
+### Optimization Plans (v1.7.0)
+- **[docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)** - SSoT plan v2.0.0 (2.2x speedup)
+- **[docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)** - SSoT plan v2.0.0 (complete coverage)
+- **[docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)** - Phase 1 validation
+- **[docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)** - Phase 2 validation
 
 ### Implementation
 - **src/exness_data_preprocess/** - Source code (7 specialized modules + facade)
@@ -43,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Complete Specification**: [`docs/UNIFIED_DUCKDB_PLAN_v2.md`](docs/UNIFIED_DUCKDB_PLAN_v2.md)
 
-### Module Pattern (v1.3.0)
+### Module Pattern (v1.7.0)
 - **Facade orchestrator** (processor.py) coordinating 7 specialized modules
 - **Separation of concerns** with single-responsibility modules
 - **SLO-based design** (Availability, Correctness, Observability, Maintainability)
@@ -55,12 +61,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **downloader.py** - HTTP download operations
 3. **tick_loader.py** - CSV parsing
 4. **database_manager.py** - Database operations
-5. **session_detector.py** - Holiday and session detection
-6. **gap_detector.py** - Incremental update logic
-7. **ohlc_generator.py** - Phase7 OHLC generation
+5. **session_detector.py** - Holiday and session detection (v1.7.0: vectorized, 2.2x speedup)
+6. **gap_detector.py** - Incremental update logic (v1.7.0: SQL gap detection, complete coverage)
+7. **ohlc_generator.py** - Phase7 OHLC generation (v1.7.0: incremental, 7.3x speedup)
 8. **query_engine.py** - Query operations
 
 **Complete Details**: [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)
+
+### Performance Optimizations (v1.7.0)
+- **Incremental OHLC Generation** (Phase 1): 7.3x speedup
+  - Optional date-range filtering for regeneration
+  - Measured: 8.05s → 1.10s for incremental updates (7 months)
+  - SSoT: [`docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)
+
+- **Session Vectorization** (Phase 2): 2.2x speedup
+  - Pre-compute trading minutes, vectorized .isin() lookup
+  - Measured: 5.99s → 2.69s for 302K bars across 10 exchanges
+  - Combined Phase 1+2: **~16x total speedup** (8.05s → 0.50s)
+  - SSoT: [`docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
+  - Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
+
+- **SQL Gap Detection** (Phase 3): Complete coverage + 46% LOC reduction
+  - SQL EXCEPT query detects ALL gaps (internal + edges)
+  - Bug fix: Now detects internal gaps missed by Python MIN/MAX
+  - Measured: 41 → 42 gaps detected (spike test validation)
+  - SSoT: [`docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
+
+**Pattern**: Spike test first (validate theory) → Implement → Iterative SSoT plan updates
 
 ### Schema (v1.6.0)
 - **Phase7 30-column OHLC** with dual-variant spreads
@@ -163,8 +190,8 @@ doppler run --project claude-config --config dev -- uv publish --token "$PYPI_TO
 
 ---
 
-**Version**: 2.0.0 (Architecture) + 1.3.0 (Implementation) + 1.0.0 (Research Patterns)
-**Last Updated**: 2025-10-17
+**Version**: 2.0.0 (Architecture) + 1.7.0 (Implementation) + 1.0.0 (Research Patterns)
+**Last Updated**: 2025-10-18
 **Architecture**: Unified Single-File DuckDB Storage with Incremental Updates
-**Implementation**: Facade Pattern with 7 Specialized Modules
+**Implementation**: Facade Pattern with 7 Specialized Modules + Performance Optimizations (~16x speedup)
 **Research**: Hybrid Materialization (pandas/Polars exploration, DuckDB validated results)

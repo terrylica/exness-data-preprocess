@@ -1,12 +1,31 @@
 # Module Architecture
 
-**Version**: v1.3.1 (Documentation Accuracy Update)
-**Last Updated**: 2025-10-17
+**Version**: v1.7.0 (Performance Optimizations)
+**Last Updated**: 2025-10-18
 **Related**: [`README.md`](../README.md) - Architecture overview
 
 ---
 
 ## Changelog
+
+### v1.7.0 (2025-10-18) - Performance Optimizations
+- **ohlc_generator.py**: Incremental OHLC generation (7.3x speedup)
+  - Add optional `start_date`/`end_date` parameters for date-range filtering
+  - Three modes: full regeneration, incremental append, range update
+  - Measured: 8.05s → 1.10s for incremental updates (7 months)
+- **session_detector.py**: Vectorized session detection (2.2x speedup)
+  - Pre-compute trading minutes with vectorized `.isin()` lookup
+  - Replace per-timestamp `.apply()` calls with set-based operations
+  - Measured: 5.99s → 2.69s for 302K bars across 10 exchanges
+  - Combined Phase 1+2: ~16x total speedup
+- **gap_detector.py**: SQL gap detection with complete coverage
+  - Replace Python iteration with SQL EXCEPT query
+  - Detect ALL gaps (internal + edges), not just edges
+  - LOC reduction: 46% (62 → 34 lines)
+  - Bug fix: Now detects internal gaps missed by Python MIN/MAX
+- All optimizations: Backward compatible (no API changes)
+- Validation: All 48 tests pass, spike tests validate measured results
+- SSoT Plans: PHASE2_SESSION_VECTORIZATION_PLAN.yaml, PHASE3_SQL_GAP_DETECTION_PLAN.yaml
 
 ### v1.3.1 (2025-10-17) - Documentation Accuracy Update
 - Fixed module count: 6 instances + 1 static utility (was documented as 7)
@@ -105,7 +124,7 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
 - `_append_ticks_to_db()` - Delegates to database_manager module
 - `_discover_missing_months()` - Delegates to gap_detector module
 - `update_data(...) -> UpdateResult` - Main workflow orchestrator (returns Pydantic model)
-- `_regenerate_ohlc()` - Delegates to ohlc_generator module
+- `_regenerate_ohlc(duckdb_path, start_date=None)` - Delegates to ohlc_generator module (v1.7.0: optional start_date for incremental)
 - `query_ticks(...) -> pd.DataFrame` - Delegates to query_engine module
 - `query_ohlc(...) -> pd.DataFrame` - Delegates to query_engine module
 - `get_data_coverage(...) -> CoverageInfo` - Delegates to query_engine module (returns Pydantic model)
@@ -339,11 +358,14 @@ CREATE TABLE IF NOT EXISTS metadata (
     - `is_xhkg_session` (BOOLEAN) - Hong Kong Exchange
     - `is_xses_session` (BOOLEAN) - Singapore Exchange
 
-**Implementation Details**:
+**Implementation Details** (v1.7.0 Vectorized):
 - **Holiday detection**: Pre-generates holiday sets for O(1) lookup performance using `calendar.regular_holidays.holidays()`
-- **Session detection**: Uses `calendar.is_open_on_minute()` with timezone-aware timestamps for minute-level precision
-- **Nested helper**: `is_trading_hour()` function handles timezone conversion automatically
-- **Performance**: Set-based holiday checking, efficient minute-level session detection
+- **Session detection** (vectorized): Pre-computes trading minutes via `_precompute_trading_minutes()`, then uses vectorized `.isin()` lookup
+  - Replaces per-timestamp `.apply()` calls with set-based operations
+  - Calls `calendar.is_open_on_minute()` during pre-computation to respect lunch breaks
+  - Performance: 2.2x speedup (5.99s → 2.69s for 302K bars across 10 exchanges)
+- **Nested helper** (legacy): `is_trading_hour()` function replaced by vectorized approach in v1.7.0
+- **Performance**: Set-based holiday checking, vectorized session detection (v1.7.0+)
 
 **SLOs**:
 - **Availability**: Raise exceptions on exchange_calendars errors (no fallback)
@@ -386,14 +408,16 @@ result = detector.detect_sessions_and_holidays(dates_df)
 **Constructor**:
 - `__init__(self, base_dir: Path)` - Initialize with base directory for database access
 
-**Methods**:
+**Methods** (v1.7.0 SQL Gap Detection):
 - `discover_missing_months(pair: str, start_date: str) -> List[Tuple[int, int]]`
   - **Parameter type**: `start_date` is a **string** in "YYYY-MM-DD" format (not datetime object)
-  - Queries database metadata for earliest/latest dates via SQL query
-  - Identifies missing months **before earliest** and **after latest** in database
-  - **Limitation**: Does NOT detect gaps within existing date range (TODO in code)
-  - Returns list of (year, month) tuples for missing data
-  - Returns list of months after latest date (not empty list for up-to-date databases)
+  - **v1.7.0**: Uses SQL EXCEPT query with `generate_series()` to detect ALL gaps
+  - **Previous**: Only detected gaps before earliest and after latest (missed internal gaps)
+  - Identifies missing months: **before earliest + within range + after latest**
+  - Uses DuckDB `generate_series()` + EXCEPT operator for set difference
+  - LOC reduction: 46% (62 lines → 34 lines)
+  - Bug fixed: Now detects internal gaps (spike test: 41 → 42 gaps detected)
+  - Returns sorted list of (year, month) tuples for missing data
 
 **SLOs**:
 - **Availability**: Raise exceptions on database/HTTP errors (no fallback)
@@ -437,9 +461,14 @@ missing = gap_detector.discover_missing_months("EURUSD", datetime(2024, 1, 1))
 **Constructor**:
 - `__init__(self, session_detector: SessionDetector)` - Requires SessionDetector dependency injection
 
-**Methods**:
-- `regenerate_ohlc(duckdb_path: Path) -> None`
-  - **DELETE before INSERT**: Drops existing `ohlc_1m` table for clean regeneration
+**Methods** (v1.7.0 Incremental):
+- `regenerate_ohlc(duckdb_path: Path, start_date: Optional[str] = None, end_date: Optional[str] = None) -> None`
+  - **v1.7.0**: Supports three operation modes via optional date parameters:
+    1. Full regeneration (start_date=None, end_date=None): DELETE all + INSERT all [backward compatible]
+    2. Incremental append (start_date=YYYY-MM-DD, end_date=None): INSERT OR IGNORE new data only [most common, 7.3x speedup]
+    3. Range update (start_date + end_date): DELETE range + INSERT range [fix specific period]
+  - Uses `INSERT OR IGNORE` with PRIMARY KEY for duplicate handling
+  - Performance: 8.05s → 1.10s for incremental updates (7 months, 303K bars)
   - Generates Phase7 30-column OHLC via SQL LEFT JOIN (Raw_Spread + Standard)
   - Dynamic SQL generation for session columns from **exchanges.py** module
   - Detects sessions and holidays using injected `session_detector` instance

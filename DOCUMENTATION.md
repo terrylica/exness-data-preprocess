@@ -110,7 +110,30 @@ For contributors and researchers who need deep understanding:
   - All constructor signatures verified
   - HTTP library, type signatures, data flow corrected
 
-**Checkpoint**: You understand the system design and can confidently extend the codebase.
+### 10. Performance Optimizations (v0.5.0)
+- **[Phase 1 Spike Test Results](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)** ⭐ *7.3x Speedup*
+  - Incremental OHLC generation: 8.05s → 1.10s for updates
+  - 303K bars regeneration vs 43K incremental update
+  - Measured: 86.3% time reduction
+
+- **[Phase 2 SSoT Plan](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)** - Session vectorization specification
+  - OpenAPI 3.1.0 machine-readable plan with SLOs
+  - Version tracking: v1.0.0 (initial) → v2.0.0 (completed)
+  - Implementation discoveries and nuances documented
+
+- **[Phase 2 Spike Test Results](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)** ⭐ *2.2x Speedup*
+  - Vectorized session detection: 5.99s → 2.69s for 302K bars
+  - 10 global exchange sessions processed in parallel
+  - Combined Phase 1+2: ~16x total speedup (8.05s → 0.50s)
+
+- **[Phase 3 SSoT Plan](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)** - SQL gap detection specification
+  - OpenAPI 3.1.0 specification with implementation strategy
+  - Bug fix documentation: Internal gaps now detected
+  - 46% LOC reduction (62 → 34 lines)
+
+- **[CHANGELOG v0.5.0](CHANGELOG.md)** - Complete release notes with measured results
+
+**Checkpoint**: You understand the optimization strategies and spike-test-first validation methodology.
 
 ---
 
@@ -242,6 +265,6 @@ DOCUMENTATION.md (You are here - Hub)
 
 ---
 
-**Last Updated**: 2025-10-17
-**Documentation Version**: v1.3.1
-**Total Documentation Files**: 68 markdown files + 2 Python examples + 2 YAML specs
+**Last Updated**: 2025-10-18
+**Documentation Version**: v1.7.0
+**Total Documentation Files**: 70 markdown files + 2 Python examples + 4 YAML specs

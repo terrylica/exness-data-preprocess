@@ -15,6 +15,7 @@ Professional forex tick data preprocessing with unified single-file DuckDB stora
 - **Incremental Updates**: Automatic gap detection and download only missing months
 - **Dual-Variant Storage**: Raw_Spread (primary) + Standard (reference) in same database
 - **Phase7 OHLC Schema**: 30-column bars (v1.6.0) with dual spreads, tick counts, normalized metrics, and 10 global exchange sessions with trading hour detection
+- **High Performance**: Incremental OHLC generation (7.3x speedup), vectorized session detection (2.2x speedup), SQL gap detection with complete coverage
 - **Fast Queries**: Date range queries with sub-15ms performance
 - **On-Demand Resampling**: Any timeframe (5m, 1h, 1d) resampled in <15ms
 - **PRIMARY KEY Constraints**: Prevents duplicate data during incremental updates
@@ -389,6 +390,30 @@ Data is sourced from Exness's public tick data repository:
 | Date range queries         | Efficient filtering without loading entire dataset |
 | On-demand resampling       | Any timeframe in <15ms                             |
 | SQL filter support         | Direct SQL WHERE clauses on ticks                  |
+
+### Performance Optimizations (v0.5.0)
+
+**Incremental OHLC Generation** - 7.3x speedup for updates:
+- Full regeneration: 8.05s (303K bars, 7 months)
+- Incremental update: 1.10s (43K new bars, 1 month)
+- Implementation: Optional date-range parameters for partial regeneration
+- Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)
+
+**Vectorized Session Detection** - 2.2x speedup for trading hour detection:
+- Current approach: 5.99s (302K bars, 10 exchanges)
+- Vectorized approach: 2.69s (302K bars, 10 exchanges)
+- Combined Phase 1+2: ~16x total speedup (8.05s → 0.50s)
+- Implementation: Pre-compute trading minutes, vectorized `.isin()` lookup
+- SSoT: [`docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
+- Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
+
+**SQL Gap Detection** - Complete coverage with 46% code reduction:
+- Bug fix: Python approach missed internal gaps (41 detected vs 42 actual)
+- SQL EXCEPT operator detects ALL gaps (before + within + after existing data)
+- Code reduced from 62 lines to 34 lines (46% reduction)
+- SSoT: [`docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
+
+**Release Notes**: See [`CHANGELOG.md`](CHANGELOG.md) for complete v0.5.0 details
 
 ## API Reference
 

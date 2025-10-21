@@ -52,7 +52,7 @@
 
 ---
 
-### Implementation Architecture v1.3.0
+### Implementation Architecture v1.7.0
 
 **Refactoring Plans**:
 - [`plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md`](plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md) - Complete refactoring progress
@@ -65,9 +65,9 @@
 - **downloader.py** - HTTP download operations (httpx)
 - **tick_loader.py** - CSV parsing (pandas)
 - **database_manager.py** - Database operations (DuckDB)
-- **session_detector.py** - Holiday and session detection (exchange_calendars)
-- **gap_detector.py** - Incremental update logic
-- **ohlc_generator.py** - Phase7 30-column OHLC generation
+- **session_detector.py** - Holiday and session detection (exchange_calendars) - v1.7.0: Vectorized 2.2x speedup
+- **gap_detector.py** - Incremental update logic - v1.7.0: SQL EXCEPT with complete gap coverage
+- **ohlc_generator.py** - Phase7 30-column OHLC generation - v1.7.0: Incremental 7.3x speedup
 - **query_engine.py** - Query operations with on-demand resampling
 
 **Design Principles**:
@@ -76,7 +76,29 @@
 - ✅ **Off-the-shelf libraries**: httpx, pandas, DuckDB, exchange_calendars (no custom implementations)
 - ✅ **Zero regressions**: All 48 tests pass after 7-module extraction (53% line reduction)
 
-**Status**: Phase 5 Complete (Released as v0.3.1 on 2025-10-16)
+**Status**: v0.5.0 Released (2025-10-18)
+
+---
+
+### Performance Optimizations (v0.5.0)
+
+**Optimization Plans (SSoT)**:
+- [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml) - OpenAPI 3.1.0 specification for session vectorization
+- [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml) - OpenAPI 3.1.0 specification for SQL gap detection
+
+**Validation Results**:
+- [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md) - Incremental OHLC 7.3x speedup validation
+- [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md) - Session vectorization 2.2x speedup validation
+
+**Key Achievements**:
+- ✅ **Incremental OHLC Generation**: 7.3x speedup (8.05s → 1.10s for incremental updates)
+- ✅ **Vectorized Session Detection**: 2.2x speedup (5.99s → 2.69s for 302K bars, 10 exchanges)
+- ✅ **Combined Phase 1+2**: ~16x total speedup (8.05s → 0.50s)
+- ✅ **SQL Gap Detection**: Complete coverage (detects internal gaps Python missed), 46% LOC reduction
+- ✅ **Spike-Test-First Methodology**: All optimizations validated before implementation
+- ✅ **Zero Regressions**: All 48 tests pass, 100% backward compatible
+
+**Release Notes**: [`../CHANGELOG.md`](../CHANGELOG.md) - Complete v0.5.0 changelog
 
 ---
 
@@ -206,6 +228,10 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 | **Zero-Spread**             | [`research/eurusd-zero-spread-deviations/README.md`](research/eurusd-zero-spread-deviations/README.md)                                                                               | Research               |
 | **Phase7 v1.1.0**           | [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) | Specification          |
 | **Methodology**             | [`research/eurusd-zero-spread-deviations/01-methodology.md`](research/eurusd-zero-spread-deviations/01-methodology.md)                                                               | Reference              |
+| **Phase 2 Optimization**    | [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml)                                                                                                  | SSoT Plan              |
+| **Phase 3 Optimization**    | [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                                          | SSoT Plan              |
+| **Spike Test Phase 1**      | [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)                                                                          | Validation             |
+| **Spike Test Phase 2**      | [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)                                                                          | Validation             |
 | **API Reference**           | [`../README.md`](../README.md)                                                                                                                                                       | Main Doc               |
 | **Examples**                | [`../examples/`](../examples/)                                                                                                                                                       | Code Samples           |
 
@@ -236,5 +262,5 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ---
 
-**Last Updated**: 2025-10-17
+**Last Updated**: 2025-10-18
 **Maintainer**: Terry Li <terry@eonlabs.com>
