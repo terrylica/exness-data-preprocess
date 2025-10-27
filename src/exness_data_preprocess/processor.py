@@ -35,6 +35,9 @@ from exness_data_preprocess.models import (
     TimeframeType,
     UpdateResult,
     VariantType,
+    supported_pairs,
+    supported_timeframes,
+    supported_variants,
 )
 from exness_data_preprocess.ohlc_generator import OHLCGenerator
 from exness_data_preprocess.query_engine import QueryEngine
@@ -105,6 +108,87 @@ class ExnessDataProcessor:
 
         # Initialize query engine module for tick and OHLC queries
         self.query_engine = QueryEngine(self.base_dir)
+
+    @staticmethod
+    def _validate_pair(pair: str) -> None:
+        """
+        Validate currency pair input.
+
+        Args:
+            pair: Currency pair to validate
+
+        Raises:
+            ValueError: If pair is not supported
+        """
+        valid_pairs = supported_pairs()
+        if pair not in valid_pairs:
+            raise ValueError(
+                f"Invalid pair '{pair}'. Must be one of: {', '.join(valid_pairs)}"
+            )
+
+    @staticmethod
+    def _validate_variant(variant: str) -> None:
+        """
+        Validate data variant input.
+
+        Args:
+            variant: Data variant to validate
+
+        Raises:
+            ValueError: If variant is not supported
+        """
+        valid_variants = supported_variants()
+        if variant not in valid_variants:
+            raise ValueError(
+                f"Invalid variant '{variant}'. Must be one of: {', '.join(valid_variants)}"
+            )
+
+    @staticmethod
+    def _validate_timeframe(timeframe: str) -> None:
+        """
+        Validate OHLC timeframe input.
+
+        Args:
+            timeframe: Timeframe to validate
+
+        Raises:
+            ValueError: If timeframe is not supported
+        """
+        valid_timeframes = supported_timeframes()
+        if timeframe not in valid_timeframes:
+            raise ValueError(
+                f"Invalid timeframe '{timeframe}'. Must be one of: {', '.join(valid_timeframes)}"
+            )
+
+    @staticmethod
+    def _validate_date_format(date_str: Optional[str], param_name: str) -> None:
+        """
+        Validate date string format.
+
+        Args:
+            date_str: Date string to validate (YYYY-MM-DD)
+            param_name: Parameter name for error messages
+
+        Raises:
+            ValueError: If date format is invalid
+        """
+        if date_str is None:
+            return
+
+        import re
+        if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+            raise ValueError(
+                f"Invalid {param_name} '{date_str}'. Must be in YYYY-MM-DD format (e.g., '2024-01-15')"
+            )
+
+        # Validate date values
+        try:
+            from datetime import datetime
+            datetime.strptime(date_str, '%Y-%m-%d')
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid {param_name} '{date_str}': {str(e)}"
+            )
 
     def download_exness_zip(
         self, year: int, month: int, pair: str = "EURUSD", variant: str = "Raw_Spread"
@@ -198,13 +282,19 @@ class ExnessDataProcessor:
             delete_zip: Delete ZIP files after processing
 
         Returns:
-            Dictionary with update results:
+            UpdateResult: Update results with:
                 - duckdb_path: Path to database file
                 - months_added: Number of months downloaded
                 - raw_ticks_added: Number of Raw_Spread ticks added
                 - standard_ticks_added: Number of Standard ticks added
                 - ohlc_bars: Total OHLC bars after update
                 - duckdb_size_mb: Database file size
+
+        Raises:
+            ValueError: If pair is not supported or start_date format is invalid
+            FileNotFoundError: If database directory cannot be created
+            ConnectionError: If Exness repository is unreachable
+            pd.errors.EmptyDataError: If downloaded ZIP files are corrupted or empty
 
         Example:
             >>> processor = ExnessDataProcessor()
@@ -215,6 +305,10 @@ class ExnessDataProcessor:
             >>> result = processor.update_data("EURUSD")
             >>> print(f"Added {result['months_added']} new months")
         """
+        # Validate inputs before any file operations
+        self._validate_pair(pair)
+        self._validate_date_format(start_date, "start_date")
+
         print(f"\n{'=' * 70}")
         print(f"Updating {pair} database")
         print(f"{'=' * 70}")
@@ -352,7 +446,13 @@ class ExnessDataProcessor:
             filter_sql: Additional SQL WHERE clause
 
         Returns:
-            DataFrame with tick data
+            DataFrame with tick data (columns: Timestamp, Bid, Ask)
+
+        Raises:
+            ValueError: If pair/variant is invalid or date format is wrong
+            FileNotFoundError: If database file doesn't exist
+            duckdb.Error: If SQL query fails (e.g., invalid filter_sql)
+            pd.errors.EmptyDataError: If date range contains no data
 
         Example:
             >>> processor = ExnessDataProcessor()
@@ -361,6 +461,12 @@ class ExnessDataProcessor:
             >>> # Query Standard ticks with custom filter
             >>> df = processor.query_ticks("EURUSD", variant="standard", filter_sql="Bid > 1.10")
         """
+        # Validate inputs before any file operations
+        self._validate_pair(pair)
+        self._validate_variant(variant)
+        self._validate_date_format(start_date, "start_date")
+        self._validate_date_format(end_date, "end_date")
+
         # Delegate to query_engine module
         return self.query_engine.query_ticks(pair, variant, start_date, end_date, filter_sql)
 
@@ -383,6 +489,12 @@ class ExnessDataProcessor:
         Returns:
             DataFrame with OHLC data (Phase7 30-column schema v1.6.0)
 
+        Raises:
+            ValueError: If pair/timeframe is invalid or date format is wrong
+            FileNotFoundError: If database file doesn't exist
+            duckdb.Error: If SQL query fails or OHLC table is missing
+            pd.errors.EmptyDataError: If date range contains no data
+
         Example:
             >>> processor = ExnessDataProcessor()
             >>> # Query 1m OHLC for January 2024
@@ -390,6 +502,12 @@ class ExnessDataProcessor:
             >>> # Query 1h OHLC (on-demand resampling)
             >>> df = processor.query_ohlc("EURUSD", timeframe="1h", start_date="2024-01-01")
         """
+        # Validate inputs before any file operations
+        self._validate_pair(pair)
+        self._validate_timeframe(timeframe)
+        self._validate_date_format(start_date, "start_date")
+        self._validate_date_format(end_date, "end_date")
+
         # Delegate to query_engine module
         return self.query_engine.query_ohlc(pair, timeframe, start_date, end_date)
 
@@ -401,7 +519,7 @@ class ExnessDataProcessor:
             pair: Currency pair
 
         Returns:
-            Dictionary with coverage information:
+            CoverageInfo: Coverage information with:
                 - database_exists: Whether database file exists
                 - duckdb_path: Path to database file
                 - duckdb_size_mb: Database file size
@@ -412,11 +530,18 @@ class ExnessDataProcessor:
                 - latest_date: Latest tick timestamp
                 - date_range_days: Number of days covered
 
+        Raises:
+            ValueError: If pair is not supported
+            duckdb.Error: If database connection fails (rare)
+
         Example:
             >>> processor = ExnessDataProcessor()
             >>> coverage = processor.get_data_coverage("EURUSD")
             >>> print(f"Coverage: {coverage['earliest_date']} to {coverage['latest_date']}")
             >>> print(f"Total: {coverage['raw_spread_ticks']:,} ticks")
         """
+        # Validate inputs before any file operations
+        self._validate_pair(pair)
+
         # Delegate to query_engine module
         return self.query_engine.get_data_coverage(pair)

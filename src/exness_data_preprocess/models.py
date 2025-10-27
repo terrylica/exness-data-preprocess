@@ -227,11 +227,13 @@ class CoverageInfo(BaseModel):
     )
     earliest_date: Optional[str] = Field(
         default=None,
-        description="ISO 8601 timestamp of earliest tick in raw_spread_ticks (None if no data)",
+        pattern=r'^\d{4}-\d{2}-\d{2}',
+        description="ISO 8601 timestamp of earliest tick in raw_spread_ticks (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
     )
     latest_date: Optional[str] = Field(
         default=None,
-        description="ISO 8601 timestamp of latest tick in raw_spread_ticks (None if no data)",
+        pattern=r'^\d{4}-\d{2}-\d{2}',
+        description="ISO 8601 timestamp of latest tick in raw_spread_ticks (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
     )
     date_range_days: int = Field(
         ge=0,
