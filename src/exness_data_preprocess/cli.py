@@ -3,6 +3,7 @@ Command-line interface for Exness data preprocessing.
 """
 
 import argparse
+import importlib.metadata
 import sys
 from pathlib import Path
 
@@ -131,6 +132,13 @@ Examples:
   # Show storage statistics
   exness-preprocess stats
         """,
+    )
+
+    # Add version flag
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {importlib.metadata.version('exness-data-preprocess')}",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")

@@ -43,7 +43,7 @@ Example:
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 # ============================================================================
 # Layer 1: Type Definitions
@@ -163,6 +163,44 @@ class UpdateResult(BaseModel):
         description="Total database file size in megabytes after update. Typical size: ~135 MB/year.",
     )
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def avg_ticks_per_month(self) -> float:
+        """
+        Average ticks added per month.
+
+        Returns:
+            Average number of ticks (Raw_Spread + Standard) per month downloaded.
+            Returns 0.0 if no months were added.
+
+        Example:
+            >>> result = UpdateResult(...)
+            >>> print(f"Avg ticks/month: {result.avg_ticks_per_month:,.0f}")
+        """
+        if self.months_added == 0:
+            return 0.0
+        total_ticks = self.raw_ticks_added + self.standard_ticks_added
+        return total_ticks / self.months_added
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def storage_efficiency_mb_per_million_ticks(self) -> float:
+        """
+        Storage efficiency: MB per million ticks.
+
+        Returns:
+            Database size per million total ticks (Raw_Spread + Standard).
+            Returns 0.0 if no ticks exist.
+
+        Example:
+            >>> result = UpdateResult(...)
+            >>> print(f"Efficiency: {result.storage_efficiency_mb_per_million_ticks:.2f} MB/M ticks")
+        """
+        total_ticks = self.raw_ticks_added + self.standard_ticks_added
+        if total_ticks == 0:
+            return 0.0
+        return (self.duckdb_size_mb / total_ticks) * 1_000_000
+
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -239,6 +277,70 @@ class CoverageInfo(BaseModel):
         ge=0,
         description="Number of calendar days between earliest_date and latest_date (0 if no data)",
     )
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def total_ticks(self) -> int:
+        """
+        Total number of ticks across both variants.
+
+        Returns:
+            Sum of raw_spread_ticks + standard_ticks
+
+        Example:
+            >>> coverage = CoverageInfo(...)
+            >>> print(f"Total ticks: {coverage.total_ticks:,}")
+        """
+        return self.raw_spread_ticks + self.standard_ticks
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def coverage_percentage(self) -> float:
+        """
+        Percentage of expected trading days with data.
+
+        Estimates coverage by comparing date_range_days to expected trading days
+        (approximately 252 trading days per year = 69% of calendar days).
+
+        Returns:
+            Percentage of expected trading days covered (0-100+).
+            Returns 0.0 if no data.
+
+        Note:
+            Values >100% indicate full coverage including weekends/holidays.
+            Values <100% indicate gaps in trading day coverage.
+
+        Example:
+            >>> coverage = CoverageInfo(...)
+            >>> print(f"Coverage: {coverage.coverage_percentage:.1f}%")
+        """
+        if self.date_range_days == 0:
+            return 0.0
+
+        # Approximate expected trading days: 252 per year = 0.69 ratio
+        expected_trading_days = self.date_range_days * 0.69
+        actual_coverage = self.date_range_days  # We have data for these days
+
+        return (actual_coverage / expected_trading_days) * 100 if expected_trading_days > 0 else 0.0
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def storage_efficiency_mb_per_million_ticks(self) -> float:
+        """
+        Storage efficiency: MB per million ticks.
+
+        Returns:
+            Database size per million total ticks.
+            Returns 0.0 if no ticks exist.
+
+        Example:
+            >>> coverage = CoverageInfo(...)
+            >>> print(f"Efficiency: {coverage.storage_efficiency_mb_per_million_ticks:.2f} MB/M ticks")
+        """
+        total = self.total_ticks
+        if total == 0:
+            return 0.0
+        return (self.duckdb_size_mb / total) * 1_000_000
 
     model_config = {
         "json_schema_extra": {

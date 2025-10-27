@@ -109,6 +109,50 @@ class ExnessDataProcessor:
         # Initialize query engine module for tick and OHLC queries
         self.query_engine = QueryEngine(self.base_dir)
 
+    def __enter__(self):
+        """
+        Enter context manager.
+
+        Enables usage with 'with' statement for automatic resource cleanup.
+
+        Example:
+            >>> with ExnessDataProcessor() as processor:
+            ...     df = processor.query_ticks("EURUSD")
+            ...     # Resources automatically cleaned up on exit
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Exit context manager.
+
+        Performs cleanup operations when exiting 'with' block.
+        Currently handles graceful cleanup of temporary files.
+
+        Args:
+            exc_type: Exception type if an error occurred
+            exc_val: Exception value if an error occurred
+            exc_tb: Exception traceback if an error occurred
+
+        Returns:
+            False to propagate exceptions (standard behavior)
+        """
+        # Clean up any temporary files
+        import shutil
+        if self.temp_dir.exists():
+            try:
+                # Remove old temp files (keep directory structure)
+                for item in self.temp_dir.glob("*.zip"):
+                    try:
+                        item.unlink()
+                    except Exception:
+                        pass  # Ignore cleanup errors
+            except Exception:
+                pass  # Ignore cleanup errors
+
+        # Don't suppress exceptions
+        return False
+
     @staticmethod
     def _validate_pair(pair: str) -> None:
         """
@@ -545,3 +589,120 @@ class ExnessDataProcessor:
 
         # Delegate to query_engine module
         return self.query_engine.get_data_coverage(pair)
+
+    def get_available_dates(self, pair: PairType = "EURUSD") -> tuple[Optional[str], Optional[str]]:
+        """
+        Get earliest and latest dates with actual data.
+
+        Unlike get_data_coverage(), this provides a quick way to check the
+        actual date boundaries without fetching full coverage statistics.
+
+        Args:
+            pair: Currency pair
+
+        Returns:
+            Tuple of (earliest_date, latest_date) as ISO 8601 strings.
+            Returns (None, None) if database doesn't exist or has no data.
+
+        Raises:
+            ValueError: If pair is not supported
+
+        Example:
+            >>> processor = ExnessDataProcessor()
+            >>> earliest, latest = processor.get_available_dates("EURUSD")
+            >>> if earliest:
+            ...     print(f"Data available from {earliest} to {latest}")
+        """
+        self._validate_pair(pair)
+        coverage = self.query_engine.get_data_coverage(pair)
+        return (coverage.earliest_date, coverage.latest_date)
+
+    def validate_date_range(
+        self,
+        start_date: str,
+        end_date: str
+    ) -> tuple[bool, Optional[str]]:
+        """
+        Validate date range before querying.
+
+        Pre-flight check to validate date formats and logical ordering without
+        performing database operations. Helps AI agents avoid failed queries.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Returns:
+            Tuple of (is_valid, error_message).
+            Returns (True, None) if valid, (False, error_message) if invalid.
+
+        Example:
+            >>> processor = ExnessDataProcessor()
+            >>> is_valid, error = processor.validate_date_range("2024-01-01", "2024-12-31")
+            >>> if not is_valid:
+            ...     print(f"Invalid date range: {error}")
+        """
+        # Validate formats
+        try:
+            self._validate_date_format(start_date, "start_date")
+            self._validate_date_format(end_date, "end_date")
+        except ValueError as e:
+            return (False, str(e))
+
+        # Validate logical ordering
+        from datetime import datetime
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+
+            if start_dt > end_dt:
+                return (False, f"start_date '{start_date}' is after end_date '{end_date}'")
+
+        except ValueError as e:
+            return (False, str(e))
+
+        return (True, None)
+
+    def estimate_download_size(
+        self,
+        pair: PairType,
+        start_date: str,
+        end_date: str
+    ) -> float:
+        """
+        Estimate download size in MB for date range.
+
+        Provides rough estimate based on typical data density (approximately
+        1.5M ticks per month = ~11 MB per month for dual-variant storage).
+
+        Args:
+            pair: Currency pair
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Returns:
+            Estimated download size in megabytes
+
+        Raises:
+            ValueError: If pair is invalid or date format is wrong
+
+        Example:
+            >>> processor = ExnessDataProcessor()
+            >>> size_mb = processor.estimate_download_size("EURUSD", "2024-01-01", "2024-12-31")
+            >>> print(f"Estimated download: {size_mb:.1f} MB")
+        """
+        self._validate_pair(pair)
+        self._validate_date_format(start_date, "start_date")
+        self._validate_date_format(end_date, "end_date")
+
+        from datetime import datetime
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+
+        # Calculate months
+        months = (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month) + 1
+
+        # Estimate: ~11 MB per month (dual-variant storage)
+        estimated_mb = months * 11.0
+
+        return estimated_mb
