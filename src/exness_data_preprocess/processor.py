@@ -26,11 +26,13 @@ from typing import List, Optional, Tuple
 import duckdb
 import pandas as pd
 
+from exness_data_preprocess.config import ConfigModel
 from exness_data_preprocess.database_manager import DatabaseManager
 from exness_data_preprocess.downloader import ExnessDownloader
 from exness_data_preprocess.gap_detector import GapDetector
 from exness_data_preprocess.models import (
     CoverageInfo,
+    DryRunResult,
     PairType,
     TimeframeType,
     UpdateResult,
@@ -74,18 +76,27 @@ class ExnessDataProcessor:
         >>> df_ohlc = processor.query_ohlc("EURUSD", timeframe="1h")
     """
 
-    def __init__(self, base_dir: Optional[Path] = None):
+    def __init__(self, base_dir: Optional[Path] = None, config: Optional[ConfigModel] = None):
         """
         Initialize processor.
 
         Args:
-            base_dir: Base directory for data storage. Defaults to ~/eon/exness-data/
+            base_dir: Base directory for data storage (overrides config if both provided)
+            config: User configuration from config file
+
+        Priority:
+            base_dir parameter > config.base_dir > default (~/eon/exness-data)
         """
+        # Resolve base_dir with priority: parameter > config > default
         if base_dir is None:
-            base_dir = Path.home() / "eon" / "exness-data"
+            if config is not None and config.base_dir is not None:
+                base_dir = config.base_dir
+            else:
+                base_dir = Path.home() / "eon" / "exness-data"
 
         self.base_dir = base_dir
         self.temp_dir = base_dir / "temp"
+        self.config = config  # Store for potential future use
 
         # Create directories
         self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -307,7 +318,8 @@ class ExnessDataProcessor:
         start_date: str = "2022-01-01",
         force_redownload: bool = False,
         delete_zip: bool = True,
-    ) -> UpdateResult:
+        dry_run: bool = False,
+    ) -> UpdateResult | DryRunResult:
         """
         Update instrument database with latest data from Exness.
 
@@ -324,15 +336,16 @@ class ExnessDataProcessor:
             start_date: Earliest date to download (YYYY-MM-DD)
             force_redownload: Force re-download even if data exists
             delete_zip: Delete ZIP files after processing
+            dry_run: Preview operation without downloading or modifying database
 
         Returns:
-            UpdateResult: Update results with:
-                - duckdb_path: Path to database file
-                - months_added: Number of months downloaded
-                - raw_ticks_added: Number of Raw_Spread ticks added
-                - standard_ticks_added: Number of Standard ticks added
-                - ohlc_bars: Total OHLC bars after update
-                - duckdb_size_mb: Database file size
+            UpdateResult: Update results with database metrics (if dry_run=False)
+            DryRunResult: Estimated operation plan (if dry_run=True) with:
+                - would_download_months: Number of months that would be downloaded
+                - estimated_raw_ticks: Estimated Raw_Spread ticks
+                - estimated_standard_ticks: Estimated Standard ticks
+                - estimated_size_mb: Estimated database size increase
+                - gap_months: List of YYYY-MM months to download
 
         Raises:
             ValueError: If pair is not supported or start_date format is invalid
@@ -368,6 +381,14 @@ class ExnessDataProcessor:
 
         if not missing_months:
             print("\n✓ Database is up to date")
+            if dry_run:
+                return DryRunResult(
+                    would_download_months=0,
+                    estimated_raw_ticks=0,
+                    estimated_standard_ticks=0,
+                    estimated_size_mb=0.0,
+                    gap_months=[],
+                )
             return UpdateResult(
                 duckdb_path=duckdb_path,
                 months_added=0,
@@ -375,6 +396,42 @@ class ExnessDataProcessor:
                 standard_ticks_added=0,
                 ohlc_bars=0,
                 duckdb_size_mb=duckdb_path.stat().st_size / 1024 / 1024,
+            )
+
+        # Dry-run mode: Return estimates without downloading
+        if dry_run:
+            num_months = len(missing_months)
+            # Historical averages for EURUSD
+            ticks_per_month = 9_500_000  # ~9.5M ticks per month per variant
+            mb_per_month = 11.0           # ~11 MB per month
+
+            estimated_raw = num_months * ticks_per_month
+            estimated_std = num_months * ticks_per_month
+            estimated_size = num_months * mb_per_month
+
+            gap_month_strings = [f"{year}-{month:02d}" for year, month in missing_months]
+
+            print(f"\n{'=' * 70}")
+            print("Dry-Run Summary")
+            print(f"{'=' * 70}")
+            print(f"Would download:    {num_months} months")
+            print(f"Estimated ticks:   {estimated_raw + estimated_std:,} total")
+            print(f"  Raw_Spread:      {estimated_raw:,}")
+            print(f"  Standard:        {estimated_std:,}")
+            print(f"Estimated size:    {estimated_size:.1f} MB")
+            print(f"\nMonths to download:")
+            for gap in gap_month_strings[:10]:  # Show first 10
+                print(f"  {gap}")
+            if len(gap_month_strings) > 10:
+                print(f"  ... and {len(gap_month_strings) - 10} more")
+            print(f"{'=' * 70}\n")
+
+            return DryRunResult(
+                would_download_months=num_months,
+                estimated_raw_ticks=estimated_raw,
+                estimated_standard_ticks=estimated_std,
+                estimated_size_mb=estimated_size,
+                gap_months=gap_month_strings,
             )
 
         # Step 3: Download and append ticks

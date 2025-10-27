@@ -60,6 +60,7 @@ __license__ = "MIT"
 
 from exness_data_preprocess.models import (
     CoverageInfo,
+    DryRunResult,
     PairType,
     TimeframeType,
     UpdateResult,
@@ -76,6 +77,7 @@ __all__ = [
     # Pydantic models
     "UpdateResult",
     "CoverageInfo",
+    "DryRunResult",
     # Type definitions
     "PairType",
     "TimeframeType",

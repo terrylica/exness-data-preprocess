@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  title: Phase 4 Dry-Run Mode and Config File Implementation Plan
+  version: 1.0.0
+  description: |
+    Single Source of Truth for Phase 4 implementation.
+
+    Intent: Add dry-run planning mode and persistent config file support.
+    Constraint: Must not modify existing behavior when features are unused.
+
+    Features:
+      1. Dry-run mode: Preview operations without file system changes
+      2. Config file: Persistent user preferences in ~/.exness-preprocess.yaml
+
+    Status: Completed
+
+  contact:
+    name: exness-data-preprocess
+    url: https://github.com/terryli/exness-data-preprocess
+
+paths:
+  /implementation:
+    summary: Implementation steps and discoveries
+
+components:
+  schemas:
+    SLOs:
+      type: object
+      required:
+        - availability
+        - correctness
+        - observability
+        - maintainability
+      properties:
+        availability:
+          type: string
+          description: |
+            Dry-run mode optional (default: off).
+            Config file optional (falls back to defaults).
+            Existing API signatures unchanged.
+          example: "100% - Features are additive only"
+
+        correctness:
+          type: string
+          description: |
+            Dry-run mode reports accurate estimates (calls gap detector, queries coverage).
+            Config file validation uses Pydantic (reject invalid configs).
+            No silent fallbacks on errors.
+          example: "Raise on invalid config, accurate dry-run estimates"
+
+        observability:
+          type: string
+          description: |
+            Dry-run mode prints operation plan to stdout.
+            Config file errors include file path and validation details.
+            Log config file location when loaded.
+          example: "Print dry-run plan, log config source"
+
+        maintainability:
+          type: string
+          description: |
+            Config uses PyYAML (off-the-shelf).
+            Config validation uses Pydantic models.
+            Dry-run reuses existing gap_detector + query_engine.
+          example: "Delegates to existing modules, uses OSS libraries"
+
+    ImplementationStrategy:
+      type: object
+      required:
+        - approach
+        - dependencies
+        - changes
+        - testing
+      properties:
+        approach:
+          type: string
+          enum:
+            - additive_features
+          description: |
+            Add dry_run parameter to processor methods.
+            Add config file loader as new module.
+            CLI reads config → overrides with flags.
+
+        dependencies:
+          type: array
+          items:
+            type: string
+          example:
+            - pyyaml (new)
+            - pydantic (existing)
+            - pathlib (stdlib)
+
+        changes:
+          type: object
+          properties:
+            config_py:
+              type: array
+              items:
+                type: string
+              example:
+                - Create src/exness_data_preprocess/config.py
+                - Define ConfigModel with Pydantic
+                - Implement load_config() with PyYAML
+                - Validate config file against schema
+
+            processor_py:
+              type: array
+              items:
+                type: string
+              example:
+                - Add dry_run parameter to update_data()
+                - When dry_run=True, call gap_detector but skip downloads
+                - Return DryRunResult with estimated MB/ticks
+                - Add optional config parameter to __init__()
+
+            cli_py:
+              type: array
+              items:
+                type: string
+              example:
+                - Add --dry-run flag to process command
+                - Add --config flag for custom config path
+                - Load ~/.exness-preprocess.yaml by default
+                - CLI flags override config file values
+
+        testing:
+          type: object
+          properties:
+            unit_tests:
+              type: string
+              example: "All 48 existing tests must pass"
+            new_tests:
+              type: string
+              example: "Add tests for config loading, dry-run mode"
+
+    ConfigFileSchema:
+      type: object
+      description: Structure of ~/.exness-preprocess.yaml
+      properties:
+        base_dir:
+          type: string
+          example: "~/eon/exness-data"
+          description: "Default base directory for data storage"
+        default_pair:
+          type: string
+          enum: [EURUSD, GBPUSD, XAUUSD, USDJPY, AUDUSD, USDCAD, NZDUSD, EURGBP, EURJPY, GBPJPY]
+          example: "EURUSD"
+          description: "Default currency pair for CLI commands"
+        default_timeframe:
+          type: string
+          enum: ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+          example: "1h"
+          description: "Default OHLC timeframe"
+      example:
+        base_dir: "~/eon/exness-data"
+        default_pair: "EURUSD"
+        default_timeframe: "1h"
+
+    DryRunResultModel:
+      type: object
+      description: Result from dry-run mode (similar to UpdateResult)
+      required:
+        - would_download_months
+        - estimated_raw_ticks
+        - estimated_standard_ticks
+        - estimated_size_mb
+        - gap_months
+      properties:
+        would_download_months:
+          type: integer
+          minimum: 0
+          description: "Number of months that would be downloaded"
+        estimated_raw_ticks:
+          type: integer
+          minimum: 0
+          description: "Estimated Raw_Spread ticks (~9.5M per month)"
+        estimated_standard_ticks:
+          type: integer
+          minimum: 0
+          description: "Estimated Standard ticks (~9.5M per month)"
+        estimated_size_mb:
+          type: number
+          minimum: 0
+          description: "Estimated database size increase (~11 MB per month)"
+        gap_months:
+          type: array
+          items:
+            type: string
+          description: "List of YYYY-MM month strings that would be downloaded"
+          example: ["2024-01", "2024-02", "2024-03"]
+
+    ImplementationDetails:
+      type: object
+      description: Concrete implementation steps (updated iteratively)
+      properties:
+        step1_create_config_module:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/config.py"
+            classes:
+              type: array
+              items:
+                type: string
+              example:
+                - ConfigModel (Pydantic model)
+            functions:
+              type: array
+              items:
+                type: string
+              example:
+                - load_config(path: Optional[Path]) -> Optional[ConfigModel]
+                - get_default_config_path() -> Path
+            intent:
+              type: string
+              example: "Load and validate config file with Pydantic"
+            dependencies:
+              type: array
+              items:
+                type: string
+              example:
+                - pyyaml.safe_load()
+                - pydantic.BaseModel
+                - pathlib.Path.expanduser()
+
+        step2_add_dry_run_to_processor:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/processor.py"
+            method:
+              type: string
+              example: "update_data"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Add dry_run parameter (default False)
+                - Call gap_detector.detect_gaps() to find missing months
+                - Estimate ticks: len(gaps) * 9_500_000 per variant
+                - Estimate size: len(gaps) * 11.0 MB
+                - Return DryRunResult instead of UpdateResult when dry_run=True
+
+        step3_add_config_to_init:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/processor.py"
+            method:
+              type: string
+              example: "__init__"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Add config parameter (Optional[ConfigModel])
+                - If config provided, use config.base_dir instead of default
+                - Store config as instance variable
+
+        step4_integrate_cli:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/cli.py"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Add --dry-run flag to process command (action='store_true')
+                - Add --config flag (optional path to config file)
+                - Load config in main() before subcommand dispatch
+                - Pass dry_run=args.dry_run to api.process_month()
+                - Print DryRunResult when in dry-run mode
+
+        step5_update_models:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/models.py"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Add DryRunResult Pydantic model
+                - Add computed field: avg_ticks_per_month (if months > 0)
+                - Add to __all__ exports
+
+        step6_update_api:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "src/exness_data_preprocess/api.py"
+            changes:
+              type: array
+              items:
+                type: string
+              example:
+                - Add dry_run parameter to process_month()
+                - Forward to processor.update_data(dry_run=dry_run)
+                - Return DryRunResult when dry_run=True
+
+    DiscoveredNuances:
+      type: object
+      description: Implementation learnings (updated during development)
+      properties:
+        version:
+          type: string
+          example: "1.0.0"
+        discoveries:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              finding:
+                type: string
+              impact:
+                type: string
+          example:
+            - timestamp: "2025-10-27T23:00:00Z"
+              finding: "ConfigModel.base_dir field_validator returns Path, not str"
+              impact: "No conversion needed in processor.__init__ - config.base_dir is already Path"
+            - timestamp: "2025-10-27T23:10:00Z"
+              finding: "Union return type needed: UpdateResult | DryRunResult"
+              impact: "Python 3.9+ supports union syntax, used throughout"
+            - timestamp: "2025-10-27T23:15:00Z"
+              finding: "CLI config loading must handle missing file gracefully"
+              impact: "load_config() returns None if file missing (not an error)"
+            - timestamp: "2025-10-27T23:20:00Z"
+              finding: "Config defaults apply only when CLI flags use default values"
+              impact: "Check args.pair == 'EURUSD' before applying config.default_pair"
+
+  x-implementation-findings:
+    version: "2.0.0"
+    status: "Completed"
+    notes: |
+      Implementation completed with all tests passing (48/48).
+
+      Modules modified:
+      - config.py (new): PyYAML config loading with Pydantic validation
+      - models.py: DryRunResult model with computed fields
+      - processor.py: dry_run parameter, config parameter, DryRunResult logic
+      - api.py: dry_run forwarding for v1.0.0 compatibility
+      - cli.py: --dry-run and --config flags, config loading
+      - pyproject.toml: pyyaml>=6.0.0 dependency
+
+      Time estimate: ~1.5 hours
+      Actual time: ~1.5 hours
+      Tests: 48 passed, 0 failed
+      Backward compatible: Yes (all optional parameters)

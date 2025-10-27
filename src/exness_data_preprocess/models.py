@@ -361,6 +361,96 @@ class CoverageInfo(BaseModel):
     }
 
 
+class DryRunResult(BaseModel):
+    """
+    Result from dry-run mode (preview without executing).
+
+    Returned when calling update_data() with dry_run=True to estimate
+    download operations without modifying the file system.
+
+    Attributes:
+        would_download_months: Number of months that would be downloaded
+        estimated_raw_ticks: Estimated Raw_Spread ticks (~9.5M per month)
+        estimated_standard_ticks: Estimated Standard ticks (~9.5M per month)
+        estimated_size_mb: Estimated database size increase (~11 MB per month)
+        gap_months: List of YYYY-MM month strings that would be downloaded
+
+    Example:
+        >>> processor = ExnessDataProcessor()
+        >>> result = processor.update_data("EURUSD", start_date="2024-01-01", dry_run=True)
+        >>> print(f"Would download {result.would_download_months} months")
+        >>> print(f"Estimated size: {result.estimated_size_mb:.1f} MB")
+        >>> print(f"Months: {', '.join(result.gap_months)}")
+    """
+
+    would_download_months: int = Field(
+        ge=0,
+        description="Number of months that would be downloaded (0 if up to date)"
+    )
+    estimated_raw_ticks: int = Field(
+        ge=0,
+        description="Estimated Raw_Spread ticks based on historical average (~9.5M per month for EURUSD)"
+    )
+    estimated_standard_ticks: int = Field(
+        ge=0,
+        description="Estimated Standard ticks based on historical average (~9.5M per month for EURUSD)"
+    )
+    estimated_size_mb: float = Field(
+        ge=0,
+        description="Estimated database size increase in megabytes (~11 MB per month for EURUSD)"
+    )
+    gap_months: list[str] = Field(
+        default_factory=list,
+        description="List of YYYY-MM month strings that would be downloaded, in chronological order"
+    )
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def estimated_total_ticks(self) -> int:
+        """
+        Total estimated ticks (Raw_Spread + Standard).
+
+        Returns:
+            Sum of estimated_raw_ticks + estimated_standard_ticks
+
+        Example:
+            >>> result = DryRunResult(...)
+            >>> print(f"Total: {result.estimated_total_ticks:,} ticks")
+        """
+        return self.estimated_raw_ticks + self.estimated_standard_ticks
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def avg_ticks_per_month(self) -> float:
+        """
+        Average estimated ticks per month.
+
+        Returns:
+            Average number of ticks per month (0.0 if no months)
+
+        Example:
+            >>> result = DryRunResult(...)
+            >>> print(f"Avg: {result.avg_ticks_per_month:,.0f} ticks/month")
+        """
+        if self.would_download_months == 0:
+            return 0.0
+        return self.estimated_total_ticks / self.would_download_months
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "would_download_months": 3,
+                    "estimated_raw_ticks": 28500000,
+                    "estimated_standard_ticks": 28500000,
+                    "estimated_size_mb": 33.0,
+                    "gap_months": ["2024-01", "2024-02", "2024-03"]
+                }
+            ]
+        }
+    }
+
+
 # ============================================================================
 # Helper Functions
 # ============================================================================

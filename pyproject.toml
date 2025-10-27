@@ -42,6 +42,7 @@ dependencies = [
     "tqdm>=4.65.0",
     "pydantic>=2.0.0",
     "exchange-calendars>=4.5.6",
+    "pyyaml>=6.0.0",
 ]
 
 [project.urls]

@@ -29,6 +29,7 @@ def process_month(
     pair: str = "EURUSD",
     delete_zip: bool = True,
     base_dir: Optional[Path] = None,
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     """
     Process single month of data (v1.0.0 API compatibility).
@@ -47,12 +48,13 @@ def process_month(
         pair: Currency pair (default: EURUSD)
         delete_zip: Delete ZIP files after processing
         base_dir: Base directory for data storage
+        dry_run: Preview operation without downloading
 
     Returns:
         Dict with v1.0.0-compatible keys:
-        - tick_count: Total ticks added (raw + standard)
+        - tick_count: Total ticks (or estimated if dry_run=True)
         - parquet_size_mb: 0 (v2.0.0 has no parquet files)
-        - duckdb_size_mb: Database size in MB
+        - duckdb_size_mb: Database size or estimated size (MB)
 
     Raises:
         Any exception from processor.update_data()
@@ -67,14 +69,25 @@ def process_month(
         pair=pair,
         start_date=start_date,
         delete_zip=delete_zip,
+        dry_run=dry_run,
     )
 
     # Map to v1.0.0 response format
-    return {
-        "tick_count": result["raw_ticks_added"] + result["standard_ticks_added"],
-        "parquet_size_mb": 0.0,  # v2.0.0 has no parquet files
-        "duckdb_size_mb": result["duckdb_size_mb"],
-    }
+    # Handle both UpdateResult and DryRunResult
+    if dry_run:
+        # DryRunResult
+        return {
+            "tick_count": result["estimated_raw_ticks"] + result["estimated_standard_ticks"],
+            "parquet_size_mb": 0.0,
+            "duckdb_size_mb": result["estimated_size_mb"],
+        }
+    else:
+        # UpdateResult
+        return {
+            "tick_count": result["raw_ticks_added"] + result["standard_ticks_added"],
+            "parquet_size_mb": 0.0,
+            "duckdb_size_mb": result["duckdb_size_mb"],
+        }
 
 
 def process_date_range(

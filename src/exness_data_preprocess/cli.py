@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from exness_data_preprocess import api
+from exness_data_preprocess.config import load_config
 
 
 def process_command(args):
@@ -42,8 +43,12 @@ def process_command(args):
             pair=args.pair,
             delete_zip=not args.keep_zip,
             base_dir=Path(args.base_dir) if args.base_dir else None,
+            dry_run=args.dry_run,
         )
-        print(f"\n✓ Successfully processed {args.pair} {args.year}-{args.month:02d}")
+        if args.dry_run:
+            print(f"\n✓ Dry-run completed for {args.pair} {args.year}-{args.month:02d}")
+        else:
+            print(f"\n✓ Successfully processed {args.pair} {args.year}-{args.month:02d}")
 
 
 def query_command(args):
@@ -141,6 +146,13 @@ Examples:
         version=f"%(prog)s {importlib.metadata.version('exness-data-preprocess')}",
     )
 
+    # Add config file flag (global)
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to config file (default: ~/.exness-preprocess.yaml)",
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Process command
@@ -155,6 +167,9 @@ Examples:
         "--keep-zip", action="store_true", help="Keep ZIP files after processing"
     )
     process_parser.add_argument("--base-dir", help="Base directory for data storage")
+    process_parser.add_argument(
+        "--dry-run", action="store_true", help="Preview operation without downloading"
+    )
     process_parser.set_defaults(func=process_command)
 
     # Query command
@@ -195,6 +210,35 @@ Examples:
     if not args.command:
         parser.print_help()
         sys.exit(1)
+
+    # Load config file (if provided or default exists)
+    config = None
+    if args.config:
+        # Custom config path provided
+        try:
+            config = load_config(Path(args.config))
+            if config is None:
+                print(f"✗ Config file not found: {args.config}", file=sys.stderr)
+                sys.exit(1)
+        except Exception as e:
+            print(f"✗ Config file error: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        # Try default config path (don't error if missing)
+        try:
+            config = load_config()
+        except Exception as e:
+            print(f"✗ Config file error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Apply config defaults (CLI flags override config)
+    if config:
+        if hasattr(args, 'base_dir') and not args.base_dir and config.base_dir:
+            args.base_dir = str(config.base_dir)
+        if hasattr(args, 'pair') and args.pair == "EURUSD" and config.default_pair:
+            args.pair = config.default_pair
+        if hasattr(args, 'timeframe') and args.timeframe == "1m" and config.default_timeframe:
+            args.timeframe = config.default_timeframe
 
     try:
         args.func(args)
