@@ -14,6 +14,7 @@
 **Impact**: Session flags incorrectly show `1` during lunch break when trading is halted
 
 **Current Implementation**:
+
 ```python
 "xtks": ExchangeConfig(
     code="XTKS",
@@ -27,6 +28,7 @@
 ```
 
 **Actual Trading Hours** (per JPX official website):
+
 - **Morning Session**: 9:00 AM - 11:30 AM JST
 - **Lunch Break**: 11:30 AM - 12:30 PM JST (NO TRADING)
 - **Afternoon Session**: 12:30 PM - 3:00 PM JST
@@ -34,6 +36,7 @@
 **Problem**: Our implementation treats 9:00-15:00 as continuous trading, incorrectly flagging 11:30-12:30 as trading hours.
 
 **Sources**:
+
 - Japan Exchange Group official: https://www.jpx.co.jp/english/equities/trading/domestic/01.html
 - TradingHours.com: "9:00am - 11:30am and 12:30pm - 3:25pm Japan Standard Time"
 
@@ -45,6 +48,7 @@
 **Impact**: Session flags incorrectly show `1` during lunch break when trading is halted
 
 **Current Implementation**:
+
 ```python
 "xhkg": ExchangeConfig(
     code="XHKG",
@@ -58,6 +62,7 @@
 ```
 
 **Actual Trading Hours** (per HKEX official website):
+
 - **Morning Session**: 9:30 AM - 12:00 PM HKT
 - **Lunch Break**: 12:00 PM - 1:00 PM HKT (NO TRADING)
 - **Afternoon Session**: 1:00 PM - 4:00 PM HKT
@@ -65,6 +70,7 @@
 **Problem**: Our implementation treats 9:30-16:00 as continuous trading, incorrectly flagging 12:00-13:00 as trading hours.
 
 **Sources**:
+
 - HKEX official: https://www.hkex.com.hk/Services/Trading-hours-and-Severe-Weather-Arrangements/Trading-Hours/Securities-Market
 - "9:30am - 12:00pm, 1:00pm - 4:00pm" (1-hour lunch break)
 
@@ -76,6 +82,7 @@
 **Impact**: May incorrectly flag lunch break hours as trading hours
 
 **Current Implementation**:
+
 ```python
 "xses": ExchangeConfig(
     code="XSES",
@@ -95,11 +102,13 @@
 ## ✅ Verified Correct
 
 ### NYSE (New York Stock Exchange)
+
 - **Implementation**: 9:30-16:00 ET
 - **Actual**: 9:30 AM - 4:00 PM ET (continuous trading, no lunch break)
 - **Status**: ✅ CORRECT
 
 ### LSE (London Stock Exchange)
+
 - **Implementation**: 8:00-16:30 GMT
 - **Actual**: 8:00 AM - 4:30 PM GMT (continuous trading, no lunch break)
 - **Status**: ✅ CORRECT
@@ -109,6 +118,7 @@
 ## 🔍 Pending Verification
 
 ### Exchanges Needing Research:
+
 1. **XSWX** (SIX Swiss Exchange) - 9:00-17:30 CET
 2. **XFRA** (Frankfurt Stock Exchange) - 9:00-17:30 CET
 3. **XTSE** (Toronto Stock Exchange) - 9:30-16:00 ET
@@ -121,17 +131,21 @@
 ## 📊 Impact Assessment
 
 ### Affected Data
+
 - **All XTKS session flags**: Incorrectly `1` during 11:30-12:30 JST lunch break
 - **All XHKG session flags**: Incorrectly `1` during 12:00-13:00 HKT lunch break
 - **Potentially XSES**: May have similar issue if lunch break exists
 
 ### User Impact
+
 **High Impact**: Users relying on `is_xtks_session` or `is_xhkg_session` for trading strategies will:
+
 1. Execute trades during non-trading hours (backtests will be invalid)
 2. Calculate incorrect trading volumes
 3. Miss the distinction between morning/afternoon sessions
 
 ### Data Regeneration Required
+
 **Yes**: All databases with XTKS or XHKG session data must be regenerated after fix.
 
 ---
@@ -143,6 +157,7 @@
 **Approach**: Enhance ExchangeConfig to support multiple trading sessions per day.
 
 **Schema Change**:
+
 ```python
 @dataclass(frozen=True)
 class TradingSession:
@@ -162,6 +177,7 @@ class ExchangeConfig:
 ```
 
 **Implementation**:
+
 ```python
 "xtks": ExchangeConfig(
     code="XTKS",
@@ -177,6 +193,7 @@ class ExchangeConfig:
 ```
 
 **Detection Logic**:
+
 ```python
 def is_trading_hour(ts, exchange_config, calendar):
     if not calendar.is_session(ts.date()):
@@ -195,12 +212,14 @@ def is_trading_hour(ts, exchange_config, calendar):
 ```
 
 **Pros**:
+
 - ✅ Accurate representation of real-world trading hours
 - ✅ Handles lunch breaks correctly
 - ✅ Extensible for future exchanges
 - ✅ Maintains backward compatibility (single-session exchanges have 1-element list)
 
 **Cons**:
+
 - ⚠️ Breaking change (requires database regeneration)
 - ⚠️ More complex schema
 
@@ -211,6 +230,7 @@ def is_trading_hour(ts, exchange_config, calendar):
 **Approach**: Document that session flags represent "trading DAY" not "continuous trading hours" and note lunch breaks as limitation.
 
 **Documentation**:
+
 ```markdown
 ## Known Limitations
 
@@ -222,10 +242,12 @@ def is_trading_hour(ts, exchange_config, calendar):
 ```
 
 **Pros**:
+
 - ✅ No code changes required
 - ✅ No database regeneration needed
 
 **Cons**:
+
 - ❌ Inaccurate business logic
 - ❌ Misleading column names (`is_*_session` implies "during trading")
 - ❌ Users may make incorrect trading decisions
@@ -235,17 +257,20 @@ def is_trading_hour(ts, exchange_config, calendar):
 ## 📝 Recommendations
 
 ### Immediate Action (Short Term)
+
 1. **Document the limitation** in migration guide and DATABASE_SCHEMA.md
 2. **Add warning** in column comments for XTKS and XHKG
 3. **Notify users** via release notes that lunch breaks are not handled
 
 ### Proper Fix (Long Term)
+
 1. **Implement Option A** (multi-session support)
 2. **Research all 10 exchanges** for complete accuracy
 3. **Bump to v1.7.0** with proper lunch break handling
 4. **Add tests** for lunch break edge cases
 
 ### Priority
+
 **HIGH**: This affects data accuracy for major Asian markets (Tokyo, Hong Kong) which account for significant forex trading volume.
 
 ---
@@ -265,16 +290,19 @@ Before implementing Option A, verify lunch break schedules for:
 ## 📅 Timeline
 
 ### Immediate (Today)
+
 - [x] Document findings
 - [ ] Add warnings to migration guide
 - [ ] Update DATABASE_SCHEMA.md with limitations
 
 ### Short Term (This Week)
+
 - [ ] Research remaining 6 exchanges
 - [ ] Decide on Option A vs Option B
 - [ ] Create v1.7.0 plan if proceeding with Option A
 
 ### Long Term (Next Release)
+
 - [ ] Implement multi-session support
 - [ ] Test DST + lunch break edge cases
 - [ ] Regenerate all test databases
@@ -321,6 +349,7 @@ After researching off-the-shelf solutions (per user requirement), discovered tha
 **Approach**: Use `exchange_calendars.is_open_on_minute()` instead of manual hour checking.
 
 **Implementation** (`session_detector.py` lines 120-135):
+
 ```python
 def is_trading_hour(ts, calendar=calendar):
     """
@@ -341,6 +370,7 @@ def is_trading_hour(ts, calendar=calendar):
 ```
 
 **Benefits**:
+
 - ✅ **Simpler** than Option A (no custom multi-session logic needed)
 - ✅ **More accurate** than Option B (actually fixes the problem)
 - ✅ **Single source of truth**: Upstream `exchange_calendars` library
@@ -351,6 +381,7 @@ def is_trading_hour(ts, calendar=calendar):
 ### Verification Results
 
 **Tokyo Stock Exchange (XTKS)**:
+
 - ✅ Morning session (9:00-11:00 JST): OPEN
 - ✅ Lunch break (11:30-12:00 JST): **CLOSED**
 - ✅ Afternoon session (12:30-14:30 JST): OPEN
@@ -358,15 +389,18 @@ def is_trading_hour(ts, calendar=calendar):
 - ✅ After Nov 5, 2024: Closes at 15:30 ✅
 
 **Hong Kong Stock Exchange (XHKG)**:
+
 - ✅ Morning session (11:00-11:30 HKT): OPEN
 - ✅ Lunch break (12:00-12:30 HKT): **CLOSED**
 - ✅ Afternoon session (13:00-14:00 HKT): OPEN
 
 **Singapore Exchange (XSES)**:
+
 - ✅ Lunch break 12:00-13:00 SGT (verified via SGX official rulebook)
 - ✅ Handled automatically by `exchange_calendars`
 
 **Test Suite**:
+
 - ✅ 48/48 tests passing
 - ✅ No regressions from v1.6.0
 - ✅ Lunch breaks correctly excluded
@@ -378,6 +412,7 @@ def is_trading_hour(ts, calendar=calendar):
 **Why**: v1.6.0 already switched from checking `calendar.is_session(date)` (trading day) to checking trading hours. However, the implementation used **manual hour comparison** instead of the proper `is_open_on_minute()` API.
 
 **Impact**:
+
 - Session columns in v1.6.0 databases were already **partially broken** (didn't respect lunch breaks)
 - This fix **completes the v1.6.0 implementation** as originally intended
 - Users should regenerate v1.6.0 databases to get correct lunch break handling

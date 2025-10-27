@@ -9,6 +9,7 @@
 ## Changelog
 
 ### v1.7.0 (2025-10-18) - Performance Optimizations
+
 - **ohlc_generator.py**: Incremental OHLC generation (7.3x speedup)
   - Add optional `start_date`/`end_date` parameters for date-range filtering
   - Three modes: full regeneration, incremental append, range update
@@ -28,6 +29,7 @@
 - SSoT Plans: PHASE2_SESSION_VECTORIZATION_PLAN.yaml, PHASE3_SQL_GAP_DETECTION_PLAN.yaml
 
 ### v1.3.1 (2025-10-17) - Documentation Accuracy Update
+
 - Fixed module count: 6 instances + 1 static utility (was documented as 7)
 - Corrected all constructor signatures (added base_dir/temp_dir parameters)
 - Fixed HTTP library documentation (urllib.request, not httpx)
@@ -41,6 +43,7 @@
 - See [`docs/validation/ARCHITECTURE_AUDIT_2025-10-17.md`](validation/ARCHITECTURE_AUDIT_2025-10-17.md) for complete audit findings
 
 ### v1.3.0 (2025-10-16) - Facade Pattern Implementation
+
 - Extracted 7 specialized modules from processor.py
 - Implemented facade pattern with SLO-based design
 - 48 tests passing, zero regressions
@@ -52,6 +55,7 @@
 The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized module instances plus 1 static utility module, coordinated by a thin orchestrator (`processor.py`). Each module has a single responsibility and defines clear SLOs (Availability, Correctness, Observability, Maintainability).
 
 **Design Principles**:
+
 - **Facade Pattern**: processor.py delegates all operations to specialized modules
 - **Separation of Concerns**: Each module has single, focused responsibility
 - **SLO-Based Design**: All modules define Availability, Correctness, Observability, Maintainability contracts
@@ -59,6 +63,7 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
 - **Zero Regressions**: All 48 tests pass after module extraction
 
 **Module Instances** (6):
+
 1. `ExnessDownloader(temp_dir)` - HTTP downloads
 2. `DatabaseManager(base_dir)` - Database operations
 3. `GapDetector(base_dir)` - Incremental update logic
@@ -66,10 +71,10 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
 5. `OHLCGenerator(session_detector)` - OHLC generation
 6. `QueryEngine(base_dir)` - Query operations
 
-**Static Utility** (1):
-7. `TickLoader` - CSV parsing (static methods only, no instantiation needed)
+**Static Utility** (1): 7. `TickLoader` - CSV parsing (static methods only, no instantiation needed)
 
 **Architecture Diagram**:
+
 ```
 ┌─────────────────────────────────────────────────┐
 │           processor.py (Facade)                 │
@@ -111,12 +116,14 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
 **Pattern**: Facade Pattern - all public methods delegate to specialized modules
 
 **Responsibilities**:
+
 - Initialize 6 module instances + 1 static utility
 - Coordinate workflow between modules
 - Provide unified public API
 - No business logic (all delegated to modules)
 
 **Key Methods**:
+
 - `__init__(base_dir: Optional[Path] = None)` - Initialize 6 module instances (downloader, database_manager, gap_detector, session_detector, ohlc_generator, query_engine) plus directory setup
 - `download_exness_zip()` - Delegates to downloader module
 - `_get_or_create_db()` - Delegates to database_manager module
@@ -130,12 +137,14 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
 - `get_data_coverage(...) -> CoverageInfo` - Delegates to query_engine module (returns Pydantic model)
 
 **SLOs**:
+
 - **Availability**: Raises exceptions from delegated modules (no fallbacks)
 - **Correctness**: Delegates validation to specialized modules
 - **Observability**: Progress output via print statements (user-facing), module logs use Python logging library
 - **Maintainability**: Thin facade (82% pure delegation, 18% orchestration), easy to add new modules
 
 **Return Types**:
+
 - `update_data()` → `UpdateResult` (Pydantic model with duckdb_path, months_added, raw_ticks_added, standard_ticks_added, ohlc_bars, duckdb_size_mb)
 - `query_ticks()` → `pd.DataFrame` (tick data)
 - `query_ohlc()` → `pd.DataFrame` (OHLC bars)
@@ -156,9 +165,11 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
 **Class**: `ExnessDownloader`
 
 **Constructor**:
+
 - `__init__(self, temp_dir: Path)` - Initialize with temporary directory for downloads
 
 **Methods**:
+
 - `download_zip(year: int, month: int, pair: str, variant: str) -> Optional[Path]`
   - Downloads ZIP file for specified parameters
   - Returns path to downloaded ZIP file (or existing file if already downloaded)
@@ -166,22 +177,26 @@ The exness-data-preprocess codebase uses a **Facade Pattern** with 6 specialized
   - **Note**: File existence check - returns existing file without re-downloading
 
 **SLOs**:
+
 - **Availability**: Returns None on HTTP errors with error message (no exceptions raised, no retries)
 - **Correctness**: Validate URL patterns match Exness repository structure
 - **Observability**: Progress output via print statements (file sizes, download status)
 - **Maintainability**: Thin wrapper around urllib.request library (off-the-shelf)
 
 **Dependencies**:
+
 - urllib.request - HTTP download via `urlretrieve()`
 - urllib.error - Error handling (`URLError`)
 - pathlib - File path handling
 
 **URL Pattern**:
+
 ```
 https://ticks.ex2archive.com/ticks/{VARIANT}/{YEAR}/{MONTH}/Exness_{VARIANT}_{YEAR}_{MONTH}.zip
 ```
 
 **Example**:
+
 ```python
 downloader = ExnessDownloader()
 zip_path = downloader.download_zip(2024, 9, "EURUSD", "Raw_Spread")
@@ -189,6 +204,7 @@ zip_path = downloader.download_zip(2024, 9, "EURUSD", "Raw_Spread")
 ```
 
 **Error Handling**:
+
 - HTTP 404: Raise error (month doesn't exist)
 - HTTP 500: Raise error (server error)
 - Network timeout: Raise error (no retries)
@@ -208,6 +224,7 @@ zip_path = downloader.download_zip(2024, 9, "EURUSD", "Raw_Spread")
 **Constructor**: None (all methods are static)
 
 **Methods**:
+
 - `load_from_zip(zip_path: Path) -> pd.DataFrame` (static method)
   - Opens ZIP file, reads CSV in-memory (no temporary files)
   - Parses timestamps to **datetime64[ns, UTC]** (timezone-aware)
@@ -216,16 +233,19 @@ zip_path = downloader.download_zip(2024, 9, "EURUSD", "Raw_Spread")
   - Raises ValueError on parsing errors
 
 **SLOs**:
+
 - **Availability**: Raise exceptions on CSV parsing errors (no fallback)
 - **Correctness**: Validate timestamp parsing to microsecond precision
 - **Observability**: Parsing error logging with line numbers
 - **Maintainability**: Pure pandas implementation (off-the-shelf)
 
 **Dependencies**:
+
 - pandas - DataFrame operations
 - zipfile - ZIP archive handling
 
 **CSV Format**:
+
 ```csv
 Timestamp,Bid,Ask
 2024-09-01 00:00:01.123456,1.10234,1.10236
@@ -233,12 +253,14 @@ Timestamp,Bid,Ask
 ```
 
 **Example**:
+
 ```python
 df = TickLoader.load_from_zip(Path("Exness_EURUSD_Raw_Spread_2024_09.zip"))
 # Returns DataFrame with ~815K rows, 3 columns
 ```
 
 **Validation**:
+
 - Timestamps must be monotonically increasing
 - Bid and Ask must be positive floats
 - No NULL values allowed
@@ -256,9 +278,11 @@ df = TickLoader.load_from_zip(Path("Exness_EURUSD_Raw_Spread_2024_09.zip"))
 **Class**: `DatabaseManager`
 
 **Constructor**:
+
 - `__init__(self, base_dir: Path)` - Initialize with base directory for database storage
 
 **Methods**:
+
 - `get_or_create_db(pair: str) -> Path`
   - Creates database if doesn't exist
   - Initializes schema with PRIMARY KEY constraints via **OHLCSchema class**
@@ -274,16 +298,19 @@ df = TickLoader.load_from_zip(Path("Exness_EURUSD_Raw_Spread_2024_09.zip"))
   - Raises DuckDBError on schema mismatches
 
 **SLOs**:
+
 - **Availability**: Raise exceptions on database errors (no fallback)
 - **Correctness**: Enforce schema integrity with PRIMARY KEY constraints
 - **Observability**: DuckDB logging enabled, transaction logging
 - **Maintainability**: Pure DuckDB library (off-the-shelf)
 
 **Dependencies**:
+
 - duckdb - Database library
 - pandas - DataFrame integration
 
 **Schema**:
+
 ```sql
 -- raw_spread_ticks table
 CREATE TABLE IF NOT EXISTS raw_spread_ticks (
@@ -316,11 +343,13 @@ CREATE TABLE IF NOT EXISTS metadata (
 **Note**: All timestamp columns are **TIMESTAMP WITH TIME ZONE** (timezone-aware) for proper UTC handling
 
 **Self-Documentation**:
+
 - All tables have COMMENT ON TABLE statements
 - All columns have COMMENT ON COLUMN statements
 - Queryable via `duckdb_tables()` and `duckdb_columns()`
 
 **Duplicate Handling**:
+
 - PRIMARY KEY constraint automatically prevents duplicates
 - No error raised on duplicate insert (silent ignore per DuckDB default)
 - Enables safe incremental updates
@@ -338,9 +367,11 @@ CREATE TABLE IF NOT EXISTS metadata (
 **Class**: `SessionDetector`
 
 **Constructor**:
+
 - `__init__(self)` - No parameters, initializes 10 exchange calendars from **exchanges.py** module
 
 **Methods**:
+
 - `detect_sessions_and_holidays(dates_df: pd.DataFrame) -> pd.DataFrame`
   - Input: DataFrame with **both** `ts` column (timestamps) and `date` column (required schema)
   - Output: DataFrame with 13 additional columns:
@@ -359,6 +390,7 @@ CREATE TABLE IF NOT EXISTS metadata (
     - `is_xses_session` (BOOLEAN) - Singapore Exchange
 
 **Implementation Details** (v1.7.0 Vectorized):
+
 - **Holiday detection**: Pre-generates holiday sets for O(1) lookup performance using `calendar.regular_holidays.holidays()`
 - **Session detection** (vectorized): Pre-computes trading minutes via `_precompute_trading_minutes()`, then uses vectorized `.isin()` lookup
   - Replaces per-timestamp `.apply()` calls with set-based operations
@@ -368,16 +400,19 @@ CREATE TABLE IF NOT EXISTS metadata (
 - **Performance**: Set-based holiday checking, vectorized session detection (v1.7.0+)
 
 **SLOs**:
+
 - **Availability**: Raise exceptions on exchange_calendars errors (no fallback)
 - **Correctness**: Use official exchange calendars with automatic DST handling via `is_open_on_minute()`
 - **Observability**: Calendar initialization logging via print statements
 - **Maintainability**: Thin wrapper around exchange_calendars library (off-the-shelf)
 
 **Dependencies**:
+
 - exchange_calendars - Official exchange trading calendars (10 exchanges)
 - **exchanges.py module** - EXCHANGES registry dict (not in session_detector.py)
 
 **Exchange Coverage**:
+
 - **10 global exchanges** from **exchanges.py** module covering 24-hour forex trading
 - **Automatic DST handling** via exchange_calendars.is_open_on_minute()
 - **Automatic lunch break handling** (Tokyo 11:30-12:30, HK/Singapore 12:00-13:00)
@@ -386,6 +421,7 @@ CREATE TABLE IF NOT EXISTS metadata (
 **Use Case**: Phase7 OHLC schema (v1.6.0) includes session flags for regime detection
 
 **Example**:
+
 ```python
 detector = SessionDetector()
 dates_df = pd.DataFrame({'date': pd.date_range('2024-09-01', '2024-09-30')})
@@ -406,9 +442,11 @@ result = detector.detect_sessions_and_holidays(dates_df)
 **Class**: `GapDetector`
 
 **Constructor**:
+
 - `__init__(self, base_dir: Path)` - Initialize with base directory for database access
 
 **Methods** (v1.7.0 SQL Gap Detection):
+
 - `discover_missing_months(pair: str, start_date: str) -> List[Tuple[int, int]]`
   - **Parameter type**: `start_date` is a **string** in "YYYY-MM-DD" format (not datetime object)
   - **v1.7.0**: Uses SQL EXCEPT query with `generate_series()` to detect ALL gaps
@@ -420,23 +458,27 @@ result = detector.detect_sessions_and_holidays(dates_df)
   - Returns sorted list of (year, month) tuples for missing data
 
 **SLOs**:
+
 - **Availability**: Raise exceptions on database/HTTP errors (no fallback)
 - **Correctness**: Accurate gap detection using metadata table
 - **Observability**: Gap discovery logging (e.g., "Found 3 missing months")
 - **Maintainability**: DuckDB metadata + HTTP directory listing (off-the-shelf)
 
 **Dependencies**:
+
 - duckdb - Metadata queries
 - httpx - Repository directory listing
 - pandas - Date range calculations
 
 **Gap Detection Logic**:
+
 1. Query metadata table for `earliest_date` and `latest_date`
 2. Calculate expected month range: `start_date` to `current_month`
 3. Identify months missing from database
 4. Return list of missing (year, month) tuples
 
 **Example**:
+
 ```python
 gap_detector = GapDetector()
 missing = gap_detector.discover_missing_months("EURUSD", datetime(2024, 1, 1))
@@ -459,9 +501,11 @@ missing = gap_detector.discover_missing_months("EURUSD", datetime(2024, 1, 1))
 **Class**: `OHLCGenerator`
 
 **Constructor**:
+
 - `__init__(self, session_detector: SessionDetector)` - Requires SessionDetector dependency injection
 
 **Methods** (v1.7.0 Incremental):
+
 - `regenerate_ohlc(duckdb_path: Path, start_date: Optional[str] = None, end_date: Optional[str] = None) -> None`
   - **v1.7.0**: Supports three operation modes via optional date parameters:
     1. Full regeneration (start_date=None, end_date=None): DELETE all + INSERT all [backward compatible]
@@ -475,24 +519,28 @@ missing = gap_detector.discover_missing_months("EURUSD", datetime(2024, 1, 1))
   - **Does NOT return** bar count (returns None, not int as previously documented)
 
 **SLOs**:
+
 - **Availability**: Raise exceptions on SQL errors (no fallback)
 - **Correctness**: Phase7 schema v1.6.0 with dual-variant spreads, normalized metrics, and 10 exchange sessions
 - **Observability**: Progress logging via print statements (OHLC bars created, session statistics)
 - **Maintainability**: DuckDB aggregation + exchange_calendars (off-the-shelf)
 
 **Dependencies**:
+
 - duckdb - OHLC aggregation SQL
 - session_detector - Holiday and session detection (dependency injection)
 - schema.py - OHLCSchema class for column definitions
 - **exchanges.py module** - EXCHANGES registry for dynamic session column generation
 
 **Implementation Details**:
+
 - **Timestamp fetching**: Queries ALL timestamps (not just dates) for minute-level session detection
 - **DataFrame registration**: Uses temporary DataFrame registration for UPDATE queries
 - **Session count calculation**: Counts total session minutes for reporting
 - **Print statements**: Progress tracking with session statistics
 
 **Phase7 Schema (v1.6.0)**:
+
 - **30 columns** total (see `docs/DATABASE_SCHEMA.md` for complete schema)
 - **BID-only OHLC**: Uses Raw_Spread Bid prices (execution prices)
 - **Dual spreads**: `raw_spread_avg` and `standard_spread_avg`
@@ -503,6 +551,7 @@ missing = gap_detector.discover_missing_months("EURUSD", datetime(2024, 1, 1))
 - **10 Global Exchange Sessions**: is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session, is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session, is_xhkg_session, is_xses_session (with automatic lunch break handling)
 
 **LEFT JOIN Methodology**:
+
 ```sql
 SELECT
     DATE_TRUNC('minute', r.Timestamp) AS minute,
@@ -523,11 +572,13 @@ ORDER BY minute;
 ```
 
 **Exchange Registry Pattern** (v1.6.0):
+
 - Centralized `EXCHANGES` dict in **exchanges.py module** (imported by session_detector.py and ohlc_generator.py)
 - Dynamic session column generation from registry
 - Easy to add new exchanges (modify dict in exchanges.py, schema auto-updates)
 
 **Example**:
+
 ```python
 generator = OHLCGenerator()
 bars_created = generator.regenerate_ohlc(Path("eurusd.duckdb"))
@@ -547,9 +598,11 @@ bars_created = generator.regenerate_ohlc(Path("eurusd.duckdb"))
 **Class**: `QueryEngine`
 
 **Constructor**:
+
 - `__init__(self, base_dir: Path)` - Initialize with base directory for database access
 
 **Methods**:
+
 - `query_ticks(pair: PairType = "EURUSD", variant: VariantType = "raw_spread", start_date: Optional[str] = None, end_date: Optional[str] = None, filter_sql: Optional[str] = None) -> pd.DataFrame`
   - **Pair-based API** (not duckdb_path-based): Constructs database path from pair parameter
   - **Variant selection**: "raw_spread" or "standard" (maps to table names)
@@ -578,6 +631,7 @@ bars_created = generator.regenerate_ohlc(Path("eurusd.duckdb"))
   - Returns: earliest_date, latest_date, total_ohlc_bars, duckdb_size_mb
 
 **Implementation Details**:
+
 - **Table name mapping**: Converts variant string to table name ("raw_spread" → "raw_spread_ticks")
 - **Database path construction**: `base_dir / f"{pair.lower()}.duckdb"`
 - **WHERE clause building**: Dynamic SQL construction based on date filters
@@ -585,23 +639,27 @@ bars_created = generator.regenerate_ohlc(Path("eurusd.duckdb"))
 - **Empty DataFrame handling**: Returns empty DataFrame if database doesn't exist (no error)
 
 **SLOs**:
+
 - **Availability**: Returns empty DataFrame on missing database, raises exceptions on SQL errors
 - **Correctness**: Accurate date filtering and aggregation via OHLCSchema
 - **Observability**: No logging (silent operation)
 - **Maintainability**: Pure DuckDB SQL + OHLCSchema integration (off-the-shelf)
 
 **Dependencies**:
+
 - duckdb - SQL query execution
 - pandas - DataFrame results
 - models.py - Pydantic types (PairType, TimeframeType, VariantType, CoverageInfo)
 - schema.py - OHLCSchema for resampling clause generation
 
 **Performance**:
+
 - **Sub-15ms** for all queries (date range filtering, resampling)
 - Indexed on Timestamp PRIMARY KEY
 - No full table scans
 
 **On-Demand Resampling**:
+
 ```python
 # Note: Pair-based API, not duckdb_path-based
 query_engine = QueryEngine(base_dir)
@@ -617,6 +675,7 @@ df = query_engine.query_ohlc(pair="EURUSD", timeframe="1h")
 ```
 
 **Date Filtering Example**:
+
 ```python
 # Query with date range (strings, not datetime objects)
 df = query_engine.query_ohlc(
@@ -638,6 +697,7 @@ df = query_engine.query_ohlc(
 **Responsibility**: Map v1.0.0 monthly-file API to v2.0.0 unified single-file API
 
 **Functions**:
+
 - `process_month(pair, year, month)` → Delegates to `processor.update_data()`
 - `process_date_range(pair, start_date, end_date)` → Delegates to `processor.update_data()`
 - `query_ohlc(pair, start_date, end_date)` → Delegates to `processor.query_ohlc()`
@@ -645,6 +705,7 @@ df = query_engine.query_ohlc(
 - `get_storage_stats(pair)` → Delegates to `processor.get_data_coverage()`
 
 **SLOs**:
+
 - **Availability**: Raise exceptions from processor (no additional error handling)
 - **Correctness**: Delegate to processor methods (no transformation logic)
 - **Observability**: Processor logging propagated
@@ -665,11 +726,13 @@ df = query_engine.query_ohlc(
 **Entry Point**: `exness-preprocess` command (installed via setuptools)
 
 **Subcommands**:
+
 - `download` - Download and update data
 - `query` - Query tick or OHLC data
 - `coverage` - Show data coverage
 
 **SLOs**:
+
 - **Availability**: Print errors to stderr, exit with non-zero code
 - **Correctness**: Argument validation via argparse
 - **Observability**: Progress bars, status messages
@@ -891,6 +954,7 @@ flowchart TD
 ## Module Statistics
 
 **Introspection Commands** (always current):
+
 ```bash
 make module-stats       # Show current line counts
 make module-complexity  # Show cyclomatic complexity (requires radon)
@@ -904,17 +968,20 @@ See [`Makefile`](../Makefile) for implementation.
 ## Testing
 
 **Test Suite**: 48 tests (100% passing)
+
 - `test_models.py` - Pydantic model validation (13 tests)
 - `test_types.py` - Type safety and helpers (15 tests)
 - `test_processor_pydantic.py` - Integration tests (6 tests)
 - `test_functional_regression.py` - v2.0.0 regression tests (10 tests)
 
 **Coverage**:
+
 - models.py: 100%
-- __init__.py: 100%
+- **init**.py: 100%
 - processor.py: 45% (orchestration code, hard to unit test)
 
 **Run Tests**:
+
 ```bash
 make test      # Run all tests
 make test-cov  # Run with coverage report
@@ -929,12 +996,14 @@ make test-cov  # Run with coverage report
 **Definition**: processor.py is a thin facade coordinating 7 specialized modules
 
 **Benefits**:
+
 - **Separation of concerns**: Each module has single responsibility
 - **Testability**: Modules can be unit tested independently
 - **Maintainability**: Easy to replace or extend individual modules
 - **Zero regressions**: 48 tests pass after refactoring
 
 **Metrics**:
+
 - processor.py orchestrator: ~410 lines
 - Extracted modules: ~1,140 lines
 - Reduction: 53% line reduction via extraction
@@ -960,6 +1029,7 @@ make test-cov  # Run with coverage report
    - Avoid custom implementations
 
 **Benefits**:
+
 - Clear contracts between modules
 - Easy to verify module behavior
 - Guides implementation decisions
@@ -969,6 +1039,7 @@ make test-cov  # Run with coverage report
 **Principle**: Prefer established libraries over custom implementations
 
 **Libraries Used**:
+
 - **httpx**: HTTP downloads (downloader.py)
 - **pandas**: DataFrame operations (tick_loader.py, query_engine.py)
 - **DuckDB**: Database operations (database_manager.py, query_engine.py)
@@ -976,6 +1047,7 @@ make test-cov  # Run with coverage report
 - **pandas_market_calendars**: Market session detection (session_detector.py)
 
 **Benefits**:
+
 - Battle-tested implementations
 - Community support
 - Reduced maintenance burden

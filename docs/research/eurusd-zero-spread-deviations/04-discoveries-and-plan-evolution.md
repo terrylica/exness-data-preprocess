@@ -9,6 +9,7 @@
 ## Overview
 
 This document captures discoveries made during implementation that required plan updates. Each version documents:
+
 - What was discovered
 - Why it matters
 - How the implementation changed
@@ -22,11 +23,13 @@ This document captures discoveries made during implementation that required plan
 ### Discovery
 
 **Expected format** (from documentation):
+
 - No header row
 - 3 columns: `timestamp_ms, bid, ask`
 - Timestamp: Integer milliseconds since epoch
 
 **Actual format**:
+
 - Header row: `"Exness","Symbol","Timestamp","Bid","Ask"`
 - 5 columns (includes broker and symbol)
 - Timestamp: ISO 8601 string (`"2024-01-01 22:05:16.191Z"`)
@@ -46,6 +49,7 @@ Documentation assumed format without verifying actual Exness CSV structure. Head
 ### Fix Applied
 
 Updated loader function:
+
 ```python
 # Before (assumed)
 df = pd.read_csv(f, header=None, names=['timestamp_ms', 'bid', 'ask'])
@@ -79,12 +83,14 @@ df['timestamp'] = pd.to_datetime(df['Timestamp'], utc=True)  # ISO 8601
 **Assumption**: Zero-spreads could exist in both Standard and Raw_Spread variants
 
 **Reality**:
+
 - **Standard variant**: Minimum spread = 0.5 pips (NEVER zero)
 - **Raw_Spread variant**: 907K zero-spread events in Sep 2024 (bid==ask)
 
 ### Error Encountered
 
 Phase 2 mean reversion analysis failed with 0% success rate:
+
 ```
 No zero-spread events in 2024-01
 No zero-spread events in 2024-02
@@ -95,6 +101,7 @@ No zero-spread events in 2024-02
 ### Investigation
 
 Checked spread distribution in Standard variant:
+
 ```python
 std['spread'] = std['ask'] - std['bid']
 print(f'Min spread: {std.spread.min():.10f}')  # 0.0000500000 (0.5 pips)
@@ -109,12 +116,14 @@ Standard variant represents **quote data** (bid < ask always).
 Raw_Spread variant represents **execution data** (bid==ask when zero spread).
 
 The two variants serve different purposes:
+
 - **Standard**: Market maker quotes (always have spread)
 - **Raw_Spread**: Execution prices (can have zero spread)
 
 ### Fix Applied
 
 **Methodology confirmed correct**:
+
 - Use ASOF merge: Raw_Spread (execution) → Standard (quotes)
 - Position ratio: `(raw_mid - std_bid) / (std_ask - std_bid)`
 - Zero-spread events: Filter `raw_spread == 0` AFTER merge
@@ -147,6 +156,7 @@ The two variants serve different purposes:
 ### Investigation
 
 **Possible causes**:
+
 1. **Sampling difference**:
    - Sep 2024 baseline: 10K sample from 152K deviations
    - Multi-period: 5K sample per month
@@ -162,6 +172,7 @@ The two variants serve different purposes:
 ### Interpretation
 
 Sep 2024 baseline **underestimated** the true reversion rate:
+
 - Actual pattern: 87.3% ± 1.9% (very stable)
 - Sep 2024: 70.6% (anomalously low)
 - Hypothesis: Sep 2024 was low-reversion outlier month
@@ -197,11 +208,13 @@ Sep 2024 baseline **underestimated** the true reversion rate:
 ### Analysis
 
 **Sep 2024 baseline was ANOMALY**, not representative:
+
 1. **2024 months** show 2× higher R² than Sep 2024
 2. **2025 months** closer to Sep 2024 baseline
 3. **Sep 2024 appears transitional** between two regimes
 
 **Evidence**:
+
 - 2024 high-volatility regime: R²=0.371 (strong predictive power)
 - 2025 low-volatility regime: R²=0.209 (weak predictive power)
 - Sep 2024 (R²=0.185): 50% lower than 2024 avg, 11% lower than 2025 avg
@@ -209,11 +222,13 @@ Sep 2024 baseline **underestimated** the true reversion rate:
 ### Hypothesis
 
 **Market regime transition occurred between 2024 and 2025**:
+
 - 2024: Higher volatility → deviations more predictive
 - 2025: Lower volatility → deviations less predictive
 - Sep 2024: Transition month with lowest predictive power
 
 **Feature consistency**:
+
 - Recent volatility remains dominant across both regimes (r=0.510 avg)
 - Rank order preserved: recent_vol > deviation_mag > persistence > spread_width
 
@@ -222,6 +237,7 @@ Sep 2024 baseline **underestimated** the true reversion rate:
 **Overall**: σ=0.096, CV=33.2% (**VARIABLE**)
 
 **Within-regime**:
+
 - 2024: CV=13.6% (moderately stable)
 - 2025: CV=23.9% (variable)
 
@@ -230,12 +246,14 @@ Sep 2024 baseline **underestimated** the true reversion rate:
 ### Impact
 
 **Reinterpretation of Sep 2024 baseline**:
+
 - ❌ Sep 2024 is NOT representative of typical behavior
 - ✅ Sep 2024 methodologies are correct
 - ✅ Multi-period validation essential for robustness
 - ⚠️ Regime shifts are real and significant
 
 **Trading implications**:
+
 - Backtest across MULTIPLE regimes (not just Sep 2024)
 - Monitor rolling R² for regime detection
 - Mean reversion stable (use with confidence)
@@ -252,34 +270,38 @@ Sep 2024 baseline **underestimated** the true reversion rate:
 
 ## Summary of Version Evolution
 
-| Version | Date | Discovery | Impact |
-|---------|------|-----------|--------|
-| v1.0.0 | Initial | Plan created with Sep 2024 baseline | Baseline assumptions |
-| v1.0.1 | 14:37 | CSV format has 5 columns + header | Loader updated |
-| v1.0.2 | 14:43 | Zero-spreads only in Raw_Spread | Methodology confirmed |
-| v1.0.3 | 14:47 | Baseline underestimated (70.6% → 87.3%) | Mean reversion robust |
-| v1.0.4 | 15:03 | 2024→2025 regime shift (77% R² drop) | Volatility regime-dependent |
+| Version | Date    | Discovery                               | Impact                      |
+| ------- | ------- | --------------------------------------- | --------------------------- |
+| v1.0.0  | Initial | Plan created with Sep 2024 baseline     | Baseline assumptions        |
+| v1.0.1  | 14:37   | CSV format has 5 columns + header       | Loader updated              |
+| v1.0.2  | 14:43   | Zero-spreads only in Raw_Spread         | Methodology confirmed       |
+| v1.0.3  | 14:47   | Baseline underestimated (70.6% → 87.3%) | Mean reversion robust       |
+| v1.0.4  | 15:03   | 2024→2025 regime shift (77% R² drop)    | Volatility regime-dependent |
 
 ---
 
 ## Key Lessons
 
 ### Methodological Rigor
+
 ✅ Error propagation (no silent failures) revealed issues early
 ✅ Version tracking captured incremental learnings
 ✅ Multi-period validation essential (single month insufficient)
 
 ### Data Reality
+
 ✅ Documentation ≠ actual format (verify empirically)
 ✅ Zero-spreads are execution events, not quote events
 ✅ Regime shifts are real and significant
 
 ### Statistical Robustness
+
 ✅ Mean reversion: Stable (single pattern across time)
 ✅ Volatility prediction: Regime-dependent (multiple patterns)
 ✅ Baseline anomalies: Detectable via multi-period testing
 
 ### Trading Strategy
+
 ✅ High confidence: Mean reversion (87.3% ± 1.9%)
 ⚠️ Medium confidence: Volatility prediction (regime-dependent)
 ⏸️ Pending: Flash crash & regime detection (Phase 4-5)

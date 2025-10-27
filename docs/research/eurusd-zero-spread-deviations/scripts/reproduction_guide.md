@@ -10,6 +10,7 @@
 This guide provides step-by-step instructions to reproduce all analyses in this research.
 
 **Prerequisites**:
+
 - Python 3.9+
 - 281.5 MB disk space (for compressed data)
 - ~2 GB RAM (for data processing)
@@ -30,6 +31,7 @@ uv pip install pandas>=2.0.0 numpy>=1.24.0
 ```
 
 **Required packages**:
+
 - `pandas>=2.0.0` (data manipulation)
 - `numpy>=1.24.0` (numerical operations)
 - `scipy>=1.10.0` (optional, for Phase 4-5 statistical tests)
@@ -45,6 +47,7 @@ print(f"numpy: {np.__version__}")
 ```
 
 Expected output:
+
 ```
 pandas: 2.x.x
 numpy: 1.24.x
@@ -75,6 +78,7 @@ Script downloads to `/tmp` by default. Modify path if needed.
 Download from https://ticks.ex2archive.com/:
 
 **Standard variant** (16 files):
+
 ```bash
 curl -O https://ticks.ex2archive.com/ticks/EURUSD/2024/01/Exness_EURUSD_2024_01.zip
 curl -O https://ticks.ex2archive.com/ticks/EURUSD/2024/02/Exness_EURUSD_2024_02.zip
@@ -84,6 +88,7 @@ curl -O https://ticks.ex2archive.com/ticks/EURUSD/2025/01/Exness_EURUSD_2025_01.
 ```
 
 **Raw_Spread variant** (16 files):
+
 ```bash
 curl -O https://ticks.ex2archive.com/ticks/EURUSD_Raw_Spread/2024/01/Exness_EURUSD_Raw_Spread_2024_01.zip
 # ... (repeat for all months)
@@ -92,6 +97,7 @@ curl -O https://ticks.ex2archive.com/ticks/EURUSD_Raw_Spread/2024/01/Exness_EURU
 ### File Naming Convention
 
 Files must follow this pattern for scripts to work:
+
 ```
 Exness_EURUSD_{YYYY}_{MM}.zip
 Exness_EURUSD_Raw_Spread_{YYYY}_{MM}.zip
@@ -111,6 +117,7 @@ python3 scripts/multiperiod-validation/phase1_data_validation.py
 ```
 
 **Expected output**:
+
 ```
 ================================================================================
 PHASE 1: DATA LOADING & VALIDATION (16 MONTHS)
@@ -123,6 +130,7 @@ PHASE 1: DATA LOADING & VALIDATION (16 MONTHS)
 **Output file**: `/tmp/multiperiod_data_validation.csv`
 
 **Success criteria**:
+
 - 100% file load success (16/16 months)
 - ASOF merge rate ≥99%
 - Zero-spread events detected in all months
@@ -136,6 +144,7 @@ python3 scripts/multiperiod-validation/phase2_mean_reversion.py
 ```
 
 **Expected output**:
+
 ```
 ================================================================================
 PHASE 2: MEAN REVERSION TEMPORAL STABILITY (16 MONTHS)
@@ -147,10 +156,12 @@ Temporal Stability: STABLE (σ=1.9%)
 ```
 
 **Output files**:
+
 - `/tmp/multiperiod_mean_reversion_results.csv` (16 rows, 1 per month)
 - `/tmp/multiperiod_mean_reversion_report.md` (summary report)
 
 **Expected results**:
+
 - Mean reversion @ 5s: 87.3% ± 1.9%
 - Success rate: 100% (16/16 months)
 - Temporal stability: STABLE (σ < 5%)
@@ -166,6 +177,7 @@ python3 scripts/multiperiod-validation/phase3_volatility_model.py
 ```
 
 **Expected output**:
+
 ```
 ================================================================================
 PHASE 3: VOLATILITY MODEL R² ROBUSTNESS (16 MONTHS)
@@ -177,10 +189,12 @@ Temporal Stability: VARIABLE (σ=0.0964)
 ```
 
 **Output files**:
+
 - `/tmp/multiperiod_volatility_model_results.csv` (16 rows)
 - `/tmp/multiperiod_volatility_model_report.md` (summary report)
 
 **Expected results**:
+
 - Overall R²: 0.290 ± 0.096 (VARIABLE)
 - 2024 R²: 0.371 ± 0.050
 - 2025 R²: 0.209 ± 0.050
@@ -222,6 +236,7 @@ python3 scripts/baseline-sep2024/04_regime_detection_analysis.py
 ```
 
 **Expected baseline results**:
+
 - Mean reversion @ 5s: 70.6%
 - Volatility R²: 0.185
 - Flash crash lift: +13.2pp
@@ -234,6 +249,7 @@ python3 scripts/baseline-sep2024/04_regime_detection_analysis.py
 ### Compare Against Documented Results
 
 **Phase 2 (Mean Reversion)**:
+
 ```python
 import pandas as pd
 
@@ -247,6 +263,7 @@ print("✅ Phase 2 results validated")
 ```
 
 **Phase 3 (Volatility Model)**:
+
 ```python
 results = pd.read_csv('/tmp/multiperiod_volatility_model_results.csv')
 
@@ -278,6 +295,7 @@ print("✅ Phase 3 results validated")
 **Cause**: Data files not downloaded or wrong directory
 
 **Fix**:
+
 ```bash
 # Check files exist
 ls -lh /tmp/Exness_EURUSD_*.zip
@@ -301,6 +319,7 @@ ls -lh /tmp/Exness_EURUSD_*.zip
 **Cause**: Insufficient RAM (<2 GB available)
 
 **Fix**:
+
 - Reduce `SAMPLE_SIZE` constant (default 5000 → try 2500)
 - Process fewer months at a time
 - Close other applications
@@ -308,14 +327,17 @@ ls -lh /tmp/Exness_EURUSD_*.zip
 ### Issue: Results differ from documented values
 
 **Acceptable differences**:
+
 - ±1% for mean reversion (random sampling variation)
 - ±0.02 for R² (numerical precision)
 
 **Unacceptable differences**:
-- >5% for mean reversion → data loading issue
-- >0.05 for R² → methodology mismatch
+
+- > 5% for mean reversion → data loading issue
+- > 0.05 for R² → methodology mismatch
 
 **Debugging**:
+
 1. Verify random seed=42 (ensures reproducibility)
 2. Check sample sizes match (5000 per month)
 3. Confirm ASOF merge tolerance=1 second
@@ -328,6 +350,7 @@ ls -lh /tmp/Exness_EURUSD_*.zip
 ### Reduce Execution Time
 
 **Sample size tuning**:
+
 ```python
 # In scripts, change:
 SAMPLE_SIZE = 5000  # Default
@@ -336,6 +359,7 @@ SAMPLE_SIZE = 2500  # 2× faster, slightly less precise
 ```
 
 **Parallel execution** (if you have multiple cores):
+
 ```bash
 # Run phases in parallel (separate terminals)
 python3 scripts/multiperiod-validation/phase2_mean_reversion.py &
@@ -346,6 +370,7 @@ wait
 ### Reduce Memory Usage
 
 **Chunked processing** (for very large files):
+
 ```python
 # Load in chunks (not implemented in current scripts)
 for chunk in pd.read_csv(filepath, chunksize=100000):
@@ -382,6 +407,7 @@ for chunk in pd.read_csv(filepath, chunksize=100000):
 ## Support
 
 For issues or questions:
+
 1. Check [04-discoveries-and-plan-evolution.md](../04-discoveries-and-plan-evolution.md) for known issues
 2. Verify data files downloaded correctly
 3. Confirm environment setup (Python 3.9+, pandas 2.0+)

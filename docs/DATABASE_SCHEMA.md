@@ -10,6 +10,7 @@
 ## Overview
 
 Each currency pair is stored in a **single DuckDB file** containing:
+
 - **All historical tick data** from both variants (Raw_Spread + Standard)
 - **Pre-computed 1-minute OHLC bars** with Phase7 30-column schema (includes normalized spread metrics and 10 global exchange sessions)
 - **Metadata** tracking coverage and update history
@@ -17,6 +18,7 @@ Each currency pair is stored in a **single DuckDB file** containing:
 **File Naming Convention**: `{instrument_lowercase}.duckdb`
 
 **Examples**:
+
 - EURUSD → `eurusd.duckdb`
 - XAUUSD → `xauusd.duckdb`
 - GBPUSD → `gbpusd.duckdb`
@@ -49,11 +51,11 @@ eurusd.duckdb
 
 ### Schema
 
-| Column      | Type                       | Constraints   | Description                                    |
-|-------------|----------------------------|---------------|------------------------------------------------|
-| `Timestamp` | TIMESTAMP WITH TIME ZONE   | PRIMARY KEY   | Microsecond-precision tick timestamp (UTC)     |
-| `Bid`       | DOUBLE                     | NOT NULL      | Bid price (execution price)                    |
-| `Ask`       | DOUBLE                     | NOT NULL      | Ask price (execution price)                    |
+| Column      | Type                     | Constraints | Description                                |
+| ----------- | ------------------------ | ----------- | ------------------------------------------ |
+| `Timestamp` | TIMESTAMP WITH TIME ZONE | PRIMARY KEY | Microsecond-precision tick timestamp (UTC) |
+| `Bid`       | DOUBLE                   | NOT NULL    | Bid price (execution price)                |
+| `Ask`       | DOUBLE                   | NOT NULL    | Ask price (execution price)                |
 
 ### Indexes
 
@@ -81,6 +83,7 @@ COMMENT ON COLUMN raw_spread_ticks.Ask IS 'Ask price (execution price)';
 ```
 
 **Retrieve Comments**:
+
 ```sql
 -- Query all table comments
 SELECT table_name, comment FROM duckdb_tables();
@@ -146,11 +149,11 @@ ORDER BY day;
 
 ### Schema
 
-| Column      | Type                       | Constraints   | Description                                    |
-|-------------|----------------------------|---------------|------------------------------------------------|
-| `Timestamp` | TIMESTAMP WITH TIME ZONE   | PRIMARY KEY   | Microsecond-precision tick timestamp (UTC)     |
-| `Bid`       | DOUBLE                     | NOT NULL      | Bid price (always < Ask)                       |
-| `Ask`       | DOUBLE                     | NOT NULL      | Ask price (always > Bid)                       |
+| Column      | Type                     | Constraints | Description                                |
+| ----------- | ------------------------ | ----------- | ------------------------------------------ |
+| `Timestamp` | TIMESTAMP WITH TIME ZONE | PRIMARY KEY | Microsecond-precision tick timestamp (UTC) |
+| `Bid`       | DOUBLE                   | NOT NULL    | Bid price (always < Ask)                   |
+| `Ask`       | DOUBLE                   | NOT NULL    | Ask price (always > Bid)                   |
 
 ### Indexes
 
@@ -179,6 +182,7 @@ COMMENT ON COLUMN standard_ticks.Ask IS 'Ask price (always > Bid)';
 ```
 
 **Retrieve Comments**:
+
 ```sql
 SELECT table_name, column_name, data_type, comment
 FROM duckdb_columns()
@@ -240,6 +244,7 @@ ORDER BY hour;
 **Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
 
 **Quick Summary**: 30 columns comprising:
+
 - **Core OHLC** (5): Timestamp, Open, High, Low, Close
 - **Dual Spreads** (2): raw_spread_avg, standard_spread_avg
 - **Dual Tick Counts** (2): tick_count_raw_spread, tick_count_standard
@@ -284,6 +289,7 @@ COMMENT ON COLUMN ohlc_1m.is_nyse_session IS '1 if during New York Stock Exchang
 ```
 
 **Retrieve Comments**:
+
 ```sql
 SELECT table_name, column_name, data_type, comment
 FROM duckdb_columns()
@@ -361,6 +367,7 @@ ORDER BY Timestamp;
 **NULL Handling**: All normalized metrics are NULL when `standard_spread_avg` or `tick_count_standard` are 0 or NULL (occurs when LEFT JOIN yields no Standard ticks for that minute).
 
 **Use Cases**:
+
 - Identify high-volatility bars independent of absolute price levels
 - Compare market activity across different sessions
 - Filter for significant directional moves
@@ -371,32 +378,38 @@ ORDER BY Timestamp;
 **Purpose**: Binary flags indicating if timestamp falls during actual trading hours for 10 major global exchanges covering 24-hour forex trading.
 
 **Exchanges Covered**:
+
 - **North America**: XNYS (NYSE - USD, 9:30-16:00 ET), XTSE (TSX - CAD, 9:30-16:00 ET)
 - **Europe**: XLON (LSE - GBP, 8:00-16:30 GMT), XSWX (SIX Swiss - CHF, 9:00-17:30 CET), XFRA (Frankfurt - EUR, 9:00-17:30 CET)
 - **Asia-Pacific**: XNZE (NZE - NZD, 10:00-16:45 NZST), XTKS (TSE - JPY, 9:00-11:30 & 12:30-15:30 JST with lunch 11:30-12:30), XASX (ASX - AUD, 10:00-16:00 AEST), XHKG (HKEX - HKD, 9:30-12:00 & 13:00-16:00 HKT with lunch 12:00-13:00), XSES (SGX - SGD, 9:00-12:00 & 13:00-17:00 SGT with lunch 12:00-13:00)
 
 **Calculation** (via exchange_calendars library):
+
 - **1**: Exchange is open and within trading hours (checks day, time, AND lunch breaks)
 - **0**: Exchange is closed (weekend, holiday, outside trading hours, OR during lunch break)
 
 **Lunch Breaks** (automatically handled by exchange_calendars):
+
 - **Tokyo (XTKS)**: 11:30-12:30 JST (session flags = 0 during lunch)
 - **Hong Kong (XHKG)**: 12:00-13:00 HKT (session flags = 0 during lunch)
 - **Singapore (XSES)**: 12:00-13:00 SGT (session flags = 0 during lunch)
 - **Western exchanges**: No lunch breaks (continuous trading)
 
 **Architecture**: Exchange Registry Pattern
+
 - Session columns dynamically generated from EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
 - Adding new exchange requires only 1-line change to registry
 - Automatic DST handling via IANA timezone database
 
 **Use Cases**:
+
 - Filter bars during specific regional trading sessions (e.g., Asian session only)
 - Identify overlapping sessions (e.g., London-New York overlap)
 - Currency-specific filtering (e.g., AUD pairs during XASX sessions)
 - Holiday impact analysis (e.g., major holidays when both XNYS and XLON closed)
 
 **Example Queries**:
+
 ```sql
 -- Filter for Asian session hours (XTKS, XASX, XHKG, XSES active)
 SELECT * FROM ohlc_1m
@@ -439,6 +452,7 @@ Timestamp            | Open    | High    | Low     | Close   | raw_spread_avg | 
 ```
 
 **Notes**:
+
 - All 30 columns shown including normalized metrics (v1.2.0+), timezone/session tracking (v1.3.0+), holiday flags (v1.4.0+), and 10 global exchange sessions with hour-based detection (v1.6.0)
 - `range_per_spread = (High-Low) / standard_spread_avg` (e.g., 0.00025 / 0.00004 = 6.25 spreads)
 - `range_per_tick = (High-Low) / tick_count_standard` (e.g., 0.00025 / 28 = 0.00089)
@@ -530,24 +544,24 @@ ORDER BY day;
 
 ### Schema
 
-| Column        | Type                       | Constraints   | Description                             |
-|---------------|----------------------------|---------------|-----------------------------------------|
-| `key`         | VARCHAR                    | PRIMARY KEY   | Metadata key identifier                 |
-| `value`       | VARCHAR                    | NOT NULL      | Metadata value (string representation)  |
-| `updated_at`  | TIMESTAMP WITH TIME ZONE   | DEFAULT NOW() | Last update timestamp                   |
+| Column       | Type                     | Constraints   | Description                            |
+| ------------ | ------------------------ | ------------- | -------------------------------------- |
+| `key`        | VARCHAR                  | PRIMARY KEY   | Metadata key identifier                |
+| `value`      | VARCHAR                  | NOT NULL      | Metadata value (string representation) |
+| `updated_at` | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | Last update timestamp                  |
 
 ### Common Metadata Keys
 
-| Key                      | Description                          | Example Value        |
-|--------------------------|--------------------------------------|----------------------|
-| `earliest_date`          | Earliest tick timestamp              | `2022-01-01`         |
-| `latest_date`            | Latest tick timestamp                | `2025-10-12`         |
-| `last_update`            | Last database update timestamp       | `2025-10-12T15:30Z`  |
-| `total_months`           | Number of months of data             | `46`                 |
-| `raw_spread_tick_count`  | Total Raw_Spread ticks               | `18619662`           |
-| `standard_tick_count`    | Total Standard ticks                 | `19596407`           |
-| `ohlc_bar_count`         | Total 1-minute OHLC bars             | `413453`             |
-| `database_version`       | Schema version                       | `2.0.0`              |
+| Key                     | Description                    | Example Value       |
+| ----------------------- | ------------------------------ | ------------------- |
+| `earliest_date`         | Earliest tick timestamp        | `2022-01-01`        |
+| `latest_date`           | Latest tick timestamp          | `2025-10-12`        |
+| `last_update`           | Last database update timestamp | `2025-10-12T15:30Z` |
+| `total_months`          | Number of months of data       | `46`                |
+| `raw_spread_tick_count` | Total Raw_Spread ticks         | `18619662`          |
+| `standard_tick_count`   | Total Standard ticks           | `19596407`          |
+| `ohlc_bar_count`        | Total 1-minute OHLC bars       | `413453`            |
+| `database_version`      | Schema version                 | `2.0.0`             |
 
 ### Example Data
 
@@ -664,6 +678,7 @@ ORDER BY c.column_index;
 ### Implementation
 
 All tables and columns have embedded documentation via `COMMENT ON` statements:
+
 - **Table comments**: Purpose, data source URLs, characteristics
 - **Column comments**: Type, constraints, nullability explanations
 
@@ -721,19 +736,19 @@ See `processor.py` lines 138-215 for implementation details.
 
 ### Per Instrument (EURUSD)
 
-| Duration  | Raw_Spread Ticks | Standard Ticks | OHLC Bars | Total Size |
-|-----------|------------------|----------------|-----------|------------|
-| 1 month   | ~1.5M            | ~1.6M          | ~32K      | ~160 MB    |
-| 1 year    | ~18M             | ~19M           | ~384K     | ~1.9 GB    |
-| 3 years   | ~54M             | ~57M           | ~1.15M    | ~5.7 GB    |
+| Duration | Raw_Spread Ticks | Standard Ticks | OHLC Bars | Total Size |
+| -------- | ---------------- | -------------- | --------- | ---------- |
+| 1 month  | ~1.5M            | ~1.6M          | ~32K      | ~160 MB    |
+| 1 year   | ~18M             | ~19M           | ~384K     | ~1.9 GB    |
+| 3 years  | ~54M             | ~57M           | ~1.15M    | ~5.7 GB    |
 
 ### Multi-Instrument
 
-| Instruments       | Duration | Total Size |
-|-------------------|----------|------------|
-| EURUSD            | 3 years  | ~5.7 GB    |
-| EURUSD + XAUUSD   | 3 years  | ~11.4 GB   |
-| EURUSD + XAUUSD + GBPUSD | 3 years | ~17.1 GB |
+| Instruments              | Duration | Total Size |
+| ------------------------ | -------- | ---------- |
+| EURUSD                   | 3 years  | ~5.7 GB    |
+| EURUSD + XAUUSD          | 3 years  | ~11.4 GB   |
+| EURUSD + XAUUSD + GBPUSD | 3 years  | ~17.1 GB   |
 
 **Validation**: Based on real EURUSD data (13 months = 2.08 GB)
 
@@ -743,14 +758,14 @@ See `processor.py` lines 138-215 for implementation details.
 
 ### Performance Benchmarks (13 months of data)
 
-| Operation                      | Time    | Notes                               |
-|--------------------------------|---------|-------------------------------------|
-| Query 880K ticks (1 month)     | <15ms   | Indexed timestamp queries           |
-| Query 1m OHLC (1 month)        | <10ms   | 32K bars                            |
-| Resample 1m → 1h (1 month)     | <15ms   | 32K → 720 bars                      |
-| Resample 1m → 1d (1 year)      | <20ms   | 384K → 365 bars                     |
-| Count all ticks                | <50ms   | Full table scan                     |
-| Get coverage metadata          | <5ms    | Small metadata table                |
+| Operation                  | Time  | Notes                     |
+| -------------------------- | ----- | ------------------------- |
+| Query 880K ticks (1 month) | <15ms | Indexed timestamp queries |
+| Query 1m OHLC (1 month)    | <10ms | 32K bars                  |
+| Resample 1m → 1h (1 month) | <15ms | 32K → 720 bars            |
+| Resample 1m → 1d (1 year)  | <20ms | 384K → 365 bars           |
+| Count all ticks            | <50ms | Full table scan           |
+| Get coverage metadata      | <5ms  | Small metadata table      |
 
 ### Index Strategy
 
@@ -769,6 +784,7 @@ WHERE Timestamp >= '2024-09-01' AND Timestamp < '2024-10-01';
 ### Incremental Updates
 
 When new data is added, the database automatically:
+
 1. Downloads missing months from Exness
 2. Appends ticks to `raw_spread_ticks` and `standard_ticks` (PRIMARY KEY prevents duplicates)
 3. Regenerates OHLC for new date ranges

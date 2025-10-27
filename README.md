@@ -394,12 +394,14 @@ Data is sourced from Exness's public tick data repository:
 ### Performance Optimizations (v0.5.0)
 
 **Incremental OHLC Generation** - 7.3x speedup for updates:
+
 - Full regeneration: 8.05s (303K bars, 7 months)
 - Incremental update: 1.10s (43K new bars, 1 month)
 - Implementation: Optional date-range parameters for partial regeneration
 - Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)
 
 **Vectorized Session Detection** - 2.2x speedup for trading hour detection:
+
 - Current approach: 5.99s (302K bars, 10 exchanges)
 - Vectorized approach: 2.69s (302K bars, 10 exchanges)
 - Combined Phase 1+2: ~16x total speedup (8.05s → 0.50s)
@@ -408,6 +410,7 @@ Data is sourced from Exness's public tick data repository:
 - Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
 
 **SQL Gap Detection** - Complete coverage with 46% code reduction:
+
 - Bug fix: Python approach missed internal gaps (41 detected vs 42 actual)
 - SQL EXCEPT operator detects ALL gaps (before + within + after existing data)
 - Code reduced from 62 lines to 34 lines (46% reduction)

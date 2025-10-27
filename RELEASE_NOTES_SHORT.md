@@ -19,3 +19,22 @@
 ---
 
 **Full Changelog**: https://github.com/Eon-Labs/rangebar/compare/v0.3.1...v0.4.0
+
+---
+
+📖 **Full Changelog**: [CHANGELOG.md](https://github.com/terrylica/exness-data-preprocess/blob/v0.5.0/CHANGELOG.md)
+
+### Release Info
+
+- **Package Version**: 0.5.0
+- **Implementation Version**: v1.7.0 (Performance Optimizations)
+- **Release Date**: 2025-10-18
+
+### Key Achievements
+
+- Incremental OHLC: 7.3x speedup
+- Vectorized session detection: 2.2x speedup
+- Combined Phase 1+2: ~16x total speedup
+- SQL gap detection with complete coverage
+- All 48 tests passing ✅
+- Spike-test-first validation ✅

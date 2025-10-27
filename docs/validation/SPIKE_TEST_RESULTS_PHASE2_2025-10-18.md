@@ -12,6 +12,7 @@
 Spike testing revealed that "vectorized" session detection provides **2.2x speedup** (55% reduction), significantly below the theoretical 224x expectation. The fundamental issue is that `exchange_calendars.is_open_on_minute()` must still be called in a loop during pre-computation to handle lunch breaks, trading hour changes, and other edge cases.
 
 **Key Findings**:
+
 - ✅ **Accuracy**: 100% match - all session flags identical across 10 exchanges
 - ⚠️ **Performance**: 2.2x speedup (below 10x threshold)
 - ⚠️ **Theory disproven**: Cannot achieve true vectorization without sacrificing accuracy
@@ -22,6 +23,7 @@ Spike testing revealed that "vectorized" session detection provides **2.2x speed
 ## Test Design
 
 ### Dataset
+
 - **Timestamps**: 7 months of minute-level data (302,400 bars)
 - **Exchanges**: 10 global exchanges (NYSE, LSE, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
 - **Validation**: Exact match required for all session flags
@@ -29,6 +31,7 @@ Spike testing revealed that "vectorized" session detection provides **2.2x speed
 ### Test Scenarios
 
 **Scenario 1: Current .apply() Approach (Baseline)**
+
 ```python
 # For each timestamp, for each exchange:
 dates_df[col_name] = dates_df["ts"].apply(
@@ -39,6 +42,7 @@ dates_df[col_name] = dates_df["ts"].apply(
 ```
 
 **Scenario 2: Vectorized .isin() Approach (Attempted)**
+
 ```python
 # Pre-compute all trading minutes for each exchange:
 for session_date in calendar.sessions_in_range(start, end):
@@ -54,6 +58,7 @@ result_df[col_name] = result_df["ts"].isin(trading_minutes).astype(int)
 ```
 
 **Why Still Calling is_open_on_minute()**:
+
 - Tokyo (XTKS): 11:30-12:30 lunch break
 - Hong Kong (XHKG): 12:00-13:00 lunch break
 - Singapore (XSES): 12:00-13:00 lunch break
@@ -62,6 +67,7 @@ result_df[col_name] = result_df["ts"].isin(trading_minutes).astype(int)
 Without calling `is_open_on_minute()`, we'd incorrectly flag lunch break minutes as trading hours.
 
 ### Success Criteria
+
 - ✅ Exact match of session flags for all 10 exchanges
 - ❌ Vectorized speedup >= 10x (achieved only 2.2x)
 
@@ -71,15 +77,16 @@ Without calling `is_open_on_minute()`, we'd incorrectly flag lunch break minutes
 
 ### Performance Metrics
 
-| Metric | Current .apply() | Vectorized .isin() | Improvement |
-|--------|------------------|--------------------| ------------|
-| **Time** | 5.99s | 2.69s | **2.2x faster** |
-| **Time Reduction** | - | - | **55.2%** |
-| **Accuracy** | Baseline | 100% match | ✅ Perfect |
+| Metric             | Current .apply() | Vectorized .isin() | Improvement     |
+| ------------------ | ---------------- | ------------------ | --------------- |
+| **Time**           | 5.99s            | 2.69s              | **2.2x faster** |
+| **Time Reduction** | -                | -                  | **55.2%**       |
+| **Accuracy**       | Baseline         | 100% match         | ✅ Perfect      |
 
 ### Detailed Breakdown
 
 **Current Approach (5.99s total)**:
+
 ```
 - Calls calendar.is_open_on_minute() at query time
 - 302,400 timestamps × 10 exchanges = 3,024,000 calls
@@ -87,6 +94,7 @@ Without calling `is_open_on_minute()`, we'd incorrectly flag lunch break minutes
 ```
 
 **Vectorized Approach (2.69s total)**:
+
 ```
 - Calls calendar.is_open_on_minute() during pre-computation
 - ~150 days × ~390 mins/day × 10 exchanges = ~585,000 calls (estimated)
@@ -99,17 +107,17 @@ Without calling `is_open_on_minute()`, we'd incorrectly flag lunch break minutes
 Both approaches produced **identical** session counts:
 
 | Exchange | Trading Minutes | Match |
-|----------|----------------|-------|
-| NYSE | 56,160 | ✅ |
-| LSE | 73,440 | ✅ |
-| XSWX | 74,460 | ✅ |
-| XFRA | 75,480 | ✅ |
-| XTSE | 56,550 | ✅ |
-| XNZE | 57,510 | ✅ |
-| XTKS | 42,000 | ✅ |
-| XASX | 51,840 | ✅ |
-| XHKG | 46,020 | ✅ |
-| XSES | 68,640 | ✅ |
+| -------- | --------------- | ----- |
+| NYSE     | 56,160          | ✅    |
+| LSE      | 73,440          | ✅    |
+| XSWX     | 74,460          | ✅    |
+| XFRA     | 75,480          | ✅    |
+| XTSE     | 56,550          | ✅    |
+| XNZE     | 57,510          | ✅    |
+| XTKS     | 42,000          | ✅    |
+| XASX     | 51,840          | ✅    |
+| XHKG     | 46,020          | ✅    |
+| XSES     | 68,640          | ✅    |
 
 ---
 
@@ -118,12 +126,15 @@ Both approaches produced **identical** session counts:
 ### Why Only 2.2x Instead of 224x?
 
 **Original Theory**:
+
 > "Replace 3M+ `.apply()` calls with pre-computed set + vectorized `.isin()` lookup"
 
 **Reality Discovered**:
+
 > "Pre-computation still requires calling `is_open_on_minute()` hundreds of thousands of times to respect lunch breaks and trading hour changes"
 
 **The Bottleneck**:
+
 ```python
 # Old approach (query-time):
 for timestamp in timestamps:  # 302K iterations
@@ -144,6 +155,7 @@ result = timestamps.isin(trading_minutes)  # Fast vectorized lookup
 ```
 
 **Speedup Calculation**:
+
 - Reduction in `is_open_on_minute()` calls: 3.024M → 0.585M ≈ 5.2x fewer calls
 - Actual measured speedup: 2.2x
 - **Gap**: Overhead from set construction, .isin() lookup, and other operations
@@ -151,6 +163,7 @@ result = timestamps.isin(trading_minutes)  # Fast vectorized lookup
 ### Why Can't We Achieve True 224x Vectorization?
 
 **Option A: Skip is_open_on_minute() During Pre-computation**
+
 ```python
 # Manually hard-code trading hours and lunch breaks
 if exchange == "xtks":
@@ -161,11 +174,13 @@ if exchange == "xtks":
 ```
 
 **Option B: Use exchange_calendars More Efficiently**
+
 - No `minutes_in_range()` method exists
 - `schedule()` returns daily open/close, doesn't account for lunch breaks
 - `is_open_on_minute()` is the ONLY method that handles all edge cases correctly
 
 **Option C: Accept the 2.2x Speedup**
+
 - Simple implementation
 - 100% accurate (delegates to exchange_calendars)
 - Combined with Phase 1: **~16x total speedup**
@@ -177,6 +192,7 @@ if exchange == "xtks":
 ### Option 1: Implement 2.2x Vectorization (Recommended)
 
 **Pros**:
+
 - ✅ 2.2x speedup is measurable benefit
 - ✅ 100% accuracy (exact match with current approach)
 - ✅ Simple implementation (~20 lines of code)
@@ -184,6 +200,7 @@ if exchange == "xtks":
 - ✅ Maintainable (uses exchange_calendars API correctly)
 
 **Cons**:
+
 - ⚠️ Below 10x threshold (failed spike test success criteria)
 - ⚠️ Not the theoretical 224x speedup
 
@@ -192,10 +209,12 @@ if exchange == "xtks":
 ### Option 2: Hard-Code Trading Hours (Not Recommended)
 
 **Pros**:
+
 - ✅ Could achieve near-224x speedup
 - ✅ No `is_open_on_minute()` calls
 
 **Cons**:
+
 - ❌ High maintenance burden (10 exchanges × N rules)
 - ❌ Risk of inaccuracy (trading hour changes, special dates)
 - ❌ Fragile (breaks if exchange_calendars data changes)
@@ -206,10 +225,12 @@ if exchange == "xtks":
 ### Option 3: Abandon Phase 2 (Conservative)
 
 **Pros**:
+
 - ✅ Focus effort on other optimizations (Phase 3, 4)
 - ✅ No implementation risk
 
 **Cons**:
+
 - ❌ Leaves 2.2x speedup on the table
 - ❌ Session detection remains bottleneck (94% of OHLC time)
 
@@ -222,6 +243,7 @@ if exchange == "xtks":
 ### Implement Modified Phase 2: Accept 2.2x Speedup
 
 **Rationale**:
+
 1. **Measurable benefit**: 2.2x speedup saves 3.3s per 302K bars
 2. **Scales with dataset size**: Larger datasets benefit more
 3. **Zero accuracy risk**: Uses same `is_open_on_minute()` logic
@@ -229,12 +251,14 @@ if exchange == "xtks":
 5. **Combined speedup**: Phase 1 (7.3x) + Phase 2 (2.2x) ≈ **16x total**
 
 **Modified Success Criteria**:
+
 - ✅ Speedup >= 2x (achieved 2.2x)
 - ✅ Exact match of session flags (achieved 100%)
 - ✅ Simple implementation (yes)
 - ✅ Combined Phase 1+2 >= 10x (16x achieved)
 
 **Performance Impact**:
+
 ```
 Baseline (no optimizations):     8.05s (7 months OHLC)
 Phase 1 only:                     1.10s (7.3x faster)
@@ -250,6 +274,7 @@ Phase 1 + Phase 2:                ~2.6s (16x faster)
 ## Implementation Plan
 
 ### Step 1: Refactor Pre-computation Logic
+
 ```python
 def _precompute_trading_minutes(self, start_date, end_date):
     """Pre-compute trading minutes for all exchanges."""
@@ -275,6 +300,7 @@ def _precompute_trading_minutes(self, start_date, end_date):
 ```
 
 ### Step 2: Replace .apply() with .isin()
+
 ```python
 # Old:
 dates_df[col_name] = dates_df["ts"].apply(is_trading_hour)
@@ -289,6 +315,7 @@ for exchange_name in self.calendars.keys():
 ```
 
 ### Step 3: Run Test Suite
+
 ```bash
 uv run pytest tests/ -v
 # Expected: All 48 tests pass
@@ -303,12 +330,14 @@ uv run pytest tests/ -v
 **Rationale**: Simple, accurate, measurable benefit, combined 16x total speedup
 
 **Key Learnings**:
+
 1. **Theory validation is critical**: Spike tests prevented implementing a complex optimization for minimal gain
 2. **Accuracy trumps speed**: Using `exchange_calendars` correctly is more important than raw performance
 3. **Combined optimizations**: Multiple small wins (7.3x + 2.2x) compound to significant total benefit (16x)
 4. **Practical thresholds**: 2.2x may not hit 10x threshold, but combined 16x justifies implementation
 
 **Next Steps**:
+
 1. User decision: Accept 2.2x implementation?
 2. If yes: Implement Phase 2 with vectorized .isin() approach
 3. If no: Skip Phase 2, proceed to Phase 3 (SQL Gap Detection)
@@ -317,6 +346,7 @@ uv run pytest tests/ -v
 ---
 
 **Spike Test Philosophy Reinforced**:
+
 > "Measure actual performance before committing to implementations. Adjust expectations based on reality, not theory."
 
 This spike test successfully revealed that the theoretical 224x speedup was based on incorrect assumptions about `exchange_calendars` API constraints.

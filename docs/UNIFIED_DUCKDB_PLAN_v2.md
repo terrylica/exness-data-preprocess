@@ -5,6 +5,7 @@
 **Change from v1.0.0**: Single file per instrument (multi-year) instead of per-month files
 
 **Implementation Summary**:
+
 - ✅ All 5 priorities completed
 - ✅ Validated with 13 months of real EURUSD data (18.6M Raw_Spread ticks, 19.6M Standard ticks, 413K OHLC bars)
 - ✅ Database size: 2.08 GB for 13 months (scales to ~4.8 GB for 3 years)

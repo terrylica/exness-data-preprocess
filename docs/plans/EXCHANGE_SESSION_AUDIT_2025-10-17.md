@@ -30,14 +30,14 @@ dates_df[col_name] = dates_df["ts"].apply(lambda d, cal=calendar: int(cal.is_ses
 
 **Example** (Monday, Jan 8, 2024):
 
-| UTC Time | ET Time | is_nyse_session | What It Means |
-|----------|---------|-----------------|---------------|
-| 08:00    | 03:00 AM | 1 | ✗ NYSE closed (opens 9:30 AM) |
-| 14:00    | 09:00 AM | 1 | ✗ NYSE closed (opens 9:30 AM) |
-| 15:00    | 10:00 AM | 1 | ✓ NYSE open |
-| 19:00    | 02:00 PM | 1 | ✓ NYSE open |
-| 21:00    | 04:00 PM | 1 | ✗ NYSE closed (closes 4:00 PM) |
-| 23:00    | 06:00 PM | 1 | ✗ NYSE closed |
+| UTC Time | ET Time  | is_nyse_session | What It Means                  |
+| -------- | -------- | --------------- | ------------------------------ |
+| 08:00    | 03:00 AM | 1               | ✗ NYSE closed (opens 9:30 AM)  |
+| 14:00    | 09:00 AM | 1               | ✗ NYSE closed (opens 9:30 AM)  |
+| 15:00    | 10:00 AM | 1               | ✓ NYSE open                    |
+| 19:00    | 02:00 PM | 1               | ✓ NYSE open                    |
+| 21:00    | 04:00 PM | 1               | ✗ NYSE closed (closes 4:00 PM) |
+| 23:00    | 06:00 PM | 1               | ✗ NYSE closed                  |
 
 **Problem**: Column is `1` for ALL minutes on a trading day, regardless of actual trading hours.
 
@@ -46,6 +46,7 @@ dates_df[col_name] = dates_df["ts"].apply(lambda d, cal=calendar: int(cal.is_ses
 **Test Script**: `/tmp/test_session_logic.py`
 
 **Results**:
+
 ```
 2024-01-08 08:00:00  03:00 AM ET     1               0               ✗ MISMATCH
 2024-01-08 14:00:00  09:00 AM ET     1               0               ✗ MISMATCH
@@ -84,14 +85,14 @@ END as london_session
 
 ### Column Comparison
 
-| Column Name | Current Behavior | Use Case |
-|-------------|------------------|----------|
-| `ny_session` | ✓ Checks trading HOURS (9-16h ET) | Intraday analysis |
-| `london_session` | ✓ Checks trading HOURS (8-16h GMT) | Intraday analysis |
-| `is_nyse_session` | ✗ Only checks trading DAY | **Misleading** |
-| `is_lse_session` | ✗ Only checks trading DAY | **Misleading** |
-| `is_xswx_session` | ✗ Only checks trading DAY | **Misleading** |
-| ... (8 more) | ✗ Only checks trading DAY | **Misleading** |
+| Column Name       | Current Behavior                   | Use Case          |
+| ----------------- | ---------------------------------- | ----------------- |
+| `ny_session`      | ✓ Checks trading HOURS (9-16h ET)  | Intraday analysis |
+| `london_session`  | ✓ Checks trading HOURS (8-16h GMT) | Intraday analysis |
+| `is_nyse_session` | ✗ Only checks trading DAY          | **Misleading**    |
+| `is_lse_session`  | ✗ Only checks trading DAY          | **Misleading**    |
+| `is_xswx_session` | ✗ Only checks trading DAY          | **Misleading**    |
+| ... (8 more)      | ✗ Only checks trading DAY          | **Misleading**    |
 
 ---
 
@@ -100,9 +101,11 @@ END as london_session
 ### Semantic Confusion
 
 The column name `is_*_session` implies:
+
 - "Is this minute during the exchange's trading session?"
 
 But the implementation only checks:
+
 - "Does this minute fall on a day when the exchange is open?"
 
 ### Why This Happened
@@ -118,6 +121,7 @@ But the implementation only checks:
 ### For Forex Tick Data Analysis
 
 **Use Case 1**: Identify ticks during NYSE trading hours
+
 ```sql
 -- Current (WRONG):
 SELECT * FROM ohlc_1m
@@ -129,6 +133,7 @@ WHERE ny_session = 'NY_Session';  -- Returns only 9:30 AM - 4:00 PM ET
 ```
 
 **Use Case 2**: Detect overlap of NYSE and LSE sessions
+
 ```sql
 -- Current (WRONG):
 SELECT * FROM ohlc_1m
@@ -216,12 +221,14 @@ for exchange_name, exchange_config in EXCHANGES.items():
 ```
 
 **Pros**:
+
 - ✓ Columns accurately reflect trading hours
 - ✓ Consistent with `ny_session` / `london_session` semantics
 - ✓ Enables correct intraday analysis
 - ✓ Single source of truth for trading hours (exchanges.py)
 
 **Cons**:
+
 - ✗ Breaking change (requires database regeneration)
 - ✗ Need to research and add trading hours for all 10 exchanges
 - ✗ Slightly more complex logic (timezone conversion + hour checks)
@@ -233,20 +240,24 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **Change**: Rename columns to accurately reflect what they check.
 
 **Rename**:
+
 - `is_nyse_session` → `is_nyse_trading_day`
 - `is_lse_session` → `is_lse_trading_day`
 - ... (all 10 exchanges)
 
 **Update Documentation**:
+
 - Schema comments: "1 if exchange trading day (not weekend, not holiday), 0 otherwise"
 - Remove mention of "session" to avoid confusion
 
 **Pros**:
+
 - ✓ Accurate naming matches implementation
 - ✓ No logic changes needed
 - ✓ Clear distinction from `ny_session` / `london_session`
 
 **Cons**:
+
 - ✗ Breaking change (column renames)
 - ✗ Less useful for intraday analysis
 - ✗ Users need `ny_session` / `london_session` for actual session detection
@@ -258,6 +269,7 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **Change**: Keep existing columns, add new hour-based session columns.
 
 **Add**:
+
 - `is_nyse_trading_day` (current `is_nyse_session` behavior)
 - `is_nyse_trading_hour` (new, checks actual trading hours)
 - ... (all 10 exchanges)
@@ -265,11 +277,13 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **Deprecate**: Mark `is_*_session` as deprecated in documentation.
 
 **Pros**:
+
 - ✓ Non-breaking (existing queries still work)
 - ✓ Provides both day-level and hour-level flags
 - ✓ Clear naming distinction
 
 **Cons**:
+
 - ✗ Schema grows to 50 columns (30 → 50)
 - ✗ Potential confusion with 3 types of columns (day/hour/legacy)
 - ✗ Maintenance burden (2 sets of columns to update)
@@ -281,20 +295,24 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **Change**: Remove `is_*_session` columns entirely, rely on existing `ny_session` / `london_session`.
 
 **Rationale**:
+
 - Already have correct session detection for NYSE and LSE
 - Other 8 exchanges not widely used for forex tick analysis
 - Simpler schema (30 → 20 columns)
 
 **For users needing other exchanges**:
+
 - Use `ny_hour` + manual hour checks in SQL
 - Or extend `ny_session` pattern to other exchanges
 
 **Pros**:
+
 - ✓ Removes misleading columns
 - ✓ Simpler schema
 - ✓ Reduces maintenance burden
 
 **Cons**:
+
 - ✗ Breaking change
 - ✗ Loses convenience of pre-computed flags
 - ✗ May need to add back later if users request
@@ -306,12 +324,14 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **Recommended Option**: **Option A** (Fix Column Values)
 
 **Rationale**:
+
 1. **Correctness**: Column values should match their semantic meaning
 2. **Consistency**: Aligns with existing `ny_session` / `london_session` behavior
 3. **Future-proof**: Enables proper intraday analysis across all 10 exchanges
 4. **Single Source of Truth**: Trading hours defined once in `exchanges.py`, propagate everywhere
 
 **Breaking Change Justification**:
+
 - Current columns are **broken** - they don't do what users expect
 - Better to fix now (v1.5.0 → v1.6.0) than carry incorrect data forward
 - Clear migration path: regenerate databases with `processor.update_data()`
@@ -325,6 +345,7 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **File**: `src/exness_data_preprocess/exchanges.py`
 
 **Changes**:
+
 1. Add trading hours fields to `ExchangeConfig`
 2. Research and add trading hours for all 10 exchanges
 3. Document trading hours sources (exchange websites, `exchange_calendars` docs)
@@ -338,6 +359,7 @@ for exchange_name, exchange_config in EXCHANGES.items():
 **File**: `src/exness_data_preprocess/session_detector.py`
 
 **Changes**:
+
 1. Update `detect_sessions_and_holidays()` to check trading hours
 2. Add timezone conversion logic
 3. Add hour/minute range checks
@@ -350,11 +372,13 @@ for exchange_name, exchange_config in EXCHANGES.items():
 ### Phase 3: Update Schema & Documentation
 
 **Files**:
+
 - `src/exness_data_preprocess/schema.py`
 - `docs/DATABASE_SCHEMA.md`
 - `CLAUDE.md`
 
 **Changes**:
+
 1. Update column comments to reflect hour-based detection
 2. Update schema version to v1.6.0
 3. Update documentation examples
@@ -367,6 +391,7 @@ for exchange_name, exchange_config in EXCHANGES.items():
 ### Phase 4: Testing & Validation
 
 **Tests**:
+
 1. Unit test for `SessionDetector.detect_sessions_and_holidays()`
    - Test trading hours for all 10 exchanges
    - Test DST transitions (NYSE: EST/EDT, LSE: GMT/BST)
@@ -383,6 +408,7 @@ for exchange_name, exchange_config in EXCHANGES.items():
 ### Phase 5: Database Regeneration
 
 **Process**:
+
 1. Run `processor.update_data(pair)` to regenerate OHLC with corrected session flags
 2. Verify column values with spot checks
 3. Update version tracking
@@ -396,14 +422,17 @@ for exchange_name, exchange_config in EXCHANGES.items():
 If fixing columns is not desired, need to decide:
 
 **Question 1**: Should columns check trading HOURS or trading DAYS?
+
 - If HOURS: Proceed with Option A
 - If DAYS: Proceed with Option B (rename to `is_*_trading_day`)
 
 **Question 2**: Are 10 exchange session columns necessary?
+
 - If YES: Keep all 10, fix them
 - If NO: Consider Option D (remove, keep only NYSE/LSE via `ny_session`/`london_session`)
 
 **Question 3**: Is breaking change acceptable?
+
 - If YES: Proceed with Option A, B, or D
 - If NO: Proceed with Option C (add new columns, deprecate old)
 
@@ -412,46 +441,56 @@ If fixing columns is not desired, need to decide:
 ## Trading Hours Reference (for Option A)
 
 ### NYSE (XNYS)
+
 - **Hours**: 9:30 AM - 4:00 PM ET
 - **Source**: NYSE official website
 - **DST**: EST (winter) / EDT (summer)
 
 ### LSE (XLON)
+
 - **Hours**: 8:00 AM - 4:30 PM GMT
 - **Source**: LSE official website
 - **DST**: GMT (winter) / BST (summer)
 
 ### SIX Swiss (XSWX)
+
 - **Hours**: 9:00 AM - 5:30 PM CET
 - **Source**: SIX Swiss Exchange
 
 ### Frankfurt (XFRA)
+
 - **Hours**: 9:00 AM - 5:30 PM CET
 - **Source**: Deutsche Börse
 
 ### Toronto (XTSE)
+
 - **Hours**: 9:30 AM - 4:00 PM ET
 - **Source**: TSX official website
 
 ### New Zealand (XNZE)
+
 - **Hours**: 10:00 AM - 4:45 PM NZST
 - **Source**: NZX official website
 
 ### Tokyo (XTKS)
+
 - **Hours**: 9:00 AM - 3:00 PM JST (with 11:30 AM - 12:30 PM lunch break)
 - **Source**: JPX official website
 - **Note**: Has lunch break (need special handling)
 
 ### Australia (XASX)
+
 - **Hours**: 10:00 AM - 4:00 PM AEST
 - **Source**: ASX official website
 
 ### Hong Kong (XHKG)
+
 - **Hours**: 9:30 AM - 4:00 PM HKT (with 12:00 PM - 1:00 PM lunch break)
 - **Source**: HKEX official website
 - **Note**: Has lunch break
 
 ### Singapore (XSES)
+
 - **Hours**: 9:00 AM - 5:00 PM SGT
 - **Source**: SGX official website
 
@@ -475,6 +514,7 @@ If fixing columns is not desired, need to decide:
 **Test Script**: `/tmp/test_session_logic.py` (demonstrates current vs expected behavior)
 
 **References**:
+
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py:119`
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/schema.py:304-311`
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py:123-133`

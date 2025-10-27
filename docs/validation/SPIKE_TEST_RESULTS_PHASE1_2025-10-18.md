@@ -12,6 +12,7 @@
 Spike testing validated that incremental OHLC generation provides **7.3x speedup** compared to full regeneration for incremental updates. While below the theoretical 20-50x expectation, the test revealed that **session detection dominates execution time**, making Phase 2 (Session Vectorization) critical for achieving full performance potential.
 
 **Key Findings**:
+
 - ✅ Incremental OHLC optimization **WORKS** and provides measurable benefit
 - ✅ Data integrity maintained (identical row counts, no duplicates)
 - ⚠️ Session detection is the bottleneck (not SQL generation)
@@ -22,6 +23,7 @@ Spike testing validated that incremental OHLC generation provides **7.3x speedup
 ## Test Design
 
 ### Dataset
+
 - **Baseline**: 6 months of simulated tick data (259,800 ticks)
 - **Increment**: 1 month of new tick data (43,200 ticks)
 - **Total**: 7 months (303,000 ticks → 303,000 OHLC bars)
@@ -30,6 +32,7 @@ Spike testing validated that incremental OHLC generation provides **7.3x speedup
 ### Test Scenarios
 
 **Scenario 1: Full Regeneration (Baseline)**
+
 ```
 1. Database contains 7 months of tick data
 2. DELETE FROM ohlc_1m
@@ -38,6 +41,7 @@ Spike testing validated that incremental OHLC generation provides **7.3x speedup
 ```
 
 **Scenario 2: Incremental Generation (Optimized)**
+
 ```
 1. Database contains 7 months of tick data
 2. Existing OHLC for 6 months already present
@@ -46,6 +50,7 @@ Spike testing validated that incremental OHLC generation provides **7.3x speedup
 ```
 
 ### Success Criteria
+
 - ✅ Speedup >= 2x (50% reduction minimum)
 - ✅ Identical row counts between methods
 - ✅ No duplicate timestamps
@@ -57,16 +62,17 @@ Spike testing validated that incremental OHLC generation provides **7.3x speedup
 
 ### Performance Metrics
 
-| Metric | Full Regeneration | Incremental Update | Improvement |
-|--------|-------------------|--------------------| ------------|
-| **Time** | 8.05s | 1.10s | **7.3x faster** |
-| **Time Reduction** | - | - | **86.3%** |
-| **Rows Generated** | 303,000 | 303,000 | ✅ Match |
-| **Duplicates** | 0 | 0 | ✅ None |
+| Metric             | Full Regeneration | Incremental Update | Improvement     |
+| ------------------ | ----------------- | ------------------ | --------------- |
+| **Time**           | 8.05s             | 1.10s              | **7.3x faster** |
+| **Time Reduction** | -                 | -                  | **86.3%**       |
+| **Rows Generated** | 303,000           | 303,000            | ✅ Match        |
+| **Duplicates**     | 0                 | 0                  | ✅ None         |
 
 ### Detailed Breakdown
 
 **Full Regeneration (8.05s total)**:
+
 ```
 - SQL OHLC generation:     ~0.5s (estimated)
 - Session detection:       ~7.5s (10 exchanges × 303,000 bars)
@@ -84,6 +90,7 @@ Spike testing validated that incremental OHLC generation provides **7.3x speedup
 ```
 
 **Incremental Update (1.10s total)**:
+
 ```
 - SQL OHLC generation:     ~0.05s (estimated, only new month)
 - Session detection:       ~1.05s (10 exchanges × 43,200 bars)
@@ -123,12 +130,15 @@ Sample data (latest 5 bars):
 ### Why 7.3x Instead of Theoretical 20-50x?
 
 **Initial Theory (from audit)**:
+
 > "Incremental OHLC should provide 20-50x speedup because we only regenerate new data instead of all historical data."
 
 **Reality Discovered by Spike Test**:
+
 > **Session detection dominates execution time**, not SQL OHLC generation.
 
 **Time Breakdown**:
+
 ```
 Full Regeneration (8.05s):
   - SQL: 0.5s (6%)
@@ -140,18 +150,21 @@ Incremental (1.10s):
 ```
 
 **Why Session Detection Dominates**:
+
 1. Checks each of 303,000 timestamps against 10 exchange calendars
 2. Uses `.apply()` with lambda functions (Python-level iteration)
 3. Holiday lookups for each exchange via `exchange_calendars` library
 4. Trading hour validation for each minute individually
 
 **Implication**:
+
 - Incremental SQL saves 0.45s (0.5s → 0.05s)
 - Incremental session detection saves 6.45s (7.5s → 1.05s)
 - **Total savings: 6.9s**, giving 7.3x speedup
 
 **Validation of Phase 2 Priority**:
 The spike test reveals that **Phase 2 (Session Vectorization)** is MORE important than Phase 1:
+
 - Phase 1 saved 0.45s of SQL time (5% of total)
 - Phase 2 could save ~7s of session detection time (87% of total)
 - If Phase 2 achieves 224x speedup (as proposed), session detection could drop from 7.5s to 0.03s
@@ -162,17 +175,21 @@ The spike test reveals that **Phase 2 (Session Vectorization)** is MORE importan
 ## Key Learnings
 
 ### 1. Spike Tests Reveal Actual Bottlenecks
+
 - **Theory**: SQL regeneration is the bottleneck
 - **Reality**: Session detection is the bottleneck
 - **Value**: Spike tests prevent premature optimization
 
 ### 2. Test Design Iterations
+
 - **Initial design**: 36 months of data → 42+ minutes runtime (too slow)
 - **Revised design**: 6 months of data → 9 seconds runtime (practical)
 - **Lesson**: Balance realism with practicality
 
 ### 3. Phase Prioritization Validated
+
 The spike test confirmed the correct implementation order:
+
 1. **Phase 1 (Incremental OHLC)**: Implemented ✅, provides 7.3x speedup
 2. **Phase 2 (Session Vectorization)**: Critical next step (could provide 224x speedup)
 3. **Phase 3 (SQL Gap Detection)**: Lower priority (affects metadata queries only)
@@ -183,28 +200,35 @@ The spike test confirmed the correct implementation order:
 ## Recommendations
 
 ### 1. Keep Phase 1 Implementation ✅
+
 **Decision**: Do NOT revert commit 08202d4
 **Rationale**:
+
 - 7.3x speedup is significant and measurable
 - Data integrity verified (identical results)
 - No regressions (all 48 tests still pass)
 - Foundation for Phase 2 optimization
 
 ### 2. Prioritize Phase 2 (Session Vectorization) 🔥
+
 **Why**: Session detection is 94% of execution time
 **Expected Impact**:
+
 - Current: 7.5s for 303,000 bars
 - Vectorized (224x faster): 0.03s for 303,000 bars
 - **Combined Phase 1 + 2**: 100x total speedup (8.05s → 0.08s)
 
 ### 3. Update Performance Claims
+
 **Original audit claim**: "95% speedup (20-50x faster)"
 **Actual measurement**: "86.3% speedup (7.3x faster)"
 **Reason**: Session detection bottleneck, not SQL
 **Action**: Update documentation with measured results
 
 ### 4. Create Phase 2 Spike Test Before Implementation
+
 Follow the validated pattern:
+
 1. Create `/tmp/spike-tests/test_phase2_session_vectorization.py`
 2. Compare `.apply()` vs vectorized `.isin()` approach
 3. Validate 224x speedup claim
@@ -215,16 +239,19 @@ Follow the validated pattern:
 ## Spike Test Artifacts
 
 ### Test File
+
 **Location**: `/tmp/spike-tests/test_phase1_incremental_ohlc.py`
 **Size**: 363 lines
 **Runtime**: ~9 seconds
 
 ### Test Database
+
 **Location**: `/tmp/spike-tests/test_incremental_ohlc.duckdb`
 **Size**: 64 MB (303,000 ticks + OHLC)
 **Tables**: raw_spread_ticks, standard_ticks, ohlc_1m
 
 ### Cleanup
+
 Spike test artifacts in `/tmp/spike-tests/` can be removed after validation. Test code is preserved for future reference.
 
 ---
@@ -237,6 +264,7 @@ Spike test artifacts in `/tmp/spike-tests/` can be removed after validation. Tes
 **Expected Impact**: Phase 1 (7.3x) + Phase 2 (224x) = **~100x combined speedup**
 
 **Timeline**:
+
 - Phase 1: ✅ Implemented and validated (7.3x speedup)
 - Phase 2: Spike test pending (expect 224x speedup on session detection)
 - Phase 3: Lower priority (metadata query optimization)
@@ -245,6 +273,7 @@ Spike test artifacts in `/tmp/spike-tests/` can be removed after validation. Tes
 ---
 
 **Spike Test Philosophy Validated**:
+
 > "Validate theories with actual measurements before committing to implementations. If the theory is disproven, update the approach accordingly."
 
 This spike test successfully validated the incremental OHLC optimization while revealing that session vectorization is the critical next optimization.

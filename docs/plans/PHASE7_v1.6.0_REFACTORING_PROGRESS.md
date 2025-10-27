@@ -13,6 +13,7 @@
 ### Completed Work ✅
 
 **Phase 1: Extract Utility Modules (COMPLETE)**
+
 - ✅ Created `downloader.py` with `ExnessDownloader` class (89 lines)
 - ✅ Created `tick_loader.py` with `TickLoader` class (67 lines)
 - ✅ Updated `processor.py` to use both modules
@@ -20,6 +21,7 @@
 - ✅ Zero regressions detected
 
 **Phase 2: Extract Database Layer (COMPLETE)**
+
 - ✅ Created `database_manager.py` with `DatabaseManager` class (213 lines)
 - ✅ Extracted `get_or_create_db()` and `append_ticks()` methods
 - ✅ Updated `processor.py` to use `self.db_manager`
@@ -27,6 +29,7 @@
 - ✅ Zero regressions detected
 
 **Phase 3: Extract Session Detection (COMPLETE)**
+
 - ✅ Created `session_detector.py` with `SessionDetector` class (121 lines)
 - ✅ Extracted exchange calendar initialization from `__init__()`
 - ✅ Extracted session/holiday detection logic from `_regenerate_ohlc()`
@@ -37,6 +40,7 @@
 - ✅ Zero regressions detected
 
 **Phase 4: Extract Complex Logic (COMPLETE)**
+
 - ✅ Created `gap_detector.py` with `GapDetector` class (157 lines after formatting)
 - ✅ Created `ohlc_generator.py` with `OHLCGenerator` class (199 lines after formatting)
 - ✅ Created `query_engine.py` with `QueryEngine` class (290 lines after formatting)
@@ -46,6 +50,7 @@
 - ✅ processor.py reduced to 412 lines (53% reduction from original)
 
 **Phase 5: Finalize Facade (COMPLETE)**
+
 - ✅ Updated CLAUDE.md with new module structure
 - ✅ Updated docs/README.md with implementation architecture v1.3.0
 - ✅ Verified examples work (basic_usage.py)
@@ -60,6 +65,7 @@
 ### Current State
 
 **Files Created (Final Line Counts after ruff/mypy fixes)**:
+
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/downloader.py` (82 lines)
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/tick_loader.py` (67 lines)
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/database_manager.py` (208 lines)
@@ -71,6 +77,7 @@
 **Total Code Extracted**: 1,124 lines across 7 focused modules
 
 **Files Modified**:
+
 - `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`
   - **Phase 1**: Removed zipfile, URLError, urlretrieve imports
   - **Phase 1**: Added ExnessDownloader, TickLoader imports and delegation
@@ -87,6 +94,7 @@
   - Line count reduced: 885 → 412 lines (473 lines removed, 53% reduction)
 
 **Test Results After Phase 5**:
+
 ```bash
 uv run pytest -v --tb=short
 # Result: 48 passed in 106.25s
@@ -103,6 +111,7 @@ uv run mypy src/
 ```
 
 **Code Metrics After Phase 5**:
+
 - **processor.py**: 885 → 412 lines (53% reduction)
 - **Extracted**: 1,124 lines across 7 modules (after ruff/mypy fixes)
 - **Architecture**: Thin facade with focused, single-responsibility modules
@@ -120,13 +129,16 @@ uv run mypy src/
 **Actual Time**: 1 hour (faster than estimated 3-4 hours due to simplified scope)
 
 **Files Created**:
+
 - `src/exness_data_preprocess/database_manager.py` (213 lines)
 
 **Methods Extracted** (from processor.py):
+
 1. ✅ `_get_or_create_db()` → `DatabaseManager.get_or_create_db()`
 2. ✅ `_append_ticks_to_db()` → `DatabaseManager.append_ticks()`
 
 **Methods NOT Extracted** (do not exist in processor.py):
+
 - ~~`add_schema_comments()`~~ - Schema comments are added inline in `get_or_create_db()`
 - ~~`add_schema_comments_all()`~~ - Not needed (schema comments always included)
 
@@ -139,9 +151,11 @@ uv run mypy src/
 **Actual Time**: 0.5 hours (faster than estimated 2-3 hours due to well-defined scope)
 
 **Files Created**:
+
 - `src/exness_data_preprocess/session_detector.py` (121 lines)
 
 **Code Extracted** (from processor.py):
+
 1. ✅ Exchange calendar initialization (from `__init__()`)
 2. ✅ Holiday detection logic (NYSE and LSE)
 3. ✅ Major holiday detection (both exchanges closed)
@@ -433,9 +447,11 @@ uv run pytest -v --tb=short
 **Estimated Time**: 2-3 hours
 
 **Files to Create**:
+
 - `src/exness_data_preprocess/session_detector.py` (~120 lines)
 
 **Code to Extract** (from processor.py lines 494-565):
+
 - Exchange calendar initialization logic (currently in `__init__`)
 - Session detection logic (currently in `_regenerate_ohlc()`)
 
@@ -594,6 +610,7 @@ uv run pytest -v --tb=short
 **Estimated Time**: 5-6 hours
 
 **Files to Create**:
+
 - `src/exness_data_preprocess/gap_detector.py` (~150 lines)
 - `src/exness_data_preprocess/ohlc_generator.py` (~180 lines)
 - `src/exness_data_preprocess/query_engine.py` (~200 lines)
@@ -929,6 +946,7 @@ uv run pytest -v --tb=short
 #### Step 5.1: Verify processor.py is clean
 
 After all extractions, `processor.py` should contain:
+
 - Class docstring
 - `__init__()` - Initialize all modules
 - `update_data()` - Orchestrate download + append + OHLC workflow
@@ -947,6 +965,7 @@ uv run pytest -v --tb=short
 #### Step 5.3: Create module-level tests
 
 Create 7 new test files:
+
 - `tests/test_downloader.py`
 - `tests/test_tick_loader.py`
 - `tests/test_database_manager.py`
@@ -956,6 +975,7 @@ Create 7 new test files:
 - `tests/test_query_engine.py`
 
 Each test file should:
+
 - Test module functionality in isolation
 - Use real data (no mocking per SLO-MA-4)
 - Cover edge cases and error handling
@@ -988,12 +1008,14 @@ uv run ruff check .
 ### Critical Tests to Monitor
 
 **test_functional_regression.py**:
+
 - `test_phase7_nine_column_schema` - Ensures 30-column schema unchanged
 - `test_dual_variant_storage` - Ensures Raw_Spread + Standard both work
 - `test_incremental_updates` - Ensures gap detection works
 - `test_query_performance` - Ensures sub-15ms queries maintained
 
 **test_processor_pydantic.py**:
+
 - `test_update_result_model` - Ensures UpdateResult unchanged
 - `test_coverage_info_model` - Ensures CoverageInfo unchanged
 
@@ -1019,6 +1041,7 @@ git reset --hard HEAD  # Rollback to last commit
 ### Checkpoint Commits
 
 After each phase completes successfully:
+
 1. Run `uv run pytest -v --tb=short` (must pass)
 2. Run `uv run ruff format .` (auto-format)
 3. Commit with message: `Phase X: Extract [module_name] module`
@@ -1044,6 +1067,7 @@ After each phase completes successfully:
 ### Validation Checklist
 
 After refactoring completes:
+
 - [ ] All 48 existing tests pass
 - [ ] Public API unchanged (ExnessDataProcessor methods)
 - [ ] Pydantic models unchanged (UpdateResult, CoverageInfo)

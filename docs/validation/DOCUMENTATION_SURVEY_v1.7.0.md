@@ -9,12 +9,14 @@
 ## Changes Implemented in v1.7.0
 
 ### Phase 1: Incremental OHLC Generation (Commit 08202d4, 46a2b77)
+
 - **Speedup**: 7.3x (8.05s → 1.10s for 7 months)
 - **Changes**: Optional `start_date`/`end_date` parameters in `regenerate_ohlc()`
 - **Modules**: `ohlc_generator.py`, `processor.py`
 - **SSoT**: `/Users/terryli/eon/exness-data-preprocess/docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md `
 
 ### Phase 2: Session Vectorization (Commit 19b566d)
+
 - **Speedup**: 2.2x (5.99s → 2.69s for 302K bars)
 - **Combined**: ~16x total speedup (Phase 1 + Phase 2)
 - **Changes**: Pre-computation with vectorized `.isin()` lookup
@@ -23,6 +25,7 @@
 - **Validation**: `/Users/terryli/eon/exness-data-preprocess/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md `
 
 ### Phase 3: SQL Gap Detection (Commit d9da415)
+
 - **Improvement**: Detects ALL gaps (internal + edges), not just edges
 - **LOC Reduction**: 46% (62 → 34 lines)
 - **Changes**: SQL EXCEPT operator with `generate_series()`
@@ -34,8 +37,10 @@
 ## Critical Files Requiring Updates
 
 ### 1. README.md (Root)
+
 **Status**: ⏳ Pending Review
 **What to Check**:
+
 - [ ] Installation instructions (version number)
 - [ ] Performance claims (add v1.7.0 optimization notes)
 - [ ] API reference (check for new parameters)
@@ -47,14 +52,17 @@
 ---
 
 ### 2. CLAUDE.md (Root)
+
 **Status**: ⏳ Pending Review
 **What to Check**:
+
 - [ ] Version references (v1.6.0 → v1.7.0)
 - [ ] Architecture summary (add optimization notes)
 - [ ] Module documentation (update with new behavior)
 - [ ] Links to new SSoT plans
 
 **Current Version Lines**:
+
 ```
 **Version**: 2.0.0 (Architecture) + 1.3.0 (Implementation) + 1.0.0 (Research Patterns)
 ```
@@ -64,20 +72,24 @@
 ---
 
 ### 3. DOCUMENTATION.md (Root - Hub)
+
 **Status**: ⏳ Pending Review
 **What to Check**:
+
 - [ ] Links to all documentation sections
 - [ ] Add links to Phase 1/2/3 SSoT plans
 - [ ] Verify no broken links
 - [ ] Update version references
 
-**Action Required**: Add "Optimization Plans" section linking to PHASE*.yaml files
+**Action Required**: Add "Optimization Plans" section linking to PHASE\*.yaml files
 
 ---
 
 ### 4. docs/README.md (Docs Hub)
+
 **Status**: ⏳ Pending Review
 **What to Check**:
+
 - [ ] Architecture section links
 - [ ] Validation section (add spike test results)
 - [ ] Research section (check gap detection docs)
@@ -88,8 +100,10 @@
 ---
 
 ### 5. docs/MODULE_ARCHITECTURE.md
+
 **Status**: ⏳ Pending Review (HIGH PRIORITY)
 **What to Check**:
+
 - [ ] ohlc_generator.py description (add incremental support)
 - [ ] session_detector.py description (add vectorization)
 - [ ] gap_detector.py description (add SQL approach)
@@ -101,8 +115,10 @@
 ---
 
 ### 6. CHANGELOG.md
+
 **Status**: ⏳ Pending Creation (HIGH PRIORITY)
 **What to Add**:
+
 - [ ] v1.7.0 section header
 - [ ] Phase 1: Incremental OHLC (7.3x speedup)
 - [ ] Phase 2: Session Vectorization (2.2x speedup, 16x combined)
@@ -115,8 +131,10 @@
 ---
 
 ### 7. docs/DATABASE_SCHEMA.md
+
 **Status**: ⏳ Pending Review
 **What to Check**:
+
 - [ ] Schema version (still v1.6.0?)
 - [ ] OHLC table documentation
 - [ ] Session columns documentation
@@ -127,8 +145,10 @@
 ---
 
 ### 8. docs/UNIFIED_DUCKDB_PLAN_v2.md
+
 **Status**: ⏳ Pending Review
 **What to Check**:
+
 - [ ] Architecture specification accuracy
 - [ ] Performance claims (update with measured results)
 - [ ] Incremental update section
@@ -139,8 +159,10 @@
 ---
 
 ### 9. pyproject.toml
+
 **Status**: ⏳ Pending Update (HIGH PRIORITY)
 **What to Check**:
+
 - [ ] version = "0.4.0" → "0.5.0" or "1.7.0"?
 - [ ] SemVer: v1.7.0 would be MAJOR.MINOR.PATCH
 - [ ] Dependencies (no changes expected)
@@ -150,8 +172,10 @@
 ---
 
 ### 10. docs/validation/ Files
+
 **Status**: ⏳ Pending Review
 **Existing**:
+
 - ✅ SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md (created)
 - ✅ SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md (created)
 - ⏳ E2E_VALIDATION_RESULTS_v1.6.0.md (needs v1.7.0 companion)
@@ -162,8 +186,10 @@
 ---
 
 ### 11. docs/research/ Files
+
 **Status**: ⏳ Pending Review
 **Files**:
+
 - GAP_DETECTION_SQL_APPROACH.md (already exists, check if needs update)
 - GAP_DETECTION_COMPARISON.md (already exists)
 - gap_detection_implementation_example.py (untracked)
@@ -175,6 +201,7 @@
 ## Link Integrity Check
 
 ### Internal Links to Verify
+
 - [ ] README.md → CHANGELOG.md
 - [ ] README.md → docs/MODULE_ARCHITECTURE.md
 - [ ] DOCUMENTATION.md → all subsections
@@ -183,6 +210,7 @@
 - [ ] All SSoT plans cross-reference each other
 
 ### External Links to Verify
+
 - [ ] PyPI package page (after publish)
 - [ ] GitHub repository links
 - [ ] exchange_calendars documentation
@@ -193,12 +221,14 @@
 ## Version String Audit
 
 ### Files with Version Strings
+
 ```bash
 # Search for version patterns
 grep -r "v1\.6\.0\|v1\.5\.0\|v0\.[0-9]\.[0-9]" --include="*.md" --include="*.toml" --include="*.py"
 ```
 
 **Critical Files**:
+
 1. pyproject.toml: `version = "0.4.0"`
 2. CLAUDE.md: `Version: 2.0.0 (Architecture) + 1.3.0 (Implementation)`
 3. docs/MODULE_ARCHITECTURE.md: `v1.3.0`
@@ -211,9 +241,10 @@ grep -r "v1\.6\.0\|v1\.5\.0\|v0\.[0-9]\.[0-9]" --include="*.md" --include="*.tom
 ## Prune/Archive Decisions
 
 ### Candidates for Archiving
-- [ ] docs/plans/* (older planning docs) → Move to docs/archive/?
+
+- [ ] docs/plans/\* (older planning docs) → Move to docs/archive/?
 - [ ] docs/validation/ARCHITECTURE_EFFICIENCY_AUDIT_2025-10-18.md → Superseded by Phase1/2/3 results?
-- [ ] docs/research/GAP_DETECTION_* → Keep (valuable research)
+- [ ] docs/research/GAP*DETECTION*\* → Keep (valuable research)
 - [ ] Untracked research files → Commit or delete?
 
 **Action Required**: Review each candidate with user
@@ -223,10 +254,12 @@ grep -r "v1\.6\.0\|v1\.5\.0\|v0\.[0-9]\.[0-9]" --include="*.md" --include="*.tom
 ## New Files to Add to DOCUMENTATION.md
 
 ### SSoT Plan Files (Not Yet Linked)
+
 1. `/Users/terryli/eon/exness-data-preprocess/docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml `
 2. `/Users/terryli/eon/exness-data-preprocess/docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml `
 
 ### Spike Test Results (Not Yet Linked)
+
 1. `/Users/terryli/eon/exness-data-preprocess/docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md `
 2. `/Users/terryli/eon/exness-data-preprocess/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md `
 
@@ -248,6 +281,7 @@ grep -r "v1\.6\.0\|v1\.5\.0\|v0\.[0-9]\.[0-9]" --include="*.md" --include="*.tom
 ## Validation Checklist
 
 After all updates:
+
 - [ ] Run pytest (all 48 tests pass)
 - [ ] Check all internal links (use link checker if available)
 - [ ] Verify version strings consistent across all files

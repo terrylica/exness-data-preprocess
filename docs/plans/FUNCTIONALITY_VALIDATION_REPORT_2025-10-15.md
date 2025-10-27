@@ -1,4 +1,5 @@
 # Functionality Validation Report - exness-data-preprocess
+
 **Date**: 2025-10-15
 **Version**: 0.3.1
 **Validator**: Claude Code
@@ -10,15 +11,17 @@
 Comprehensive validation reveals **7 critical issues** that prevent full functionality:
 
 ### Critical Issues (Blocking)
+
 1. ❌ **CLI completely broken** - Cannot import `api` module (does not exist)
 2. ❌ **Missing api.py module** - Referenced in CLAUDE.md but doesn't exist
 3. ❌ **Missing add_schema_comments.py example** - Referenced in CLAUDE.md but doesn't exist
-4. ❌ **Incorrect __version__ in __init__.py** - Shows "0.1.0" but should be "0.3.1"
+4. ❌ **Incorrect **version** in **init**.py** - Shows "0.1.0" but should be "0.3.1"
 5. ❌ **Incorrect schema version in examples** - Claims "13-column (v1.2.0)" but actual is "30-column (v1.5.0)"
-6. ❌ **Incorrect schema version in __init__.py** - Claims "13-column (v1.2.0)" but actual is "30-column (v1.5.0)"
+6. ❌ **Incorrect schema version in **init**.py** - Claims "13-column (v1.2.0)" but actual is "30-column (v1.5.0)"
 7. ⚠️ **Example scripts untested** - No validation that examples actually work
 
 ### Working Functionality ✅
+
 - ✅ **Test suite**: All 48 tests pass (103.28s)
 - ✅ **Core modules**: processor.py and all 7 extracted modules work correctly
 - ✅ **Pydantic models**: UpdateResult, CoverageInfo validated and working
@@ -35,6 +38,7 @@ Comprehensive validation reveals **7 critical issues** that prevent full functio
 **Problem**: Line 9 imports `from exness_data_preprocess import api` but this module doesn't exist
 
 **Error**:
+
 ```
 ImportError: cannot import name 'api' from 'exness_data_preprocess'
 ```
@@ -42,6 +46,7 @@ ImportError: cannot import name 'api' from 'exness_data_preprocess'
 **Impact**: CLI is completely non-functional. Users cannot use `exness-preprocess` command at all.
 
 **CLI Commands Affected**:
+
 - `exness-preprocess process` - Broken
 - `exness-preprocess query` - Broken
 - `exness-preprocess analyze` - Broken
@@ -50,6 +55,7 @@ ImportError: cannot import name 'api' from 'exness_data_preprocess'
 **Root Cause**: CLI was written for v1.0.0 API which used monthly files. v2.0.0 refactored to unified single-file architecture but CLI was never updated.
 
 **Functions CLI Expects (Don't Exist)**:
+
 - `api.process_month(year, month, pair, ...)` - v1.0.0 monthly processing
 - `api.process_date_range(start_year, start_month, end_year, end_month, ...)` - v1.0.0 range processing
 - `api.query_ohlc(year, month, pair, timeframe, ...)` - v1.0.0 monthly queries
@@ -57,6 +63,7 @@ ImportError: cannot import name 'api' from 'exness_data_preprocess'
 - `api.get_storage_stats(base_dir)` - v1.0.0 storage stats
 
 **Recommended Fix**: Either:
+
 1. Create api.py with wrapper functions for backward compatibility (quick fix)
 2. Rewrite CLI to use v2.0.0 API (`ExnessDataProcessor` class) directly (correct fix)
 
@@ -69,6 +76,7 @@ ImportError: cannot import name 'api' from 'exness_data_preprocess'
 **Problem**: File does not exist but is referenced in documentation
 
 **Documentation Claims** (CLAUDE.md line 363-366):
+
 ```markdown
 9. **api.py** - Simple wrapper functions
    - Convenience functions wrapping `ExnessDataProcessor` methods
@@ -78,11 +86,13 @@ ImportError: cannot import name 'api' from 'exness_data_preprocess'
 **Reality**: File does not exist in repository
 
 **Impact**:
+
 - CLI broken (depends on api.py)
 - Documentation misleading
 - No backward compatibility for v1.0.0 users
 
 **Recommended Fix**: Either:
+
 1. Create api.py with documented functions
 2. Remove references from documentation and fix CLI
 
@@ -95,41 +105,48 @@ ImportError: cannot import name 'api' from 'exness_data_preprocess'
 **Problem**: File does not exist but is referenced in documentation
 
 **Documentation References**:
+
 - CLAUDE.md line 147: `[examples/add_schema_comments.py](examples/add_schema_comments.py)`
 - CLAUDE.md line 339: `**Usage Example**: [`examples/add_schema_comments.py`](examples/add_schema_comments.py)`
 
 **Reality**: Only 2 example files exist:
+
 - `examples/basic_usage.py` ✅
 - `examples/batch_processing.py` ✅
 
 **Impact**: Users following documentation will get 404 errors
 
 **Recommended Fix**: Either:
+
 1. Create add_schema_comments.py example (5-10 minutes)
 2. Remove references from documentation
 
 ---
 
-### Issue 4: Incorrect __version__ in __init__.py ❌
+### Issue 4: Incorrect **version** in **init**.py ❌
 
 **File**: `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/__init__.py`
 
 **Current Value** (Line 57):
+
 ```python
 __version__ = "0.1.0"
 ```
 
 **Expected Value**:
+
 ```python
 __version__ = "0.3.1"
 ```
 
 **Impact**:
+
 - Version introspection returns wrong value
 - Package metadata inconsistency
 - Users cannot verify installed version
 
 **Evidence**:
+
 ```bash
 $ git describe --tags
 v0.3.1
@@ -142,10 +159,12 @@ v0.3.1
 ### Issue 5: Incorrect Schema Version in Examples ❌
 
 **Files Affected**:
+
 1. `/Users/terryli/eon/exness-data-preprocess/examples/basic_usage.py`
 2. `/Users/terryli/eon/exness-data-preprocess/examples/batch_processing.py`
 
 **Current Claims**:
+
 - `basic_usage.py` line 14: "13-column (v1.2.0) OHLC schema with dual spreads"
 - `basic_usage.py` line 36: "Generate Phase7 13-column (v1.2.0) OHLC"
 - `basic_usage.py` line 209: "13-column (v1.2.0) OHLC schema"
@@ -154,6 +173,7 @@ v0.3.1
 **Actual Schema**: 30-column Phase7 v1.5.0
 
 **Evidence** (from `schema.py` and docs):
+
 - 6 price columns (timestamp, open, high, low, close, typical)
 - 6 spread/tick columns (raw_spread_avg, standard_spread_avg, tick_count_raw_spread, tick_count_standard, range_per_spread, range_per_tick, body_per_spread, body_per_tick)
 - 4 timezone/session columns (ny_hour, london_hour, ny_session, london_session)
@@ -167,11 +187,12 @@ v0.3.1
 
 ---
 
-### Issue 6: Incorrect Schema Version in __init__.py ❌
+### Issue 6: Incorrect Schema Version in **init**.py ❌
 
 **File**: `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/__init__.py`
 
 **Current Claim** (Line 10):
+
 ```python
 - Phase7 13-column OHLC schema (v1.2.0) with dual spreads, tick counts, and normalized metrics
 ```
@@ -187,12 +208,14 @@ v0.3.1
 ### Issue 7: Example Scripts Untested ⚠️
 
 **Files**:
+
 - `examples/basic_usage.py` (217 lines)
 - `examples/batch_processing.py` (468 lines)
 
 **Problem**: No automated validation that examples work
 
 **Risks**:
+
 1. Examples may use outdated API
 2. Examples may reference non-existent features
 3. Examples may crash on execution
@@ -207,6 +230,7 @@ v0.3.1
 ### Test Suite - 48 Tests Pass
 
 **Execution**:
+
 ```bash
 uv run pytest -v --tb=short
 ```
@@ -214,6 +238,7 @@ uv run pytest -v --tb=short
 **Result**: 48 passed in 103.28s (0:01:43) ✅
 
 **Test Files**:
+
 - `tests/test_basic.py` - 4 tests ✅
 - `tests/test_functional_regression.py` - 10 tests ✅
 - `tests/test_models.py` - 13 tests ✅
@@ -227,6 +252,7 @@ uv run pytest -v --tb=short
 ### Core Modules - All Working ✅
 
 **7 Extracted Modules** (from refactoring):
+
 1. ✅ `downloader.py` (82 lines) - HTTP download operations
 2. ✅ `tick_loader.py` (67 lines) - CSV parsing
 3. ✅ `database_manager.py` (208 lines) - Database operations
@@ -236,6 +262,7 @@ uv run pytest -v --tb=short
 7. ✅ `query_engine.py` (290 lines) - Query operations
 
 **Facade Module**:
+
 - ✅ `processor.py` (412 lines) - Orchestrator facade
 
 **All modules tested via 48 passing tests**
@@ -245,6 +272,7 @@ uv run pytest -v --tb=short
 ### Pydantic Models - Working ✅
 
 **Models**:
+
 - ✅ `UpdateResult` - Validated update result with dict access backward compatibility
 - ✅ `CoverageInfo` - Validated coverage information with dict access
 - ✅ `PairType` - Literal type for supported pairs
@@ -259,12 +287,13 @@ uv run pytest -v --tb=short
 
 ### Immediate (Critical Fixes)
 
-1. ✅ **Fix __version__ in __init__.py** (1 minute)
+1. ✅ **Fix **version** in **init**.py** (1 minute)
+
    ```python
    __version__ = "0.3.1"
    ```
 
-2. ✅ **Fix schema version in __init__.py** (2 minutes)
+2. ✅ **Fix schema version in **init**.py** (2 minutes)
    - Replace "13-column (v1.2.0)" with "30-column (v1.5.0)"
    - Add exchange sessions to description
 
@@ -316,8 +345,8 @@ uv run pytest -v --tb=short
 
 ### Fixes Applied ✅
 
-1. ✅ **__version__ fixed** - Updated from "0.1.0" to "0.3.1" in __init__.py
-2. ✅ **Schema version fixed in __init__.py** - Updated from "13-column (v1.2.0)" to "30-column (v1.5.0)" with full description
+1. ✅ \***\*version** fixed** - Updated from "0.1.0" to "0.3.1" in **init\*\*.py
+2. ✅ **Schema version fixed in **init**.py** - Updated from "13-column (v1.2.0)" to "30-column (v1.5.0)" with full description
 3. ✅ **Schema version fixed in examples/basic_usage.py** - 3 occurrences updated
 4. ✅ **Schema version fixed in examples/batch_processing.py** - 1 occurrence updated
 5. ✅ **api.py module created** - 267 lines, v1.0.0 backward compatibility layer with SLO-based design
@@ -329,12 +358,14 @@ uv run pytest -v --tb=short
 Created `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/api.py`:
 
 **SLOs**:
+
 - Availability: Raise on errors, no fallbacks
 - Correctness: Delegate to ExnessDataProcessor
 - Observability: Pass through processor logging
 - Maintainability: Thin wrappers, no business logic
 
 **Functions** (v1.0.0 → v2.0.0 mapping):
+
 - `process_month()` → `processor.update_data()` (single month)
 - `process_date_range()` → `processor.update_data()` (date range)
 - `query_ohlc()` → `processor.query_ohlc()` (month-based date range)
@@ -346,12 +377,14 @@ Created `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ap
 ### Validation Results ✅
 
 **CLI Functionality**:
+
 ```bash
 $ uv run exness-preprocess --help
 # Output: Full help text with 4 commands (process, query, analyze, stats) ✅
 ```
 
 **Test Suite**:
+
 ```bash
 $ uv run pytest -v --tb=short
 # Result: 48 passed in 100.88s ✅
@@ -369,7 +402,7 @@ $ uv run pytest -v --tb=short
 
 ### Time Breakdown
 
-- __version__ fix: 1 minute
+- **version** fix: 1 minute
 - Schema version fixes: 5 minutes
 - api.py module creation: 20 minutes
 - CLAUDE.md updates: 5 minutes

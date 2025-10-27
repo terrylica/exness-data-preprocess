@@ -12,6 +12,7 @@
 Schema v1.6.0 fixes a semantic mismatch in exchange session columns. Previously, `is_*_session` columns only checked if a DATE was a trading day, but the column names implied they checked if the TIME was during trading HOURS.
 
 **Example of the Problem**:
+
 - v1.5.0: `is_nyse_session = 1` at 3 AM on Monday (NYSE doesn't open until 9:30 AM!)
 - v1.6.0: `is_nyse_session = 0` at 3 AM, `1` only during 9:30 AM - 4:00 PM ET
 
@@ -28,6 +29,7 @@ Schema v1.6.0 fixes a semantic mismatch in exchange session columns. Previously,
 2. **session_detector.py** - Updated detection logic:
    - **Before**: Only checked `calendar.is_session(date)` (trading day check)
    - **After**: Checks BOTH trading day AND time within trading hours:
+
      ```python
      # Check if trading day (excludes weekends + holidays)
      if not calendar.is_session(ts.date()):
@@ -43,6 +45,7 @@ Schema v1.6.0 fixes a semantic mismatch in exchange session columns. Previously,
 ### Documentation Updates
 
 All references updated from v1.5.0 to v1.6.0 across:
+
 - README.md (4 references)
 - CLAUDE.md
 - docs/DATABASE_SCHEMA.md
@@ -54,10 +57,11 @@ All references updated from v1.5.0 to v1.6.0 across:
 ### Source Code Updates
 
 All v1.5.0 references updated in 8 modules:
+
 - query_engine.py (1 reference)
 - database_manager.py (3 references)
 - exchanges.py (4 references)
-- __init__.py (1 reference)
+- **init**.py (1 reference)
 - processor.py (6 references)
 - api.py (1 reference)
 - ohlc_generator.py (6 references)
@@ -70,6 +74,7 @@ All v1.5.0 references updated in 8 modules:
 **Breaking Change**: Existing databases with v1.5.0 schema are INCOMPATIBLE with v1.6.0.
 
 **Why**: The `is_*_session` column values will change significantly:
+
 - v1.5.0: `1` for all timestamps on trading days (00:00-23:59)
 - v1.6.0: `1` only during exchange trading hours (e.g., NYSE 9:30-16:00 ET)
 
@@ -180,6 +185,7 @@ uv run pytest
 ```
 
 **Key Test Validations**:
+
 1. Session detection correctly checks trading hours
 2. Timezone-naive timestamps are handled properly
 3. Exchange session flags are 0 outside trading hours
@@ -192,6 +198,7 @@ uv run pytest
 
 **API Compatibility**: ✅ PRESERVED
 All public API methods remain unchanged:
+
 - `processor.update_data()`
 - `processor.query_ohlc()`
 - `processor.query_ticks()`
@@ -236,6 +243,7 @@ cp ~/eon/exness-data/eurusd_v1.5.0_backup.duckdb ~/eon/exness-data/eurusd.duckdb
 ### Q: Why not just rename the columns to `is_*_trading_day`?
 
 **A**: We considered this, but:
+
 1. Column names would be misleading ("day" implies date, not hour)
 2. Users expect session flags to mean "during trading hours"
 3. Fixing the values matches industry convention
@@ -243,6 +251,7 @@ cp ~/eon/exness-data/eurusd_v1.5.0_backup.duckdb ~/eon/exness-data/eurusd.duckdb
 ### Q: Can I use both v1.5.0 and v1.6.0 in parallel?
 
 **A**: Yes, store databases in separate directories:
+
 ```python
 processor_v15 = edp.ExnessDataProcessor(base_dir="~/eon/exness-data-v1.5.0")
 processor_v16 = edp.ExnessDataProcessor(base_dir="~/eon/exness-data-v1.6.0")
@@ -262,6 +271,7 @@ processor_v16 = edp.ExnessDataProcessor(base_dir="~/eon/exness-data-v1.6.0")
 ## Changelog
 
 **v1.6.0 (2025-10-17)**:
+
 - **BREAKING**: Fixed session columns to check trading HOURS not just trading DAYS
 - Added trading hours to ExchangeConfig (open_hour, open_minute, close_hour, close_minute)
 - Updated session_detector.py to perform timezone conversion and hour range checks
@@ -271,6 +281,7 @@ processor_v16 = edp.ExnessDataProcessor(base_dir="~/eon/exness-data-v1.6.0")
 - Source code updated across 8 modules
 
 **v1.5.0 (2025-10-15)**:
+
 - Added 10 global exchange session flags
 - Replaced hardcoded NYSE/LSE with dynamic exchange registry
 - 30-column Phase7 OHLC schema
@@ -286,18 +297,21 @@ During comprehensive validation of v1.6.0 lunch break support, discovered a **CR
 **Bug Location**: `src/exness_data_preprocess/ohlc_generator.py` lines 151-184
 
 **Root Cause**:
+
 1. Code queried unique DATES from ohlc_1m table (not timestamps)
 2. Created MIDNIGHT timestamps from those dates (`pd.to_datetime(date)` → `2024-08-05 00:00:00`)
 3. Checked if midnight was during trading hours
 4. Applied the midnight result to ALL 1,440 minutes of that day
 
 **Impact**:
+
 - **Tokyo (9:00-15:00 JST)**: Midnight is NEVER during trading hours → ALL flags = 0 ❌
 - **Hong Kong (9:30-16:00 HKT)**: Midnight is NEVER during trading hours → ALL flags = 0 ❌
 - **Singapore (9:00-17:00 SGT)**: Midnight is NEVER during trading hours → ALL flags = 0 ❌
 - **All exchanges**: Only exchanges where midnight falls within trading hours would work correctly
 
 **Example**:
+
 ```python
 # BROKEN CODE (before fix):
 dates_df = conn.execute("SELECT DISTINCT DATE(Timestamp) as date FROM ohlc_1m").df()
@@ -326,6 +340,7 @@ timestamps_df["date"] = timestamps_df["Timestamp"].dt.date
 ```
 
 **Database Update Change**:
+
 ```python
 # BEFORE: Match by DATE (applies midnight flag to all minutes)
 WHERE DATE(ohlc_1m.Timestamp) = hf.date
@@ -359,10 +374,12 @@ Generated fresh test database (15 months, 450K OHLC bars) and verified:
 **CRITICAL**: Databases generated with v1.6.0 code BEFORE commit b7c4867 have broken session flags and MUST be regenerated.
 
 **Affected versions**:
+
 - Any database generated between commit ca956ae (v1.6.0 initial) and commit b7c4867 (midnight fix)
 - This includes databases generated with commit a89f755 (lunch break implementation)
 
 **How to check if your database needs regeneration**:
+
 ```python
 import pandas as pd
 from exness_data_preprocess import ExnessDataProcessor
@@ -387,12 +404,14 @@ else:
 ### Timeline: Two-Phase Fix
 
 **Phase 1: Lunch Break Support** (commit a89f755)
+
 - ✅ Implemented `exchange_calendars.is_open_on_minute()` in session_detector.py
 - ✅ Correctly handles lunch breaks when called
 - ❌ **BUT** ohlc_generator.py wasn't calling it correctly (midnight bug)
 - **Result**: Implementation was correct, but integration was broken
 
 **Phase 2: Midnight Bug Fix** (commit b7c4867)
+
 - ✅ Fixed ohlc_generator.py to query ALL timestamps (not just dates)
 - ✅ session_detector now checks each minute individually
 - ✅ Database updates with exact timestamp match
@@ -401,6 +420,7 @@ else:
 ### Research Backing
 
 Spawned 5 parallel research agents to analyze solution options:
+
 1. **Option A** (Minute-level Python): ✅ Recommended & Implemented
 2. **Option B** (SQL-based): ❌ Rejected (181+ lines, no holiday support)
 3. **Option C** (Hybrid): ✅ Recommended (current approach)
@@ -428,6 +448,7 @@ During comprehensive audit of v1.6.0 implementation, discovered that 3 Asian exc
 Research revealed that `exchange_calendars` v4.11.1 (the library we already use) has **built-in lunch break support** via `is_open_on_minute()` method.
 
 **Before** (manual hour checking):
+
 ```python
 # Manually compared hours/minutes (DIDN'T CHECK LUNCH BREAKS)
 open_minutes = exchange_config.open_hour * 60 + exchange_config.open_minute
@@ -436,6 +457,7 @@ return int(open_minutes <= current_minutes < close_minutes)
 ```
 
 **After** (using exchange_calendars API):
+
 ```python
 # Uses exchange_calendars built-in method (handles lunch breaks automatically)
 return int(calendar.is_open_on_minute(ts))
@@ -452,11 +474,13 @@ return int(calendar.is_open_on_minute(ts))
 ### Verification
 
 **Tokyo Stock Exchange**:
+
 - Before Nov 5, 2024: Closes at 15:00 JST ✅
 - After Nov 5, 2024: Closes at 15:30 JST ✅ (extended hours automatically handled)
 - Lunch break 11:30-12:30 JST: `is_xtks_session = 0` ✅
 
 **Hong Kong Stock Exchange**:
+
 - Lunch break 12:00-13:00 HKT: `is_xhkg_session = 0` ✅
 
 ### Database Regeneration
@@ -466,6 +490,7 @@ return int(calendar.is_open_on_minute(ts))
 **Why**: The initial v1.6.0 release (before lunch break fix) had partially broken session flags that didn't respect lunch breaks. This enhancement completes the v1.6.0 implementation.
 
 **How to verify if your database needs regeneration**:
+
 ```python
 import pandas as pd
 from exness_data_preprocess import ExnessDataProcessor
@@ -488,6 +513,7 @@ else:
 ### Version Clarification
 
 **Package version remains 0.4.0** (no bump needed):
+
 - This enhancement completes the v1.6.0 implementation as originally intended
 - No breaking changes to API or database schema
 - Users who haven't regenerated v1.6.0 databases yet will get the corrected version automatically
@@ -495,6 +521,7 @@ else:
 ### End-to-End Validation (2025-10-17)
 
 **Test Environment**:
+
 - Generated fresh EURUSD database with 15 months of data (Aug 2024 - Oct 2025)
 - Total OHLC bars: 450,431
 - Database size: 2.28 GB
@@ -528,6 +555,7 @@ else:
    ```
 
 **Key Findings**:
+
 - Session detection works correctly with `exchange_calendars.is_open_on_minute()`
 - Lunch breaks for Tokyo, Hong Kong, and Singapore are properly excluded
 - Database timestamps stored with timezone info (may display in local timezone but UTC values are correct)
@@ -535,6 +563,7 @@ else:
 - Zero regressions in OHLC generation
 
 **Testing**:
+
 ```bash
 # Tokyo: 9:00-11:30 OPEN, 11:30-12:30 CLOSED, 12:30-15:30 OPEN
 # Hong Kong: 9:30-12:00 OPEN, 12:00-13:00 CLOSED, 13:00-16:00 OPEN

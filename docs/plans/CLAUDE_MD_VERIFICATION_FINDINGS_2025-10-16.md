@@ -18,6 +18,7 @@
 ## Section-by-Section Verification Results
 
 ### ✅ Section 1: Header (Lines 1-9)
+
 - **Content**: Project description, architecture statement
 - **Verification**: N/A (essential metadata)
 - **Decision**: ✅ **KEEP** - Essential header for AI assistant
@@ -25,6 +26,7 @@
 ---
 
 ### ⚠️ Section 2: Development Commands (Lines 11-65)
+
 - **Content**: Setup, testing, code quality, building/publishing commands
 - **Verification**:
   - ✅ Setup commands found in `README.md:304-306`
@@ -40,6 +42,7 @@
 ---
 
 ### ❌ Section 3: Module Structure (Lines 71-157) - CRITICAL
+
 - **Content**: Detailed module descriptions with SLOs, class names, method signatures
 - **Verification**:
   - ❌ **docs/README.md** only has module names and brief descriptions
@@ -47,6 +50,7 @@
   - ❌ **No file** documents class names (ExnessDownloader, TickLoader, etc.)
   - ❌ **No file** documents method signatures (download_zip(year, month, pair, variant))
 - **Search Results**:
+
   ```
   docs/README.md:49: - **downloader.py** - HTTP download operations (httpx)
   docs/README.md:50: - **tick_loader.py** - CSV parsing (pandas)
@@ -64,12 +68,14 @@
   - Only found in CLAUDE.md (current file)
   - NOT documented anywhere else
   ```
+
 - **Impact**: **HIGH** - This is architectural information essential for understanding the codebase
 - **Decision**: ❌ **CREATE docs/MODULE_ARCHITECTURE.md** - Document module details, then link from CLAUDE.md
 
 ---
 
 ### ⏳ Section 4: Key Design Patterns (Lines 159-200)
+
 - **Content**: Facade Pattern, Unified Single-File Architecture, Phase7 Schema, Data Flow
 - **Verification**:
   - ❌ "Facade Pattern" only found in planning docs, not authoritative docs
@@ -85,6 +91,7 @@
 ---
 
 ### ✅ Section 5: Database Schema (Lines 202-224)
+
 - **Content**: Table structure (raw_spread_ticks, standard_ticks, ohlc_1m, metadata)
 - **Verification**: ✅ **Comprehensive coverage** in `docs/DATABASE_SCHEMA.md` (920 lines)
 - **Search Results**:
@@ -99,6 +106,7 @@
 ---
 
 ### ✅ Section 6: Quick Links (Lines 227-243)
+
 - **Content**: Documentation hub links
 - **Analysis**: This IS the hub section per hub-and-spoke pattern
 - **Decision**: ✅ **KEEP AND RELOCATE** - Move to top (after header, before Development Commands)
@@ -106,12 +114,14 @@
 ---
 
 ### ⚠️ Section 7: Essential Architecture Decisions (Lines 246-340)
+
 - **Content**:
   - Unified Single-File DuckDB Storage details
   - Phase7 30-Column OHLC Schema details
   - DuckDB Self-Documentation details
 
 **7a. Unified Single-File DuckDB Storage (Lines 248-282)**:
+
 - **Verification**:
   - ❌ Validation results ("18.6M ticks", "19.6M ticks", "2.08 GB") NOT documented elsewhere
   - ✅ Architecture plan exists in `docs/UNIFIED_DUCKDB_PLAN_v2.md`
@@ -124,16 +134,19 @@
 - **Decision**: ⏳ **PARTIAL** - Architecture plan exists, but validation results need documenting
 
 **7b. Phase7 30-Column OHLC Schema (Lines 284-310)**:
+
 - **Verification**: ✅ Documented in `docs/DATABASE_SCHEMA.md`
 - **Decision**: ✅ **REMOVE** - Replace with link to DATABASE_SCHEMA.md
 
 **7c. DuckDB Self-Documentation (Lines 312-339)**:
+
 - **Verification**: ✅ Documented in `docs/DATABASE_SCHEMA.md`
 - **Decision**: ✅ **REMOVE** - Replace with link to DATABASE_SCHEMA.md
 
 ---
 
 ### ✅ Section 8: Exness Data Sources (Lines 343-356)
+
 - **Content**: Data source URL, variants, characteristics
 - **Verification**: ✅ **Comprehensive coverage** in `docs/EXNESS_DATA_SOURCES.md`
 - **Search Results**:
@@ -147,6 +160,7 @@
 ---
 
 ### ⏳ Section 9: Research Areas (Lines 360-381)
+
 - **Content**: Zero-Spread Deviation Analysis, Compression Benchmarks
 - **Verification**: ✅ Links to research docs exist
 - **Analysis**: Already using progressive disclosure (links to deeper docs)
@@ -155,6 +169,7 @@
 ---
 
 ### ⚠️ Section 10: Current Implementation Status (Lines 385-413)
+
 - **Content**: v2.0.0 Architecture status, usage examples, pending tasks
 - **Verification**:
   - ✅ v2.0.0 Architecture reference in `docs/README.md:183`
@@ -168,6 +183,7 @@
 ---
 
 ### ✅ Section 11: File Locations (Lines 417-443)
+
 - **Content**: Project root, data storage structure, database schema, test artifacts
 - **Verification**: ✅ Documented in `README.md:100-122`
 - **Search Results**:
@@ -182,6 +198,7 @@
 ---
 
 ### ✅ Section 12: Migration from v1.0.0 (Lines 447-462)
+
 - **Content**: v1.0.0 legacy structure, v2.0.0 structure, migration steps
 - **Verification**: ✅ Documented in `README.md:413-428`
 - **Search Results**:
@@ -195,6 +212,7 @@
 ---
 
 ### ✅ Section 13: References (Lines 466-472)
+
 - **Content**: External links (Exness, DuckDB, Parquet, Zstd)
 - **Analysis**: External references essential for AI assistant
 - **Decision**: ✅ **KEEP** - Essential external references
@@ -204,25 +222,27 @@
 ## Summary of Verification Results
 
 ### ✅ Content EXISTS in Other Files (8 sections)
-| Section | Existing Location | Action |
-|---------|------------------|--------|
-| Database Schema | `docs/DATABASE_SCHEMA.md` | Link |
-| Data Sources | `docs/EXNESS_DATA_SOURCES.md` | Link |
-| File Locations | `README.md:100-122` | Link |
-| Migration Guide | `README.md:413-428` | Link |
-| Phase7 Schema | `docs/DATABASE_SCHEMA.md` | Link |
-| Self-Documentation | `docs/DATABASE_SCHEMA.md` | Link |
-| Research Links | Already linking | Keep |
-| References | External links | Keep |
+
+| Section            | Existing Location             | Action |
+| ------------------ | ----------------------------- | ------ |
+| Database Schema    | `docs/DATABASE_SCHEMA.md`     | Link   |
+| Data Sources       | `docs/EXNESS_DATA_SOURCES.md` | Link   |
+| File Locations     | `README.md:100-122`           | Link   |
+| Migration Guide    | `README.md:413-428`           | Link   |
+| Phase7 Schema      | `docs/DATABASE_SCHEMA.md`     | Link   |
+| Self-Documentation | `docs/DATABASE_SCHEMA.md`     | Link   |
+| Research Links     | Already linking               | Keep   |
+| References         | External links                | Keep   |
 
 ### ❌ Content MISSING from Other Files (5 sections)
-| Section | Issue | Action Required |
-|---------|-------|----------------|
-| Module Structure (Lines 71-157) | No SLO details, class names, method signatures documented | **CREATE** `docs/MODULE_ARCHITECTURE.md` |
-| Facade Pattern (Line 161-167) | Not documented anywhere | Add to MODULE_ARCHITECTURE.md |
-| Validation Results (Lines 261-267) | 18.6M ticks, 2.08 GB, etc. not documented | Add to UNIFIED_DUCKDB_PLAN_v2.md or new file |
-| Implementation Status (Lines 385-413) | Detailed checklist not in docs/README.md | Simplify or move to planning doc |
-| Development Commands (Lines 11-65) | Partial coverage in README.md | Verify if README has all, keep essential subset |
+
+| Section                               | Issue                                                     | Action Required                                 |
+| ------------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
+| Module Structure (Lines 71-157)       | No SLO details, class names, method signatures documented | **CREATE** `docs/MODULE_ARCHITECTURE.md`        |
+| Facade Pattern (Line 161-167)         | Not documented anywhere                                   | Add to MODULE_ARCHITECTURE.md                   |
+| Validation Results (Lines 261-267)    | 18.6M ticks, 2.08 GB, etc. not documented                 | Add to UNIFIED_DUCKDB_PLAN_v2.md or new file    |
+| Implementation Status (Lines 385-413) | Detailed checklist not in docs/README.md                  | Simplify or move to planning doc                |
+| Development Commands (Lines 11-65)    | Partial coverage in README.md                             | Verify if README has all, keep essential subset |
 
 ---
 
@@ -247,8 +267,10 @@
 1. **Relocate Hub Section** - Move "Quick Links" (lines 227-243) to top (after header)
 
 2. **Simplify Module Structure** - Replace 77 lines of module details with:
+
    ```markdown
    ### Module Pattern (v1.3.0)
+
    - Facade orchestrator coordinating 7 specialized modules
    - SLO-based design (Availability, Correctness, Observability, Maintainability)
    - Off-the-shelf libraries (httpx, pandas, DuckDB, exchange_calendars)
@@ -275,17 +297,23 @@
 **Before**: 479 lines with detailed implementation buried in middle
 
 **After**: ~150 lines with hub-and-spoke organization:
+
 ```markdown
 # CLAUDE.md
+
 ## Documentation Hub (at top)
+
 ## Architecture Summary (essentials only, links to deeper docs)
+
 ## Development Commands (essential subset)
+
 ## References (external links)
 ```
 
 **Reduction**: ~69% (479 → 150 lines)
 
 **Improvement**:
+
 - Hub at top (was line 227, now line 11)
 - All detailed content documented in specialized files
 - Progressive disclosure (CLAUDE.md → docs/MODULE_ARCHITECTURE.md → source code)

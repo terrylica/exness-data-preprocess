@@ -17,6 +17,7 @@
 **Architecture Principle**: DuckDB as single source of truth for validated research outcomes (materialized results), not exploratory tools (pandas/Polars ASOF operations).
 
 **Research Lifecycle**:
+
 1. **Explore**: pandas/Polars for tick-level ASOF merges (0.04s at 880K ticks)
 2. **Validate**: Confirm statistical significance, temporal stability
 3. **Graduate**: Materialize results to DuckDB tables with COMMENT ON
@@ -55,12 +56,14 @@
 ### Implementation Architecture v1.7.0
 
 **Refactoring Plans**:
+
 - [`plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md`](plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md) - Complete refactoring progress
 - [`plans/REFACTORING_CHECKLIST.md`](plans/REFACTORING_CHECKLIST.md) - Quick reference checklist
 
 **Pattern**: Facade with 7 specialized modules
 
 **Key Modules**:
+
 - **processor.py** - Thin orchestrator facade, delegates to modules
 - **downloader.py** - HTTP download operations (httpx)
 - **tick_loader.py** - CSV parsing (pandas)
@@ -71,6 +74,7 @@
 - **query_engine.py** - Query operations with on-demand resampling
 
 **Design Principles**:
+
 - ✅ **Separation of concerns**: Each module has single responsibility
 - ✅ **SLO-based design**: All modules define Availability, Correctness, Observability, Maintainability
 - ✅ **Off-the-shelf libraries**: httpx, pandas, DuckDB, exchange_calendars (no custom implementations)
@@ -83,14 +87,17 @@
 ### Performance Optimizations (v0.5.0)
 
 **Optimization Plans (SSoT)**:
+
 - [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml) - OpenAPI 3.1.0 specification for session vectorization
 - [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml) - OpenAPI 3.1.0 specification for SQL gap detection
 
 **Validation Results**:
+
 - [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md) - Incremental OHLC 7.3x speedup validation
 - [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md) - Session vectorization 2.2x speedup validation
 
 **Key Achievements**:
+
 - ✅ **Incremental OHLC Generation**: 7.3x speedup (8.05s → 1.10s for incremental updates)
 - ✅ **Vectorized Session Detection**: 2.2x speedup (5.99s → 2.69s for 302K bars, 10 exchanges)
 - ✅ **Combined Phase 1+2**: ~16x total speedup (8.05s → 0.50s)
@@ -165,6 +172,7 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 - [`data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) - OHLC specification
 
 **Phase7 Schema** (30 columns, v1.6.0):
+
 - **Definition**: [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py)
 - **Comprehensive Guide**: [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)
 - **Architecture**: Exchange Registry Pattern with 10 global exchange sessions (trading hour detection)
@@ -216,24 +224,24 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ## Quick Navigation
 
-| Topic                       | Document                                                                                                                                                                             | Type                   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
-| **Research Patterns**       | [`RESEARCH_PATTERNS.md`](RESEARCH_PATTERNS.md)                                                                                                                                        | ⭐ Architecture Decision |
-| **v2.0.0 Architecture**     | [`UNIFIED_DUCKDB_PLAN_v2.md`](UNIFIED_DUCKDB_PLAN_v2.md)                                                                                                                             | ⭐ Implementation Plan |
-| **Database Schema**         | [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)                                                                                                                                            | ⭐ Schema Reference    |
-| **Module Architecture**     | [`MODULE_ARCHITECTURE.md`](MODULE_ARCHITECTURE.md)                                                                                                                                    | Implementation Details |
-| **v1.0.0 Architecture**     | [`archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md`](archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md)                                                                                       | Archived Plan          |
-| **Data Sources**            | [`EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)                                                                                                                                   | Guide                  |
-| **Compression**             | [`research/compression-benchmarks/README.md`](research/compression-benchmarks/README.md)                                                                                             | Research               |
-| **Zero-Spread**             | [`research/eurusd-zero-spread-deviations/README.md`](research/eurusd-zero-spread-deviations/README.md)                                                                               | Research               |
-| **Phase7 v1.1.0**           | [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) | Specification          |
-| **Methodology**             | [`research/eurusd-zero-spread-deviations/01-methodology.md`](research/eurusd-zero-spread-deviations/01-methodology.md)                                                               | Reference              |
-| **Phase 2 Optimization**    | [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml)                                                                                                  | SSoT Plan              |
-| **Phase 3 Optimization**    | [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                                          | SSoT Plan              |
-| **Spike Test Phase 1**      | [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)                                                                          | Validation             |
-| **Spike Test Phase 2**      | [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)                                                                          | Validation             |
-| **API Reference**           | [`../README.md`](../README.md)                                                                                                                                                       | Main Doc               |
-| **Examples**                | [`../examples/`](../examples/)                                                                                                                                                       | Code Samples           |
+| Topic                    | Document                                                                                                                                                                             | Type                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| **Research Patterns**    | [`RESEARCH_PATTERNS.md`](RESEARCH_PATTERNS.md)                                                                                                                                       | ⭐ Architecture Decision |
+| **v2.0.0 Architecture**  | [`UNIFIED_DUCKDB_PLAN_v2.md`](UNIFIED_DUCKDB_PLAN_v2.md)                                                                                                                             | ⭐ Implementation Plan   |
+| **Database Schema**      | [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)                                                                                                                                           | ⭐ Schema Reference      |
+| **Module Architecture**  | [`MODULE_ARCHITECTURE.md`](MODULE_ARCHITECTURE.md)                                                                                                                                   | Implementation Details   |
+| **v1.0.0 Architecture**  | [`archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md`](archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md)                                                                                       | Archived Plan            |
+| **Data Sources**         | [`EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)                                                                                                                                   | Guide                    |
+| **Compression**          | [`research/compression-benchmarks/README.md`](research/compression-benchmarks/README.md)                                                                                             | Research                 |
+| **Zero-Spread**          | [`research/eurusd-zero-spread-deviations/README.md`](research/eurusd-zero-spread-deviations/README.md)                                                                               | Research                 |
+| **Phase7 v1.1.0**        | [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) | Specification            |
+| **Methodology**          | [`research/eurusd-zero-spread-deviations/01-methodology.md`](research/eurusd-zero-spread-deviations/01-methodology.md)                                                               | Reference                |
+| **Phase 2 Optimization** | [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml)                                                                                                   | SSoT Plan                |
+| **Phase 3 Optimization** | [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                                           | SSoT Plan                |
+| **Spike Test Phase 1**   | [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)                                                                           | Validation               |
+| **Spike Test Phase 2**   | [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)                                                                           | Validation               |
+| **API Reference**        | [`../README.md`](../README.md)                                                                                                                                                       | Main Doc                 |
+| **Examples**             | [`../examples/`](../examples/)                                                                                                                                                       | Code Samples             |
 
 ---
 

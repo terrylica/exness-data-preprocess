@@ -11,11 +11,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Documentation Hub
 
 ### User Documentation
+
 - **[README.md](README.md)** - Installation, API reference, usage examples
 - **[examples/basic_usage.py](examples/basic_usage.py)** - Download, query, coverage operations
 - **[examples/batch_processing.py](examples/batch_processing.py)** - Multi-instrument parallel processing
 
 ### AI Assistant Documentation
+
 - **[docs/README.md](docs/README.md)** - Architecture, planning, research findings
 - **[docs/MODULE_ARCHITECTURE.md](docs/MODULE_ARCHITECTURE.md)** - Complete module documentation with SLOs (v1.7.0)
 - **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema with self-documentation
@@ -25,12 +27,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **[Makefile](Makefile)** - Module introspection commands (module-stats, module-complexity, module-deps)
 
 ### Optimization Plans (v1.7.0)
+
 - **[docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)** - SSoT plan v2.0.0 (2.2x speedup)
 - **[docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)** - SSoT plan v2.0.0 (complete coverage)
 - **[docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)** - Phase 1 validation
 - **[docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)** - Phase 2 validation
 
 ### Implementation
+
 - **src/exness_data_preprocess/** - Source code (7 specialized modules + facade)
 - **tests/** - Test suite (48 tests, 100% passing)
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
@@ -40,6 +44,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture Summary
 
 ### Storage Pattern (v2.0.0)
+
 - **Single DuckDB file per instrument** (e.g., eurusd.duckdb containing all historical data)
 - **Dual-variant storage** (Raw_Spread + Standard in same database)
 - **Incremental updates** with automatic gap detection
@@ -50,6 +55,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Complete Specification**: [`docs/UNIFIED_DUCKDB_PLAN_v2.md`](docs/UNIFIED_DUCKDB_PLAN_v2.md)
 
 ### Module Pattern (v1.7.0)
+
 - **Facade orchestrator** (processor.py) coordinating 7 specialized modules
 - **Separation of concerns** with single-responsibility modules
 - **SLO-based design** (Availability, Correctness, Observability, Maintainability)
@@ -57,6 +63,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Zero regressions** (48 tests pass)
 
 **Modules**:
+
 1. **processor.py** - Thin orchestrator facade
 2. **downloader.py** - HTTP download operations
 3. **tick_loader.py** - CSV parsing
@@ -69,6 +76,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Complete Details**: [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)
 
 ### Performance Optimizations (v1.7.0)
+
 - **Incremental OHLC Generation** (Phase 1): 7.3x speedup
   - Optional date-range filtering for regeneration
   - Measured: 8.05s → 1.10s for incremental updates (7 months)
@@ -90,6 +98,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Pattern**: Spike test first (validate theory) → Implement → Iterative SSoT plan updates
 
 ### Schema (v1.6.0)
+
 - **Phase7 30-column OHLC** with dual-variant spreads
 - **BID-only OHLC** from Raw_Spread execution prices
 - **Normalized metrics** (range_per_spread, range_per_tick, body_per_spread, body_per_tick)
@@ -100,6 +109,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Complete Schema**: [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
 
 ### Data Sources
+
 - **Source**: https://ticks.ex2archive.com/ (public Exness tick data)
 - **Primary**: Raw_Spread variant (97.81% zero-spreads, execution prices)
 - **Reference**: Standard variant (0% zero-spreads, market quotes)
@@ -108,6 +118,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Complete Guide**: [`docs/EXNESS_DATA_SOURCES.md`](docs/EXNESS_DATA_SOURCES.md)
 
 ### Research Patterns (v1.0.0)
+
 - **Lifecycle**: Explore (pandas/Polars) → Validate → Graduate (DuckDB) → Query (SQL)
 - **ASOF Performance**: pandas/Polars 0.04s, DuckDB 0.89s at 880K ticks (24x difference)
 - **Tool Selection**: pandas/Polars for tick-level temporal matching, DuckDB for materialized results
@@ -121,6 +132,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Setup
+
 ```bash
 # Install with development dependencies
 uv sync --dev
@@ -130,6 +142,7 @@ pip install -e ".[dev]"
 ```
 
 ### Testing
+
 ```bash
 # Run all tests
 uv run pytest
@@ -142,6 +155,7 @@ uv run pytest tests/test_basic.py -v
 ```
 
 ### Code Quality
+
 ```bash
 # Format code
 uv run ruff format .
@@ -154,6 +168,7 @@ uv run mypy src/
 ```
 
 ### Module Introspection
+
 ```bash
 # Show current line counts (always accurate)
 make module-stats
@@ -166,6 +181,7 @@ make module-deps
 ```
 
 ### Building and Publishing
+
 ```bash
 # Build package
 uv build

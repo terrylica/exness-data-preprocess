@@ -361,6 +361,7 @@ This eliminates repetitive code when creating forms that correspond to database 
 **Scope**: Removed line count references from exness-data-preprocess v0.3.1 documentation
 
 **Files Modified**:
+
 1. CLAUDE.md (9 line count references removed)
 2. docs/README.md (8 line count references removed)
 3. RELEASE_NOTES.md (8 line count references removed)
@@ -372,15 +373,20 @@ This eliminates repetitive code when creating forms that correspond to database 
 ### Pattern Applied
 
 **Transformation Pattern**:
+
 ```markdown
 # BEFORE
+
 **Modules**:
+
 - processor.py (412 lines) - Thin orchestrator facade
 - downloader.py (82 lines) - HTTP downloads
 - tick_loader.py (67 lines) - CSV parsing
 
 # AFTER
+
 **Modules**:
+
 - processor.py - Thin orchestrator facade coordinating 7 specialized modules
 - downloader.py - HTTP download operations using httpx library
 - tick_loader.py - CSV parsing returning pandas DataFrame
@@ -391,6 +397,7 @@ This eliminates repetitive code when creating forms that correspond to database 
 ### Introspection System
 
 **Created Makefile Commands**:
+
 ```makefile
 make module-stats       # Current line counts (always accurate)
 make module-complexity  # Cyclomatic complexity analysis (requires radon)
@@ -398,6 +405,7 @@ make module-deps        # Dependency tree (requires pipdeptree)
 ```
 
 **Benefits**:
+
 - Documentation never becomes stale
 - Metrics always reflect current state
 - Users can verify claims themselves
@@ -419,18 +427,22 @@ make module-deps        # Dependency tree (requires pipdeptree)
 ### SLO Compliance
 
 **Availability**: ✅ Raise on errors (no fallbacks)
+
 - All edits used exact string matching
 - No silent failures
 
 **Correctness**: ✅ All line counts removed, introspection system working
+
 - Verified with grep searches
 - Tested `make module-stats` command
 
 **Observability**: ✅ Clear audit trail
+
 - All changes documented in this file
 - Git commit will show exact diffs
 
 **Maintainability**: ✅ Off-the-shelf tools
+
 - Used Make (standard build tool)
 - Used wc, radon, pipdeptree (industry-standard tools)
 - No custom implementations
@@ -450,8 +462,9 @@ make module-deps        # Dependency tree (requires pipdeptree)
 ### Validation Results
 
 **User-Facing Docs Checked**:
+
 - ✅ README.md (no line counts)
-- ✅ examples/*.py (no line counts)
+- ✅ examples/\*.py (no line counts)
 - ✅ CONTRIBUTING.md (no line counts)
 - ✅ CLAUDE.md (line counts removed)
 - ✅ docs/README.md (line counts removed)
@@ -459,9 +472,10 @@ make module-deps        # Dependency tree (requires pipdeptree)
 - ✅ CHANGELOG.md (line counts removed)
 
 **Historical/Planning Docs Preserved**:
-- docs/plans/*.md (validation reports, historical snapshots)
-- docs/archive/*.md (archived specifications)
-- docs/research/*.md (research findings)
+
+- docs/plans/\*.md (validation reports, historical snapshots)
+- docs/archive/\*.md (archived specifications)
+- docs/research/\*.md (research findings)
 
 **Rationale**: Planning and research docs are timestamped snapshots documenting specific states at specific times. They're not claiming current state.
 
@@ -470,6 +484,7 @@ make module-deps        # Dependency tree (requires pipdeptree)
 **Time Investment**: 45 minutes implementation + 20 minutes documentation = 65 minutes
 
 **Annual Maintenance Saved**:
+
 - No need to update line counts after refactoring (estimated 4x/year × 10 minutes = 40 minutes/year)
 - No confusion from stale metrics (estimated 2x/year × 30 minutes debugging = 60 minutes/year)
 - No documentation drift reports (estimated 1x/year × 60 minutes = 60 minutes/year)

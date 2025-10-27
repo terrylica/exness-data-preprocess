@@ -13,6 +13,7 @@
 **Standard (EURUSD) achieves Signal Quality Score of 26.57, representing 32× superior microstructure signal quality compared to alternative variants.**
 
 Using modal-band-excluded variance estimation, Standard exhibits:
+
 - **22.5% non-modal observations** (881,837 ticks varying)
 - **118.1% mode-truncated CV** (extreme spread variability)
 - **Optimal signal-to-static ratio** for ML feature engineering
@@ -25,6 +26,7 @@ This analysis applies rigorous statistical frameworks to evaluate spread varianc
 2. **Hurdle Model Decomposition**: Two-part analysis for zero-inflated distributions (Raw_Spread)
 
 **Signal Quality Score Definition**:
+
 ```
 SQ = P(non-modal) × CV_truncated
 
@@ -35,14 +37,15 @@ Where:
 
 ### Results Summary
 
-| Variant | Modal % | Non-Modal % | Mode-Truncated CV | **Signal Score** | Recommendation |
-|---------|---------|-------------|-------------------|------------------|----------------|
-| **Standard (EURUSD)** | 77.5% | **22.5%** | **118.1%** | **26.57** | ✅ **Use for ML** |
-| Mini (EURUSDm) | 98.4% | 1.6% | 48.9% | 0.78 | ❌ Avoid |
-| Cent (EURUSDc) | 98.4% | 1.6% | 48.9% | 0.78 | ❌ Avoid |
-| Raw_Spread | 98.3% zeros | 1.4% varying | 58.6% | 0.84 | ❌ Avoid |
+| Variant               | Modal %     | Non-Modal %  | Mode-Truncated CV | **Signal Score** | Recommendation    |
+| --------------------- | ----------- | ------------ | ----------------- | ---------------- | ----------------- |
+| **Standard (EURUSD)** | 77.5%       | **22.5%**    | **118.1%**        | **26.57**        | ✅ **Use for ML** |
+| Mini (EURUSDm)        | 98.4%       | 1.6%         | 48.9%             | 0.78             | ❌ Avoid          |
+| Cent (EURUSDc)        | 98.4%       | 1.6%         | 48.9%             | 0.78             | ❌ Avoid          |
+| Raw_Spread            | 98.3% zeros | 1.4% varying | 58.6%             | 0.84             | ❌ Avoid          |
 
 **Interpretation**:
+
 > Standard's low modal concentration (77.5%) leaves 22.5% of observations varying with extreme CV (118%), providing rich microstructure information for regime-switching models and HFT signal detection.
 
 ---
@@ -84,16 +87,19 @@ Where:
 ### Supporting Materials
 
 **Data**:
+
 - `data/histogram/` - Spread distribution histograms
 - `data/mode-truncated-results/` - Mode-truncated analysis results
 - `data/hurdle-model-results/` - Zero-inflated model results
 
 **Visualizations**:
+
 - `visualizations/mode-truncated/` - Signal quality comparisons
 - `visualizations/hurdle-model/` - Hurdle decomposition plots
 - `visualizations/temporal/` - Temporal pattern analysis
 
 **Reproducibility**:
+
 - `scripts/reproduction_guide.md` - Complete analysis workflow
 
 ---
@@ -114,6 +120,7 @@ Where:
 **For ML Feature Engineering**: Use **Standard (EURUSD)**
 
 **Justification**:
+
 - 32× higher signal quality than alternatives
 - Sufficient non-modal observations (22.5%) for learning
 - Extreme mode-truncated CV (118%) captures regime dynamics

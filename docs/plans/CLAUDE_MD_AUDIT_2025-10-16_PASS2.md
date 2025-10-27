@@ -12,6 +12,7 @@
 **Status**: CLAUDE.md reorganization (Pass 1) successful, minor corrections needed for promotional language compliance
 
 **Findings**:
+
 - ✅ Hub-and-spoke pattern implemented correctly
 - ✅ Progressive disclosure working (essentials → links → detailed docs)
 - ✅ Single source of truth maintained
@@ -24,6 +25,7 @@
 ### ✅ Link Farm + Hub-and-Spoke
 
 **CLAUDE.md Structure**:
+
 ```
 Line 1-9:   Header
 Line 11-30: Documentation Hub (✅ positioned at top)
@@ -37,6 +39,7 @@ Line 147-153: References (external links)
 **Improvement**: 96% earlier access to navigation
 
 **docs/README.md Structure**:
+
 ```
 Line 1-9:   Header with hub pattern statement
 Line 11-36: Architecture & Planning (with links)
@@ -51,6 +54,7 @@ Line 179-193: Quick Navigation (table)
 ### ✅ Progressive Disclosure
 
 **Level 0** (CLAUDE.md - 159 lines): Essentials + hub links
+
 - Project summary: 1 sentence
 - Hub: 20 lines with all document links
 - Architecture Summary: Bullet points only, links to detailed docs
@@ -58,12 +62,14 @@ Line 179-193: Quick Navigation (table)
 - References: External links only
 
 **Level 1** (docs/README.md - 223 lines): Architecture overview + deeper links
+
 - Comprehensive architecture descriptions
 - Links to specialized docs (UNIFIED_DUCKDB_PLAN_v2.md, DATABASE_SCHEMA.md)
 - Research findings with links to detailed reports
 - Quick navigation table
 
 **Level 2** (Specialized docs): Complete specifications
+
 - docs/MODULE_ARCHITECTURE.md - 800+ lines
 - docs/DATABASE_SCHEMA.md - 920 lines
 - docs/UNIFIED_DUCKDB_PLAN_v2.md - Complete v2.0.0 spec
@@ -75,14 +81,14 @@ Line 179-193: Quick Navigation (table)
 
 **Verification Results**:
 
-| Topic | Single Source | Referenced From | Duplication |
-|-------|--------------|-----------------|-------------|
-| Module architecture | docs/MODULE_ARCHITECTURE.md | CLAUDE.md:62, docs/README.md:47-55 | None ✅ |
-| Database schema | docs/DATABASE_SCHEMA.md | CLAUDE.md:72, docs/README.md:17, 131 | None ✅ |
-| v2.0.0 architecture | docs/UNIFIED_DUCKDB_PLAN_v2.md | CLAUDE.md:43, docs/README.md:15 | None ✅ |
-| Data sources | docs/EXNESS_DATA_SOURCES.md | CLAUDE.md:80, docs/README.md:71 | None ✅ |
-| Implementation status | docs/README.md:39-64 | CLAUDE.md:45-50 (summary only) | None ✅ |
-| Research findings | docs/research/ | CLAUDE.md (none), docs/README.md:88-143 | None ✅ |
+| Topic                 | Single Source                  | Referenced From                         | Duplication |
+| --------------------- | ------------------------------ | --------------------------------------- | ----------- |
+| Module architecture   | docs/MODULE_ARCHITECTURE.md    | CLAUDE.md:62, docs/README.md:47-55      | None ✅     |
+| Database schema       | docs/DATABASE_SCHEMA.md        | CLAUDE.md:72, docs/README.md:17, 131    | None ✅     |
+| v2.0.0 architecture   | docs/UNIFIED_DUCKDB_PLAN_v2.md | CLAUDE.md:43, docs/README.md:15         | None ✅     |
+| Data sources          | docs/EXNESS_DATA_SOURCES.md    | CLAUDE.md:80, docs/README.md:71         | None ✅     |
+| Implementation status | docs/README.md:39-64           | CLAUDE.md:45-50 (summary only)          | None ✅     |
+| Research findings     | docs/research/                 | CLAUDE.md (none), docs/README.md:88-143 | None ✅     |
 
 **All topics have single authoritative source** ✅
 
@@ -95,6 +101,7 @@ Line 179-193: Quick Navigation (table)
 ### ⚠️ Issue 1: Promotional Language in CLAUDE.md
 
 **Location**: Line 5
+
 ```markdown
 **Architecture**: Professional forex tick data preprocessing with unified single-file DuckDB storage
 ```
@@ -102,6 +109,7 @@ Line 179-193: Quick Navigation (table)
 **Problem**: "Professional" is promotional language
 
 **Fix**: Replace with factual description
+
 ```markdown
 **Architecture**: Forex tick data preprocessing with unified single-file DuckDB storage
 ```
@@ -113,6 +121,7 @@ Line 179-193: Quick Navigation (table)
 ### ⚠️ Issue 2: Promotional Language in docs/README.md
 
 **Location**: Line 175
+
 ```markdown
 **Conclusion**: Unified DuckDB architecture is production-ready
 ```
@@ -120,6 +129,7 @@ Line 179-193: Quick Navigation (table)
 **Problem**: "production-ready" is promotional language
 
 **Fix**: Replace with factual validation statement
+
 ```markdown
 **Conclusion**: Unified DuckDB architecture validated with 13 months real data (Oct 2024 - Oct 2025)
 ```
@@ -136,13 +146,15 @@ Line 179-193: Quick Navigation (table)
 **docs/README.md**: Relative paths only ✅
 
 **Example (correct)**:
+
 ```markdown
-[`MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)  # Relative path
+[`MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md) # Relative path
 ```
 
 **Previous (incorrect)**:
+
 ```markdown
-`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py`  # Absolute path
+`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/processor.py` # Absolute path
 ```
 
 ### ✅ No Line Number References
@@ -150,13 +162,15 @@ Line 179-193: Quick Navigation (table)
 **CLAUDE.md**: No line numbers (previously had 14) ✅
 
 **Replacement**: Introspection commands
+
 ```markdown
-make module-stats       # Always shows current line counts
+make module-stats # Always shows current line counts
 ```
 
 ### ✅ Version Tracking
 
 **CLAUDE.md footer** (lines 156-159):
+
 ```markdown
 **Version**: 2.0.0 (Architecture) + 1.3.0 (Implementation)
 **Last Updated**: 2025-10-16
@@ -165,6 +179,7 @@ make module-stats       # Always shows current line counts
 ```
 
 **docs/README.md footer** (lines 221-222):
+
 ```markdown
 **Last Updated**: 2025-10-15
 **Maintainer**: Terry Li <terry@eonlabs.com>
@@ -178,24 +193,24 @@ make module-stats       # Always shows current line counts
 
 ### Size Reduction (Pass 1 Reorganization)
 
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| CLAUDE.md lines | 479 | 159 | -67% |
-| Hub position | Line 227 | Line 11 | +96% earlier |
-| Absolute paths | 10 | 0 | -100% |
-| Line number references | 14 | 0 | -100% |
-| Single source violations | 5 topics | 0 topics | -100% |
+| Metric                   | Before   | After    | Change       |
+| ------------------------ | -------- | -------- | ------------ |
+| CLAUDE.md lines          | 479      | 159      | -67%         |
+| Hub position             | Line 227 | Line 11  | +96% earlier |
+| Absolute paths           | 10       | 0        | -100%        |
+| Line number references   | 14       | 0        | -100%        |
+| Single source violations | 5 topics | 0 topics | -100%        |
 
 ### Pattern Compliance
 
-| Pattern | CLAUDE.md | docs/README.md | Status |
-|---------|-----------|----------------|--------|
-| Hub-and-spoke | ✅ Line 11 | ✅ Line 1-9 | Compliant |
-| Progressive disclosure | ✅ 3 levels | ✅ 3 levels | Compliant |
-| Single source of truth | ✅ Links only | ✅ Hub + links | Compliant |
-| No promotional language | ⚠️ 1 instance | ⚠️ 1 instance | Needs fix |
-| No absolute paths | ✅ None | ✅ None | Compliant |
-| Version tracking | ✅ Present | ✅ Present | Compliant |
+| Pattern                 | CLAUDE.md     | docs/README.md | Status    |
+| ----------------------- | ------------- | -------------- | --------- |
+| Hub-and-spoke           | ✅ Line 11    | ✅ Line 1-9    | Compliant |
+| Progressive disclosure  | ✅ 3 levels   | ✅ 3 levels    | Compliant |
+| Single source of truth  | ✅ Links only | ✅ Hub + links | Compliant |
+| No promotional language | ⚠️ 1 instance | ⚠️ 1 instance  | Needs fix |
+| No absolute paths       | ✅ None       | ✅ None        | Compliant |
+| Version tracking        | ✅ Present    | ✅ Present     | Compliant |
 
 ---
 
@@ -210,6 +225,7 @@ make module-stats       # Always shows current line counts
 ### Pattern Maintenance
 
 **Anti-Patterns to Avoid**:
+
 - ❌ Promotional language ("professional", "production-ready", "enhanced", "corrected")
 - ❌ Absolute file paths (non-portable)
 - ❌ Line number references (volatile)
@@ -217,6 +233,7 @@ make module-stats       # Always shows current line counts
 - ❌ Hub buried in middle of file (should be at top)
 
 **Best Practices**:
+
 - ✅ Factual descriptions only
 - ✅ Relative paths or references
 - ✅ Introspection commands (make module-stats)
@@ -238,6 +255,7 @@ make module-stats       # Always shows current line counts
 ### Before (Original 479-line CLAUDE.md)
 
 **Structure**:
+
 ```
 # Header
 ## Development Commands (55 lines)
@@ -253,6 +271,7 @@ make module-stats       # Always shows current line counts
 ```
 
 **Problems**:
+
 - Hub buried at line 227
 - 155 lines of detailed module architecture (should be in separate file)
 - Duplicate content (database schema, data sources, file locations)
@@ -262,6 +281,7 @@ make module-stats       # Always shows current line counts
 ### After (Current 159-line CLAUDE.md)
 
 **Structure**:
+
 ```
 # Header
 ## Documentation Hub (20 lines) ← At top (line 11)
@@ -271,6 +291,7 @@ make module-stats       # Always shows current line counts
 ```
 
 **Improvements**:
+
 - Hub at line 11 (96% earlier)
 - Architecture essentials only (detailed content in MODULE_ARCHITECTURE.md)
 - No duplicate content (all topics link to single source)
@@ -339,6 +360,7 @@ grep -r "raw_spread_ticks" docs/
 **Pass 2 (Audit)**: Identified 2 minor promotional language instances requiring correction
 
 **Overall Compliance**: 95% compliant with pattern requirements
+
 - ✅ Hub-and-spoke pattern
 - ✅ Progressive disclosure
 - ✅ Single source of truth

@@ -34,32 +34,33 @@ This audit verified that the MODULE_ARCHITECTURE.md documentation (v1.3.1) accur
 
 **update_data() Workflow - 8 Steps Verified**:
 
-| Step | Documented | Actual Code | Status |
-|------|-----------|-------------|--------|
-| 1. Schema Init | database_manager calls OHLCSchema methods | database_manager.py:148-153 | ✅ Match |
-| 2. Gap Detection | gap_detector queries raw_spread_ticks | processor.py:228 → gap_detector.py:95-102 | ✅ Match |
-| 3. Download | downloader fetches Raw + Standard ZIPs | processor.py:251, 257 → downloader.py:76 | ✅ Match |
-| 4. Parse Ticks | tick_loader parses CSV to UTC DataFrame | processor.py:265-266 → tick_loader.py:66 | ✅ Match |
-| 5. Insert Ticks | database_manager INSERT OR IGNORE | processor.py:269-270 → database_manager.py:197 | ✅ Match |
-| 6. ZIP Cleanup | Delete temporary files | processor.py:280-282 | ✅ Match |
+| Step               | Documented                                     | Actual Code                                              | Status   |
+| ------------------ | ---------------------------------------------- | -------------------------------------------------------- | -------- |
+| 1. Schema Init     | database_manager calls OHLCSchema methods      | database_manager.py:148-153                              | ✅ Match |
+| 2. Gap Detection   | gap_detector queries raw_spread_ticks          | processor.py:228 → gap_detector.py:95-102                | ✅ Match |
+| 3. Download        | downloader fetches Raw + Standard ZIPs         | processor.py:251, 257 → downloader.py:76                 | ✅ Match |
+| 4. Parse Ticks     | tick_loader parses CSV to UTC DataFrame        | processor.py:265-266 → tick_loader.py:66                 | ✅ Match |
+| 5. Insert Ticks    | database_manager INSERT OR IGNORE              | processor.py:269-270 → database_manager.py:197           | ✅ Match |
+| 6. ZIP Cleanup     | Delete temporary files                         | processor.py:280-282                                     | ✅ Match |
 | 7. OHLC Generation | DELETE + INSERT + UPDATE with session_detector | processor.py:287 → ohlc_generator.py:80, 88-145, 175-184 | ✅ Match |
-| 8. Statistics | Count bars, calculate file size | processor.py:291-295 | ✅ Match |
+| 8. Statistics      | Count bars, calculate file size                | processor.py:291-295                                     | ✅ Match |
 
 **Specialized Modules - All Verified**:
 
-| Module | Constructor Documented | Constructor Actual | Methods Documented | Methods Actual | Status |
-|--------|------------------------|-------------------|-------------------|----------------|--------|
-| downloader.py | `__init__(temp_dir)` | Line 30 | `download_zip()` | Line 35 | ✅ |
-| tick_loader.py | Static utility (no __init__) | Confirmed | `load_from_zip()` | Line 24 | ✅ |
-| database_manager.py | `__init__(base_dir)` | Line 44 | `get_or_create_db()`, `append_ticks()` | Lines 53, 160 | ✅ |
-| gap_detector.py | `__init__(base_dir)` | Line 43 | `discover_missing_months()` | Line 54 | ✅ |
-| session_detector.py | `__init__()` | Line 36 | `detect_sessions_and_holidays()` | Line 67 | ✅ |
-| ohlc_generator.py | `__init__(session_detector)` | Line 51 | `regenerate_ohlc()` | Line 58 | ✅ |
-| query_engine.py | `__init__(base_dir)` | Line 47 | `query_ticks()`, `query_ohlc()`, `get_data_coverage()` | Lines 57, 115, 211 | ✅ |
+| Module              | Constructor Documented       | Constructor Actual | Methods Documented                                     | Methods Actual     | Status |
+| ------------------- | ---------------------------- | ------------------ | ------------------------------------------------------ | ------------------ | ------ |
+| downloader.py       | `__init__(temp_dir)`         | Line 30            | `download_zip()`                                       | Line 35            | ✅     |
+| tick_loader.py      | Static utility (no **init**) | Confirmed          | `load_from_zip()`                                      | Line 24            | ✅     |
+| database_manager.py | `__init__(base_dir)`         | Line 44            | `get_or_create_db()`, `append_ticks()`                 | Lines 53, 160      | ✅     |
+| gap_detector.py     | `__init__(base_dir)`         | Line 43            | `discover_missing_months()`                            | Line 54            | ✅     |
+| session_detector.py | `__init__()`                 | Line 36            | `detect_sessions_and_holidays()`                       | Line 67            | ✅     |
+| ohlc_generator.py   | `__init__(session_detector)` | Line 51            | `regenerate_ohlc()`                                    | Line 58            | ✅     |
+| query_engine.py     | `__init__(base_dir)`         | Line 47            | `query_ticks()`, `query_ohlc()`, `get_data_coverage()` | Lines 57, 115, 211 | ✅     |
 
 **Mermaid Diagram Accuracy**: ✅ **100% Accurate**
 
 All flowcharts in MODULE_ARCHITECTURE.md correctly represent actual code execution paths, including:
+
 - 8-step update_data() workflow
 - Session detector dependency injection
 - OHLCSchema method calls
@@ -77,6 +78,7 @@ All flowcharts in MODULE_ARCHITECTURE.md correctly represent actual code executi
 **Issue**: Every incremental update triggers full OHLC regeneration for ALL historical data, not just new data.
 
 **Evidence**:
+
 ```python
 # ohlc_generator.py line 80
 conn.execute("DELETE FROM ohlc_1m")  # Deletes ALL existing OHLC data
@@ -93,18 +95,19 @@ GROUP BY DATE_TRUNC('minute', r.Timestamp)
 
 For EURUSD with 36 months of historical data, adding 1 new month:
 
-| Operation | New Data (M) | Total Data (N) | Complexity | Time Impact |
-|-----------|--------------|----------------|------------|-------------|
-| Download ticks | 1 month | - | O(M) | ~5s |
-| Insert ticks (PRIMARY KEY) | 1 month | - | O(M) | ~0.1s |
-| **DELETE ohlc_1m** | **0 rows** | **413,000 rows** | **O(N)** | **~2s** |
-| **INSERT ohlc_1m** | **11,500 rows** | **413,000 rows** | **O(N)** | **~15s** |
-| **Session detection** | **11,500 mins** | **413,000 mins** | **O(N)** | **~8s** |
-| **UPDATE flags** | **11,500 rows** | **413,000 rows** | **O(N)** | **~3s** |
+| Operation                  | New Data (M)    | Total Data (N)   | Complexity | Time Impact |
+| -------------------------- | --------------- | ---------------- | ---------- | ----------- |
+| Download ticks             | 1 month         | -                | O(M)       | ~5s         |
+| Insert ticks (PRIMARY KEY) | 1 month         | -                | O(M)       | ~0.1s       |
+| **DELETE ohlc_1m**         | **0 rows**      | **413,000 rows** | **O(N)**   | **~2s**     |
+| **INSERT ohlc_1m**         | **11,500 rows** | **413,000 rows** | **O(N)**   | **~15s**    |
+| **Session detection**      | **11,500 mins** | **413,000 mins** | **O(N)**   | **~8s**     |
+| **UPDATE flags**           | **11,500 rows** | **413,000 rows** | **O(N)**   | **~3s**     |
 
 **Total Waste**: ~28 seconds to regenerate 36 months when only 1 month (3%) is new.
 
 **Scaling Problem**:
+
 - 1 year of data: ~7s OHLC regeneration
 - 2 years: ~15s
 - 3 years: ~28s
@@ -147,10 +150,12 @@ def regenerate_ohlc_incremental(self, duckdb_path: Path, start_date: str, end_da
 ```
 
 **Expected Performance Improvement**:
+
 - Adding 1 month to 36-month database: 28s → 0.8s (**35× faster**)
 - Adding 1 month to 60-month database: 50s → 0.8s (**62× faster**)
 
 **Business Impact**:
+
 - **Development**: Faster iteration during testing (60% time reduction on incremental updates)
 - **Production**: Scalable to multi-year datasets without performance degradation
 - **User Experience**: Sub-second incremental updates instead of multi-second waits
@@ -164,6 +169,7 @@ def regenerate_ohlc_incremental(self, duckdb_path: Path, start_date: str, end_da
 **Issue**: Gap detector only finds missing months before earliest or after latest date. Does not detect gaps WITHIN existing coverage.
 
 **Evidence**:
+
 ```python
 # gap_detector.py line 107
 # TODO: Implement gap detection WITHIN existing date range
@@ -172,12 +178,14 @@ def regenerate_ohlc_incremental(self, duckdb_path: Path, start_date: str, end_da
 **Current Behavior**:
 
 If database has:
+
 - ✅ Jan 2024
 - ❌ Feb 2024 (missing)
 - ✅ Mar 2024
 - ✅ Apr 2024
 
 Running `update_data(start_date="2024-01-01")` will:
+
 - ❌ **NOT detect Feb 2024 gap**
 - ✅ Only detect months after Apr 2024
 
@@ -206,6 +214,7 @@ def discover_missing_months(self, pair: str, start_date: str) -> List[Tuple[int,
 ```
 
 **Impact**:
+
 - **Current**: Manual intervention required to fill gaps
 - **Fixed**: Automatic gap detection and filling on every `update_data()` call
 
@@ -214,39 +223,49 @@ def discover_missing_months(self, pair: str, start_date: str) -> List[Tuple[int,
 ### ✅ GOOD PRACTICES IDENTIFIED
 
 **1. File Existence Caching** (`downloader.py:71-72`):
+
 ```python
 if zip_path.exists():
     return zip_path  # Don't re-download
 ```
+
 - Prevents redundant downloads
 - Saves bandwidth and time
 
 **2. PRIMARY KEY Duplicate Prevention** (`database_manager.py:197`):
+
 ```python
 INSERT OR IGNORE INTO {table_name} SELECT * FROM temp_ticks
 ```
+
 - Database-level deduplication (no application logic needed)
 - Safe for re-running failed updates
 
 **3. Read-Only Connections for Queries** (`query_engine.py:105`):
+
 ```python
 conn = duckdb.connect(str(duckdb_path), read_only=True)
 ```
+
 - Prevents accidental writes
 - Allows concurrent reads
 
 **4. Timezone-Aware Timestamps** (`tick_loader.py:66`):
+
 ```python
 df["Timestamp"] = df["Timestamp"].dt.tz_localize("UTC")
 ```
+
 - Explicit UTC timezone (not naive)
 - Prevents DST ambiguity
 
 **5. Self-Documenting Database** (`database_manager.py:94-103`):
+
 ```python
 COMMENT ON TABLE raw_spread_ticks IS '...'
 COMMENT ON COLUMN raw_spread_ticks.Timestamp IS '...'
 ```
+
 - Schema documentation inside database
 - Discoverable via SQL queries
 
@@ -291,6 +310,7 @@ COMMENT ON COLUMN raw_spread_ticks.Timestamp IS '...'
 **File**: `src/exness_data_preprocess/ohlc_generator.py`
 
 **Changes**:
+
 1. Add `regenerate_ohlc_incremental(duckdb_path, start_date, end_date)` method
 2. Update `processor.py` to track which months were added
 3. Call incremental method with date range instead of full regeneration
@@ -304,6 +324,7 @@ COMMENT ON COLUMN raw_spread_ticks.Timestamp IS '...'
 **File**: `src/exness_data_preprocess/gap_detector.py`
 
 **Changes**:
+
 1. Query for distinct year/month combinations in database
 2. Compare with expected range from start_date to today
 3. Return all missing months (before, within, and after)
@@ -317,6 +338,7 @@ COMMENT ON COLUMN raw_spread_ticks.Timestamp IS '...'
 **File**: `src/exness_data_preprocess/processor.py`
 
 **Changes**:
+
 1. Use ThreadPoolExecutor to download Raw_Spread + Standard concurrently
 2. Handle partial failures (one variant succeeds, other fails)
 
@@ -331,6 +353,7 @@ COMMENT ON COLUMN raw_spread_ticks.Timestamp IS '...'
 The architecture documentation is **100% accurate** and reflects the actual implementation. However, the system has a **critical efficiency bottleneck** in OHLC generation that prevents it from scaling efficiently to multi-year datasets.
 
 **Key Metrics**:
+
 - **Documentation Accuracy**: 100% ✅
 - **Code Quality**: High (good practices throughout)
 - **Critical Issues**: 1 (full OHLC regeneration)
@@ -338,6 +361,7 @@ The architecture documentation is **100% accurate** and reflects the actual impl
 - **Optimization Opportunities**: 3 identified
 
 **Next Steps**:
+
 1. Implement incremental OHLC generation (Priority 1)
 2. Implement full gap detection (Priority 2)
 3. Consider parallel downloads (Priority 3)

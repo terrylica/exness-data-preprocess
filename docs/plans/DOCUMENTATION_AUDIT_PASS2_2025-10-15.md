@@ -1,4 +1,5 @@
 # Documentation Audit Report Pass 2 - exness-data-preprocess
+
 **Date**: 2025-10-15
 **Version**: 0.3.1
 **Auditor**: Claude Code
@@ -10,6 +11,7 @@
 Second-pass audit after initial fixes reveals **4 remaining issues** requiring attention:
 
 ### Critical Issues (Remaining)
+
 1. ⚠️ **docs/README.md line counts outdated** - Still shows old line counts (414, 89, 213, 163, 210, 283)
 2. ⚠️ **docs/README.md status outdated** - Shows "Phase 4 Complete" but Phase 5 is complete
 3. ⚠️ **SESSION_2025-10-15_SUMMARY.md outdated** - Shows Phase 1 status, needs Phase 5 completion
@@ -24,10 +26,12 @@ Second-pass audit after initial fixes reveals **4 remaining issues** requiring a
 **File**: `/Users/terryli/eon/exness-data-preprocess/docs/README.md`
 
 **Current Content** (Line 45-56):
+
 ```markdown
 **Pattern**: Facade with 7 specialized modules (414 lines processor, 1,146 lines extracted)
 
 **Key Modules**:
+
 - **processor.py** (414 lines) - Thin orchestrator facade, delegates to modules
 - **downloader.py** (89 lines) - HTTP download operations (httpx)
 - **tick_loader.py** (67 lines) - CSV parsing (pandas)
@@ -39,6 +43,7 @@ Second-pass audit after initial fixes reveals **4 remaining issues** requiring a
 ```
 
 **Actual Line Counts** (from `wc -l`):
+
 ```
 412 processor.py    (not 414)
  82 downloader.py   (not 89)
@@ -59,11 +64,13 @@ Second-pass audit after initial fixes reveals **4 remaining issues** requiring a
 **File**: `/Users/terryli/eon/exness-data-preprocess/docs/README.md`
 
 **Current Content** (Line 63):
+
 ```markdown
 **Status**: Phase 4 Complete (2025-10-15)
 ```
 
 **Should Be**:
+
 ```markdown
 **Status**: Phase 5 Complete (Released as v0.3.1 on 2025-10-16)
 ```
@@ -75,12 +82,14 @@ Second-pass audit after initial fixes reveals **4 remaining issues** requiring a
 **File**: `/Users/terryli/eon/exness-data-preprocess/docs/plans/SESSION_2025-10-15_SUMMARY.md`
 
 **Issues**:
+
 1. **Title shows Phase 1** - Document describes only Phase 1 completion
 2. **Line count for downloader.py** - Shows 89 lines (actual: 82)
 3. **Missing Phase 2-5** - No mention of Phase 2, 3, 4, or 5 work
 4. **Status outdated** - Shows "Phase 1 Complete (2/5 phases done)" but should be "Phase 5 Complete"
 
 **Recommended Action**: Update to reflect Phase 5 completion with:
+
 - Phase 1-5 summary
 - Final line counts
 - Test results (48 passed in 106.25s)
@@ -95,6 +104,7 @@ Second-pass audit after initial fixes reveals **4 remaining issues** requiring a
 **File**: `/Users/terryli/eon/exness-data-preprocess/CHANGELOG.md`
 
 **Current Content** (Line 13):
+
 ```markdown
 - Extract 7 specialized modules from processor.py (Phase 1-5) Refactor processor.py (885 → 414 lines, 53% reduction) using facade pattern with 7 focused modules implementing separation of concerns. Modules Created: - downloader.py (89 lines): HTTP download operations - tick_loader.py (67 lines): CSV parsing - database_manager.py (213 lines): Database operations - session_detector.py (121 lines): Holiday/session detection - gap_detector.py (163 lines): Incremental update logic - ohlc_generator.py (210 lines): Phase7 OHLC generation - query_engine.py (283 lines): Query operations Design Principles: - Facade pattern: processor.py delegates to specialized modules - SLO-based: All modules define Availability, Correctness, Observability, Maintainability - Off-the-shelf: httpx, pandas, DuckDB, exchange_calendars (no custom implementations) - Zero regressions: All 48 tests pass, all ruff checks pass Documentation: - Updated CLAUDE.md with module structure and facade pattern - Updated docs/README.md with implementation architecture v1.3.0 - Added planning documents (REFACTORING_CHECKLIST.md, PHASE7_v1.6.0_REFACTORING_PROGRESS.md) Version: 1.3.0 (Implementation) Validation: 48 tests pass, ruff checks pass, backward compatible
 ```
@@ -122,12 +132,14 @@ The following files have been verified to contain correct line counts:
 ## Recommended Action Plan
 
 ### Immediate (Today)
+
 1. ✅ Update docs/README.md with correct line counts
 2. ✅ Update docs/README.md status to "Phase 5 Complete"
 3. ✅ Update SESSION_2025-10-15_SUMMARY.md with Phase 5 completion details
 4. ✅ Document CHANGELOG.md note (no manual edit needed)
 
 ### Not Recommended
+
 - ❌ **Do NOT edit CHANGELOG.md** - Auto-generated file, edit source commits instead
 - ❌ **Do NOT edit historical commit messages** - Preserve git history integrity
 
@@ -136,6 +148,7 @@ The following files have been verified to contain correct line counts:
 ## Validation
 
 ### Current Line Counts (2025-10-15, verified)
+
 ```bash
 $ wc -l src/exness_data_preprocess/*.py
       89 __init__.py
@@ -155,6 +168,7 @@ $ wc -l src/exness_data_preprocess/*.py
 ```
 
 ### 7 Extracted Modules Total
+
 ```
  82 downloader.py
  67 tick_loader.py
@@ -168,6 +182,7 @@ $ wc -l src/exness_data_preprocess/*.py
 ```
 
 ### Facade Module
+
 ```
 412 processor.py (was 885, 53% reduction)
 ```
@@ -177,6 +192,7 @@ $ wc -l src/exness_data_preprocess/*.py
 ## Conclusion
 
 Pass 2 audit reveals 4 remaining issues, 3 of which require fixes:
+
 1. **docs/README.md line counts** - Fix required
 2. **docs/README.md status** - Fix required
 3. **SESSION_2025-10-15_SUMMARY.md** - Fix required

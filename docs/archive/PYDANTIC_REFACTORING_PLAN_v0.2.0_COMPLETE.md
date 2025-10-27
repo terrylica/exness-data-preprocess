@@ -26,6 +26,7 @@
 **Main Class**: `ExnessDataProcessor`
 
 **Public Methods**:
+
 1. `__init__(base_dir: Path = None)` - No return
 2. `download_exness_zip(year, month, pair, variant)` → `Optional[Path]`
 3. `update_data(pair, start_date, force_redownload, delete_zip)` → `Dict[str, Any]` ⚠️
@@ -36,28 +37,32 @@
 8. `get_data_coverage(pair)` → `Dict[str, Any]` ⚠️
 
 **Legacy API (api.py)**: ❌ BROKEN - References non-existent methods
+
 - `process_month()` - calls `processor.process_month()` which doesn't exist!
 - `process_date_range()` - calls `processor.process_month()` which doesn't exist!
 - `query_ohlc()` - signature doesn't match processor.query_ohlc()
 - `analyze_ticks()` - calls `processor.analyze_ticks()` which doesn't exist!
 - `get_storage_stats()` - calls `processor.get_storage_stats()` which doesn't exist!
 
-**Exports (__init__.py)**: Exports broken api.py functions
+**Exports (**init**.py)**: Exports broken api.py functions
 
 ### Issues Identified
 
 #### Critical Issues
+
 1. **api.py is completely broken** - All functions call non-existent methods
-2. **__init__.py docstring outdated** - Shows v1.0.0 API (process_month)
+2. \***\*init**.py docstring outdated\*\* - Shows v1.0.0 API (process_month)
 3. **No type safety** - Dict[str, Any] return types hide structure
 4. **No validation** - Can return arbitrary dict keys/values
 
 #### High-Priority Issues
+
 5. **AI agents can't discover API** - Untyped dicts, no JSON Schema
 6. **No enum types** - pair/timeframe/variant are strings, not Literal
 7. **Missing validation helpers** - No supported_pairs() method
 
 #### Medium-Priority Issues
+
 8. **Docstrings lack structure** - No consistent Args/Returns/Examples
 9. **No embedded examples** - Can't show AI agents usage patterns
 10. **query_ticks returns DataFrame** - Good, but should document schema
@@ -69,20 +74,23 @@
 ### Changes Required
 
 #### Breaking Changes (None - Maintain Backward Compatibility)
+
 - ❌ None - All changes are additive or compatible
 
 #### Non-Breaking Changes (High Impact)
+
 1. **Add Pydantic models** for return types
 2. **Add Literal types** for enums
 3. **Update method signatures** with typed parameters
 4. **Deprecate api.py** with warnings
-5. **Update __init__.py** docstring
+5. **Update **init**.py** docstring
 6. **Add validation helpers**
 7. **Enhance docstrings** with structured format
 
 ### Backward Compatibility Strategy
 
 **Pydantic models are dict-compatible**:
+
 ```python
 # Old code (v2.0.0)
 result = processor.update_data("EURUSD", "2022-01-01")
@@ -107,6 +115,7 @@ print(result['months_added'])  # ✅ Still works (dict access)
 **Location**: `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/models.py`
 
 **Contents**:
+
 ```python
 """
 Pydantic models for exness-data-preprocess v2.1.0.
@@ -241,6 +250,7 @@ class CoverageInfo(BaseModel):
 ```
 
 **Benefits**:
+
 - ✅ Single source of truth for all return types
 - ✅ Validation rules embedded (ge=0 for counts)
 - ✅ Field descriptions for AI agents
@@ -250,6 +260,7 @@ class CoverageInfo(BaseModel):
 #### 1.2 Update `processor.py` Imports
 
 **Add at top**:
+
 ```python
 from exness_data_preprocess.models import (
     UpdateResult,
@@ -263,6 +274,7 @@ from exness_data_preprocess.models import (
 #### 1.3 Add Validation Helpers to `ExnessDataProcessor`
 
 **Add static methods**:
+
 ```python
 @staticmethod
 def supported_pairs() -> list[PairType]:
@@ -317,6 +329,7 @@ def supported_variants() -> list[VariantType]:
 #### 2.1 Update `update_data()` Method
 
 **Current signature**:
+
 ```python
 def update_data(
     self,
@@ -328,6 +341,7 @@ def update_data(
 ```
 
 **New signature**:
+
 ```python
 def update_data(
     self,
@@ -408,6 +422,7 @@ def update_data(
 ```
 
 **Changes**:
+
 - ✅ `pair: str` → `pair: PairType` (IDE autocomplete shows valid values)
 - ✅ `-> Dict[str, Any]` → `-> UpdateResult` (structured return)
 - ✅ Rich docstring with Args/Returns/Raises/Examples/See Also/Note
@@ -418,11 +433,13 @@ def update_data(
 #### 2.2 Update `get_data_coverage()` Method
 
 **Current signature**:
+
 ```python
 def get_data_coverage(self, pair: str = "EURUSD") -> Dict[str, Any]:
 ```
 
 **New signature**:
+
 ```python
 def get_data_coverage(self, pair: PairType = "EURUSD") -> CoverageInfo:
     """
@@ -460,6 +477,7 @@ def get_data_coverage(self, pair: PairType = "EURUSD") -> CoverageInfo:
 #### 2.3 Update `query_ticks()` Method
 
 **Current signature**:
+
 ```python
 def query_ticks(
     self,
@@ -472,6 +490,7 @@ def query_ticks(
 ```
 
 **New signature**:
+
 ```python
 def query_ticks(
     self,
@@ -533,6 +552,7 @@ def query_ticks(
 #### 2.4 Update `query_ohlc()` Method
 
 **Current signature**:
+
 ```python
 def query_ohlc(
     self,
@@ -544,6 +564,7 @@ def query_ohlc(
 ```
 
 **New signature**:
+
 ```python
 def query_ohlc(
     self,
@@ -612,20 +633,23 @@ def query_ohlc(
 #### 3.1 Fix or Remove api.py
 
 **Option A: Remove entirely** (Recommended)
+
 - api.py is completely broken
 - All functions call non-existent methods
 - No users can be relying on it
 
 **Option B: Fix and deprecate**
+
 - Would need to rewrite all functions
 - More work for no benefit
 - Delays v2.1.0 release
 
 **Recommendation**: Remove api.py, add deprecation notice in CHANGELOG.md
 
-#### 3.2 Update __init__.py
+#### 3.2 Update **init**.py
 
 **Current**:
+
 ```python
 from exness_data_preprocess.api import (
     analyze_ticks,
@@ -648,6 +672,7 @@ __all__ = [
 ```
 
 **New**:
+
 ```python
 """
 exness-data-preprocess v2.1.0
@@ -832,12 +857,14 @@ def test_help_function():
 ## Risk Assessment
 
 ### Low Risk Changes ✅
+
 - Adding Pydantic models (new file, no existing code affected)
 - Adding validation helpers (new methods, purely additive)
 - Updating docstrings (doesn't affect runtime behavior)
-- Updating __init__.py docstring (cosmetic change)
+- Updating **init**.py docstring (cosmetic change)
 
 ### Medium Risk Changes ⚠️
+
 - Changing return types `Dict[str, Any]` → Pydantic models
   - **Mitigation**: Pydantic models are dict-compatible
   - **Test**: Verify dict access still works
@@ -846,6 +873,7 @@ def test_help_function():
   - **Test**: Verify existing calls still work
 
 ### High Risk Changes ❌
+
 - Removing api.py
   - **Mitigation**: api.py is already broken, can't have users
   - **Test**: N/A - no functional code to break
@@ -862,22 +890,26 @@ def test_help_function():
 ## Migration Timeline
 
 ### Hour 1: Foundation
+
 - [ ] Create models.py with Pydantic models
 - [ ] Add validation helpers to processor.py
 - [ ] Update imports in processor.py
 
 ### Hour 2: Update Signatures
+
 - [ ] Update update_data() signature and docstring
 - [ ] Update get_data_coverage() signature and docstring
 - [ ] Update return statements to use Pydantic models
 
 ### Hour 3: Update Remaining Methods
+
 - [ ] Update query_ticks() signature and docstring
 - [ ] Update query_ohlc() signature and docstring
 - [ ] Remove api.py
-- [ ] Update __init__.py
+- [ ] Update **init**.py
 
 ### Hour 4: Testing
+
 - [ ] Write backward compatibility tests
 - [ ] Write validation tests
 - [ ] Write AI discovery tests
@@ -885,6 +917,7 @@ def test_help_function():
 - [ ] Update examples/
 
 ### Hour 5: Documentation
+
 - [ ] Update README.md Quick Start
 - [ ] Update CHANGELOG.md
 - [ ] Update CLAUDE.md in project
@@ -896,6 +929,7 @@ def test_help_function():
 ## Success Criteria
 
 ### Functional Requirements
+
 - ✅ All existing code continues to work (dict access)
 - ✅ Type hints show valid values in IDE
 - ✅ Runtime validation catches invalid data
@@ -903,10 +937,12 @@ def test_help_function():
 - ✅ help() shows rich documentation
 
 ### Performance Requirements
+
 - ✅ No performance degradation (Pydantic v2 is fast)
 - ✅ Same query performance (<15ms)
 
 ### Documentation Requirements
+
 - ✅ AI agents can discover API via introspection
 - ✅ Examples in docstrings
 - ✅ Validation rules in Field descriptions
@@ -916,6 +952,7 @@ def test_help_function():
 ## Post-Implementation Validation
 
 ### Checklist
+
 1. [ ] Run full test suite (existing + new tests)
 2. [ ] Verify examples/ still work
 3. [ ] Test in real REPL with real database
@@ -925,7 +962,9 @@ def test_help_function():
 7. [ ] Update PyPI package description
 
 ### Rollback Plan
+
 If critical issues found:
+
 1. Revert to v2.0.0 tag
 2. Keep models.py for future
 3. Release v2.0.1 with bug fixes only
@@ -935,6 +974,7 @@ If critical issues found:
 ## Conclusion
 
 This refactoring plan provides:
+
 - ✅ **High Impact**: Enables AI discovery, adds validation, generates schemas
 - ✅ **Low Regression Risk**: Backward compatible via Pydantic dict access
 - ✅ **Clear Timeline**: 5 hours total (3 implementation + 2 testing)

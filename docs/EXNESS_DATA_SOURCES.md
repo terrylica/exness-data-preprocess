@@ -27,6 +27,7 @@ https://ticks.ex2archive.com/ticks/{VARIANT}/{YEAR}/{MONTH}/Exness_{VARIANT}_{YE
 ```
 
 **Examples**:
+
 - Standard: `https://ticks.ex2archive.com/ticks/EURUSD/2024/09/Exness_EURUSD_2024_09.zip`
 - Raw_Spread: `https://ticks.ex2archive.com/ticks/EURUSD_Raw_Spread/2024/09/Exness_EURUSD_Raw_Spread_2024_09.zip`
 
@@ -37,27 +38,33 @@ https://ticks.ex2archive.com/ticks/{VARIANT}/{YEAR}/{MONTH}/Exness_{VARIANT}_{YE
 Exness provides **4 main variants** of tick data for each instrument:
 
 ### 1. Standard (Default)
+
 **Symbol**: `{INSTRUMENT}` (e.g., `EURUSD`)
 
 **Characteristics**:
+
 - **Zero-spreads**: 0% (always Bid < Ask)
 - **Mean spread**: 0.7 pips (EURUSD)
 - **Use case**: Reference quotes, position ratio calculation
 
 **Example (EURUSD Sep 2024)**:
+
 - Ticks: 1,082,145
 - File size: 7.17 MB (compressed)
 - CSV size: 66 MB (uncompressed)
 
 ### 2. Raw_Spread
+
 **Symbol**: `{INSTRUMENT}_Raw_Spread` (e.g., `EURUSD_Raw_Spread`)
 
 **Characteristics**:
+
 - **Zero-spreads**: 97.81% (Bid == Ask)
 - **Mean spread**: 0.0 pips
 - **Use case**: Execution prices, zero-spread deviation analysis, OHLC construction
 
 **Example (EURUSD Sep 2024)**:
+
 - Ticks: 925,780
 - File size: 5.88 MB (compressed)
 - CSV size: 53 MB (uncompressed)
@@ -65,27 +72,33 @@ Exness provides **4 main variants** of tick data for each instrument:
 **Critical for Phase7**: Primary data source for BID-only OHLC construction
 
 ### 3. Standart_Plus (Note: Typo in Name)
+
 **Symbol**: `{INSTRUMENT}_Standart_Plus` (e.g., `EURUSD_Standart_Plus`)
 
 **Characteristics**:
+
 - **Zero-spreads**: 0% (always Bid < Ask)
 - **Mean spread**: 1.2 pips (70% wider than Standard)
 - **Use case**: Wider spread variant, possibly retail accounts
 
 **Example (EURUSD Sep 2024)**:
+
 - Ticks: ~1,100,000 (estimated)
 - File size: 7.51 MB (compressed)
 - CSV size: 69 MB (uncompressed)
 
 ### 4. Zero_Spread
+
 **Symbol**: `{INSTRUMENT}_Zero_Spread` (e.g., `EURUSD_Zero_Spread`)
 
 **Characteristics**:
+
 - **Zero-spreads**: 97.81% (Bid == Ask)
 - **Mean spread**: 0.0 pips
 - **Use case**: Nearly identical to Raw_Spread
 
 **Example (EURUSD Sep 2024)**:
+
 - Ticks: ~925,000 (estimated)
 - File size: 5.90 MB (compressed)
 - CSV size: 53 MB (uncompressed)
@@ -101,12 +114,12 @@ Exness provides **4 main variants** of tick data for each instrument:
 
 ## Comparison Matrix (EURUSD Sep 2024)
 
-| Variant | Ticks | Zero-Spreads | Mean Spread | File Size | Use Case |
-|---------|-------|--------------|-------------|-----------|----------|
-| **EURUSD** | 1.08M | 0% | 0.7 pips | 7.17 MB | Reference quotes |
-| **EURUSD_Raw_Spread** | 925K | 97.81% | 0.0 pips | 5.88 MB | **Primary for phase7** |
-| **EURUSD_Standart_Plus** | 1.10M | 0% | 1.2 pips | 7.51 MB | Wider spreads |
-| **EURUSD_Zero_Spread** | 925K | 97.81% | 0.0 pips | 5.90 MB | Similar to Raw_Spread |
+| Variant                  | Ticks | Zero-Spreads | Mean Spread | File Size | Use Case               |
+| ------------------------ | ----- | ------------ | ----------- | --------- | ---------------------- |
+| **EURUSD**               | 1.08M | 0%           | 0.7 pips    | 7.17 MB   | Reference quotes       |
+| **EURUSD_Raw_Spread**    | 925K  | 97.81%       | 0.0 pips    | 5.88 MB   | **Primary for phase7** |
+| **EURUSD_Standart_Plus** | 1.10M | 0%           | 1.2 pips    | 7.51 MB   | Wider spreads          |
+| **EURUSD_Zero_Spread**   | 925K  | 97.81%       | 0.0 pips    | 5.90 MB   | Similar to Raw_Spread  |
 
 ---
 
@@ -122,6 +135,7 @@ All variants use identical CSV structure:
 ```
 
 **Columns**:
+
 - `Exness` - Provider name (header: "Exness", data: "exness")
 - `Symbol` - Instrument symbol
 - `Timestamp` - ISO 8601 with milliseconds, UTC timezone
@@ -143,6 +157,7 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 ```
 
 **Output** (EURUSD example):
+
 ```
 EURUSD
 EURUSD_Raw_Spread
@@ -172,6 +187,7 @@ curl -s "https://ticks.ex2archive.com/ticks/EURUSD/2024/" | jq
 Located at: [`/tmp/exness-duckdb-test/download_exness_variants.sh`](/tmp/exness-duckdb-test/download_exness_variants.sh)
 
 **Usage**:
+
 ```bash
 # Download standard variant
 ./download_exness_variants.sh EURUSD 2024 09
@@ -266,10 +282,12 @@ position_ratio = (raw_mid - std_bid) / (std_ask - std_bid)
 ```
 
 Where:
+
 - `raw_mid = (raw_bid + raw_ask) / 2` from Raw_Spread variant
 - `std_bid`, `std_ask` from Standard variant (ASOF merged)
 
 **Interpretation**:
+
 - `position_ratio = 0.5` → Execution at midpoint (no deviation)
 - `position_ratio < 0.5` → Bid-biased execution
 - `position_ratio > 0.5` → Ask-biased execution
@@ -305,11 +323,13 @@ tick_count_standard     BIGINT                    -- COUNT(*) from Standard
 ### Spread Behavior
 
 **Standard Variant**:
+
 - **Minimum spread**: 0.6 pips (EURUSD)
 - **Mean spread**: 0.7 pips (EURUSD)
 - **Never zero**: Always `Bid < Ask`
 
 **Raw_Spread Variant**:
+
 - **Zero-spreads**: 97.81% of ticks (EURUSD)
 - **Mean spread**: 0.0 pips
 - **Represents execution**: Bid == Ask at most ticks
@@ -328,19 +348,23 @@ tick_count_standard     BIGINT                    -- COUNT(*) from Standard
 ### Single Instrument (EURUSD)
 
 **Per Month** (21 trading days):
+
 - Raw_Spread ticks: 925K ticks
 - Standard ticks: 1.08M ticks
 - **Unified DuckDB**: 11.26 MB (ticks + OHLC bars)
 
 **Annual** (12 months):
+
 - 12 × 11.5 MB = **~138 MB/year**
 
 **5-Year History**:
+
 - 5 × 138 MB = **~690 MB**
 
 ### Multi-Instrument
 
 **Two Instruments** (EURUSD + XAUUSD):
+
 - Annual: 2 × 138 MB = **~276 MB/year**
 - 5-year: 2 × 690 MB = **~1.38 GB**
 

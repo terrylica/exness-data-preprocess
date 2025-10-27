@@ -9,6 +9,7 @@ This directory contains empirical benchmarks that determined the optimal compres
 ### Winner: Parquet with Zstd-22 (Lossless)
 
 **Metrics**:
+
 - **Size**: 4.77 MB per month (9% smaller than ZIP baseline)
 - **Write Time**: 0.78s
 - **Read Time**: 0.014s
@@ -16,6 +17,7 @@ This directory contains empirical benchmarks that determined the optimal compres
 - **Precision**: Lossless (zero error)
 
 **Why It Won**:
+
 1. **Lossless**: Financial data requires exact precision (36 pips error is unacceptable)
 2. **Fast**: Sub-second write time, instant read
 3. **Queryable**: DuckDB can query directly without loading into memory
@@ -24,6 +26,7 @@ This directory contains empirical benchmarks that determined the optimal compres
 ### Rejected: Brotli-11 (Too Slow)
 
 **Metrics**:
+
 - **Size**: 4.34 MB per month (17% smaller than ZIP)
 - **Write Time**: 13.67s (17.5x slower than Zstd-22)
 - **Read Time**: 0.012s
@@ -33,12 +36,14 @@ This directory contains empirical benchmarks that determined the optimal compres
 ### Rejected: Delta Encoding (Lossy)
 
 **Metrics**:
+
 - **Size**: 1.59 MB per month (69% smaller than ZIP)
 - **Write Time**: 0.063s
 - **Read Time**: 0.080s (includes decode step)
 - **Precision Loss**: 36.16 pips average error (max 95.10 pips)
 
 **Why Rejected**: **LOSSY compression is unacceptable for financial data**. The adversarial audit revealed:
+
 1. **Precision Loss**: Converts float64 → int16, causing 36 pips average error
 2. **Not Queryable**: Requires Python decode step (can't use DuckDB directly)
 3. **5.7x Slower**: 0.080s read+decode vs 0.014s for normal Parquet
@@ -51,6 +56,7 @@ This directory contains empirical benchmarks that determined the optimal compres
 **Purpose**: Initial comprehensive test of Parquet compression codecs.
 
 **Tested**:
+
 - Snappy (default)
 - Gzip-9
 - Brotli-11
@@ -66,6 +72,7 @@ This directory contains empirical benchmarks that determined the optimal compres
 **Purpose**: Comprehensive benchmark across multiple columnar formats.
 
 **Tested**:
+
 - Apache Parquet (all codecs)
 - Apache Arrow Feather
 - Lance (modern columnar format)
@@ -82,12 +89,14 @@ This directory contains empirical benchmarks that determined the optimal compres
 **Purpose**: **Adversarial audit** of delta encoding fairness.
 
 **Critical Finding**: Delta encoding is NOT a fair comparison:
+
 1. **LOSSY**: 36.16 pips average error (max 95.10 pips)
 2. **5.7x Slower**: 0.080s read+decode vs 0.014s for normal Parquet
 3. **Not Queryable**: Requires Python decode step before DuckDB can query
 4. **Reconstruction Error**: float64 → int16 conversion loses precision
 
 **Code Analysis**:
+
 ```python
 # Delta encoding (LOSSY)
 df_delta['Bid_delta'] = (df['Bid'].diff() * 100000).astype('int16')
@@ -107,6 +116,7 @@ pq.write_table(table, normal_path, compression='zstd', compression_level=22)
 ### Data Source
 
 All benchmarks used **actual Exness EURUSD tick data** from `Exness_EURUSD_Raw_Spread_2024_08.zip` (downloaded from ex2archive.com):
+
 - **Period**: August 2024
 - **Rows**: ~2,000,000 ticks
 - **Size**: 5.25 MB (ZIP baseline)
@@ -115,6 +125,7 @@ All benchmarks used **actual Exness EURUSD tick data** from `Exness_EURUSD_Raw_S
 ### Compression Baseline
 
 **ZIP**: 5.25 MB (Exness original format)
+
 - Used as 1.0x baseline for all comparisons
 - All results reported as ratio to ZIP size
 
@@ -129,6 +140,7 @@ All benchmarks used **actual Exness EURUSD tick data** from `Exness_EURUSD_Raw_S
 ### Adversarial Audit
 
 After initial benchmarks, conducted **adversarial audit** (requested by user) to verify fairness:
+
 - Checked for lossy conversions
 - Measured decode time separately from read time
 - Verified queryability with DuckDB
@@ -143,6 +155,7 @@ Based on these empirical benchmarks, **exness-data-preprocess** uses:
 **Parquet with Zstd-22 compression**
 
 **Rationale**:
+
 1. **Lossless**: Zero precision loss (required for financial data)
 2. **Fast**: 0.78s write, 0.014s read (practical for batch processing)
 3. **Queryable**: Direct DuckDB queries without decode step
@@ -165,6 +178,7 @@ uv run --active python -m docs.research.compression-benchmarks.test_parquet_comp
 ```
 
 **Expected Output**:
+
 ```
 Method              Size      vs ZIP      Result
 ────────────────────────────────────────────────────────────
@@ -189,6 +203,7 @@ uv run --active python -m docs.research.compression-benchmarks.test_delta_encodi
 ```
 
 **Expected Output**:
+
 ```
 PRECISION LOSS ANALYSIS
 Bid errors:
@@ -232,6 +247,7 @@ VERDICT
 ## Summary
 
 These benchmarks demonstrate that **Parquet with Zstd-22** is the optimal choice for Exness tick data:
+
 - **9% smaller than ZIP** (practical compression)
 - **Lossless** (zero precision loss)
 - **Fast** (0.78s write, 0.014s read)
@@ -243,6 +259,7 @@ The adversarial audit was critical in rejecting delta encoding, which appeared o
 ---
 
 **Files in this directory**:
+
 - `/Users/terryli/eon/exness-data-preprocess/docs/research/compression-benchmarks/test_parquet_compression_methods.py`
 - `/Users/terryli/eon/exness-data-preprocess/docs/research/compression-benchmarks/test_all_compression_methods.py`
 - `/Users/terryli/eon/exness-data-preprocess/docs/research/compression-benchmarks/test_delta_encoding_properly.py`

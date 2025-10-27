@@ -35,22 +35,26 @@ This audit comprehensively verified all module architecture documentation in `/U
 ## Audit Methodology
 
 ### Phase 1: Documentation Review
+
 - Read complete MODULE_ARCHITECTURE.md (689 lines)
 - Identified documented claims for each module
 - Noted method signatures, dependencies, SLOs
 
 ### Phase 2: Source Code Analysis
+
 - Used 3 parallel research agents to audit:
   - **Agent 1**: processor.py facade (413 lines)
   - **Agent 2**: All 7 specialized modules (7 files)
   - **Agent 3**: Data flow and call graphs
 
 ### Phase 3: Comparison & Findings
+
 - Line-by-line comparison of documentation vs actual code
 - Evidence collection with specific line numbers
 - Classification: ✅ Accurate, ⚠️ Inaccurate, ➕ Missing
 
 ### Phase 4: Corrections
+
 - Updated MODULE_ARCHITECTURE.md with all fixes
 - Added enhanced Mermaid flowcharts
 - Verified all corrections against source code
@@ -62,17 +66,20 @@ This audit comprehensively verified all module architecture documentation in `/U
 ### Module 1: processor.py - **98% Accurate** ✅
 
 **What Was Correct**:
+
 - All 11 methods present and documented
 - Pure delegation pattern (82% of methods are 1-liners)
 - 6-step update_data() workflow accurate
 - Line count within 1% (413 actual vs ~410 documented)
 
 **Issues Fixed**:
+
 1. Module count: "7 modules" → "6 instances + 1 static utility"
 2. Return types: Added Pydantic model documentation (UpdateResult, CoverageInfo)
 3. Observability: Clarified use of print statements vs logging library
 
 **Evidence**:
+
 ```python
 # Line 92-107: Only 6 module instances
 self.downloader = ExnessDownloader(self.temp_dir)  # Instance
@@ -90,14 +97,15 @@ self.query_engine = QueryEngine(self.base_dir)     # Instance
 
 **Critical Issues Fixed**:
 
-| Issue | Was Documented | Actual Code | Line |
-|-------|---------------|-------------|------|
-| HTTP Library | `httpx` | `urllib.request` | 10 |
-| Constructor | No params | `__init__(temp_dir: Path)` | 30 |
-| Error Handling | Raises HTTPError | Returns `None` | 82 |
-| File Caching | Not mentioned | Returns existing file | 71-72 |
+| Issue          | Was Documented   | Actual Code                | Line  |
+| -------------- | ---------------- | -------------------------- | ----- |
+| HTTP Library   | `httpx`          | `urllib.request`           | 10    |
+| Constructor    | No params        | `__init__(temp_dir: Path)` | 30    |
+| Error Handling | Raises HTTPError | Returns `None`             | 82    |
+| File Caching   | Not mentioned    | Returns existing file      | 71-72 |
 
 **Evidence**:
+
 ```python
 # Line 10: Wrong library documented
 import urllib.request
@@ -116,10 +124,12 @@ except urllib.error.URLError as e:
 ### Module 3: tick_loader.py - **90% Accurate** ✅
 
 **Issues Fixed**:
+
 1. Timestamp type: `datetime64[ns]` → `datetime64[ns, UTC]` (timezone-aware)
 2. Constructor: Documented as static utility (no instantiation)
 
 **Evidence**:
+
 ```python
 # Line 66: UTC timezone localization
 df["Timestamp"] = df["Timestamp"].dt.tz_localize("UTC")
@@ -131,12 +141,14 @@ df["Timestamp"] = df["Timestamp"].dt.tz_localize("UTC")
 ### Module 4: database_manager.py - **85% Accurate** ✅
 
 **Issues Fixed**:
+
 1. Constructor signature: Added `__init__(base_dir: Path)`
 2. Timestamp columns: `TIMESTAMP` → `TIMESTAMP WITH TIME ZONE`
 3. Schema creation: Documented OHLCSchema integration
 4. INSERT strategy: Documented `INSERT OR IGNORE` approach
 
 **Evidence**:
+
 ```python
 # Line 86: Timezone-aware timestamps
 Timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -156,12 +168,14 @@ INSERT OR IGNORE INTO {table_name} SELECT * FROM temp_ticks
 ### Module 5: session_detector.py - **80% Accurate** ✅
 
 **Issues Fixed**:
+
 1. Input schema: Documented requirement for **both** `ts` and `date` columns
 2. EXCHANGES location: Clarified it's in **exchanges.py** module, not session_detector.py
 3. Implementation: Documented `is_open_on_minute()` approach
 4. Performance: Added notes on pre-generated holiday sets
 
 **Evidence**:
+
 ```python
 # Line 24: EXCHANGES imported from separate module
 from exness_data_preprocess.exchanges import EXCHANGES
@@ -180,14 +194,15 @@ return int(calendar.is_open_on_minute(ts))
 
 **Issues Fixed**:
 
-| Issue | Was Documented | Actual Code | Impact |
-|-------|---------------|-------------|--------|
-| Constructor | No params | `__init__(base_dir: Path)` | Missing signature |
-| start_date type | `datetime` | `str` (YYYY-MM-DD) | **TYPE MISMATCH** |
-| Gap detection | "Within range" | Only before/after | **LOGIC LIMITATION** |
-| Up-to-date return | Empty list | Always finds months | **INCORRECT** |
+| Issue             | Was Documented | Actual Code                | Impact               |
+| ----------------- | -------------- | -------------------------- | -------------------- |
+| Constructor       | No params      | `__init__(base_dir: Path)` | Missing signature    |
+| start_date type   | `datetime`     | `str` (YYYY-MM-DD)         | **TYPE MISMATCH**    |
+| Gap detection     | "Within range" | Only before/after          | **LOGIC LIMITATION** |
+| Up-to-date return | Empty list     | Always finds months        | **INCORRECT**        |
 
 **Evidence**:
+
 ```python
 # Line 54: start_date is string, not datetime
 def discover_missing_months(self, pair: str, start_date: str):
@@ -201,12 +216,14 @@ def discover_missing_months(self, pair: str, start_date: str):
 ### Module 7: ohlc_generator.py - **85% Accurate** ✅
 
 **Issues Fixed**:
+
 1. Constructor: Documented SessionDetector dependency injection
 2. Return type: `-> int` → `-> None` (no return statement)
 3. DELETE operation: Documented DELETE before INSERT pattern
 4. EXCHANGES location: Same as session_detector fix
 
 **Evidence**:
+
 ```python
 # Line 56: Constructor takes SessionDetector
 def __init__(self, session_detector: SessionDetector):
@@ -227,13 +244,14 @@ conn.execute("DELETE FROM ohlc_1m")
 
 **Massive Rewrite Required**:
 
-| Method | Documented Signature | Actual Signature |
-|--------|---------------------|------------------|
-| query_ticks | `(duckdb_path, table_name, ...)` | `(pair, variant, ...)` |
-| query_ohlc | `(duckdb_path, ...)` | `(pair, timeframe, ...)` |
-| get_data_coverage | `(duckdb_path) -> dict` | `(pair) -> CoverageInfo` |
+| Method            | Documented Signature             | Actual Signature         |
+| ----------------- | -------------------------------- | ------------------------ |
+| query_ticks       | `(duckdb_path, table_name, ...)` | `(pair, variant, ...)`   |
+| query_ohlc        | `(duckdb_path, ...)`             | `(pair, timeframe, ...)` |
+| get_data_coverage | `(duckdb_path) -> dict`          | `(pair) -> CoverageInfo` |
 
 **Evidence**:
+
 ```python
 # Line 57: Completely different signature
 def query_ticks(
@@ -256,12 +274,14 @@ def get_data_coverage(self, pair: PairType = "EURUSD") -> CoverageInfo:
 ## Data Flow Corrections
 
 ### Before (Documented):
+
 ```
 Exness Repository → gap_detector → downloader → tick_loader →
 database_manager → ohlc_generator → session_detector → query_engine
 ```
 
 ### Issues:
+
 1. Missing schema initialization step
 2. session_detector shown as separate step (actually called BY ohlc_generator)
 3. query_engine shown in update flow (actually separate query operations)
@@ -269,6 +289,7 @@ database_manager → ohlc_generator → session_detector → query_engine
 5. Missing statistics gathering step
 
 ### After (Corrected):
+
 ```
 1. database_manager (schema init via OHLCSchema)
 2. gap_detector
@@ -301,24 +322,24 @@ Added 3 detailed Mermaid diagrams:
 
 ### By Category
 
-| Category | Fixes Applied | Impact |
-|----------|--------------|--------|
-| Constructor signatures | 7 modules | All modules now document required parameters |
-| Method signatures | query_engine.py | Complete rewrite of 3 method signatures |
-| Dependencies | downloader.py, schema integration | urllib.request, OHLCSchema documented |
-| Type signatures | 4 modules | str vs datetime, Pydantic vs dict |
-| Data flow | Complete rewrite | 8-step workflow + separated query operations |
-| Implementation details | All modules | INSERT OR IGNORE, timezone handling, etc. |
-| Flowcharts | 3 Mermaid diagrams | Visual accuracy for all code paths |
+| Category               | Fixes Applied                     | Impact                                       |
+| ---------------------- | --------------------------------- | -------------------------------------------- |
+| Constructor signatures | 7 modules                         | All modules now document required parameters |
+| Method signatures      | query_engine.py                   | Complete rewrite of 3 method signatures      |
+| Dependencies           | downloader.py, schema integration | urllib.request, OHLCSchema documented        |
+| Type signatures        | 4 modules                         | str vs datetime, Pydantic vs dict            |
+| Data flow              | Complete rewrite                  | 8-step workflow + separated query operations |
+| Implementation details | All modules                       | INSERT OR IGNORE, timezone handling, etc.    |
+| Flowcharts             | 3 Mermaid diagrams                | Visual accuracy for all code paths           |
 
 ### By Severity
 
-| Severity | Count | Examples |
-|----------|-------|----------|
-| CRITICAL | 5 | HTTP library wrong, query_engine signatures, SLO violation |
-| HIGH | 7 | Constructor params, type mismatches |
-| MEDIUM | 6 | Return types, EXCHANGES location |
-| LOW | 4 | Implementation details, observability |
+| Severity | Count | Examples                                                   |
+| -------- | ----- | ---------------------------------------------------------- |
+| CRITICAL | 5     | HTTP library wrong, query_engine signatures, SLO violation |
+| HIGH     | 7     | Constructor params, type mismatches                        |
+| MEDIUM   | 6     | Return types, EXCHANGES location                           |
+| LOW      | 4     | Implementation details, observability                      |
 
 ---
 
@@ -357,6 +378,7 @@ All corrections were verified against source code:
 ### User Impact
 
 **Researchers using this package now have**:
+
 - Accurate constructor signatures for all modules
 - Correct method signatures (especially query_engine.py)
 - Precise dependency information (urllib not httpx)

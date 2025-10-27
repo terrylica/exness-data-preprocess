@@ -11,6 +11,7 @@
 ### 1. Python Environment
 
 **Using uv (recommended)**:
+
 ```bash
 # Install dependencies
 uv pip install pandas numpy matplotlib seaborn scipy
@@ -20,11 +21,13 @@ uv run --with pandas --with numpy --with matplotlib --with seaborn python analys
 ```
 
 **Using pip**:
+
 ```bash
 pip install pandas numpy matplotlib seaborn scipy
 ```
 
 **Versions Tested**:
+
 - Python: 3.13.6
 - pandas: 2.3.2
 - numpy: 2.3.3
@@ -39,6 +42,7 @@ pip install pandas numpy matplotlib seaborn scipy
 ### 1. EURUSD Variants from Exness ex2archive
 
 **URL Pattern**:
+
 ```
 https://ticks.ex2archive.com/ticks/{SYMBOL}/{YYYY}/{MM}/Exness_{SYMBOL}_{YYYY}_{MM}.zip
 ```
@@ -46,6 +50,7 @@ https://ticks.ex2archive.com/ticks/{SYMBOL}/{YYYY}/{MM}/Exness_{SYMBOL}_{YYYY}_{
 **Variants Analyzed**:
 
 1. **Standard** (EURUSD):
+
    ```bash
    wget https://ticks.ex2archive.com/ticks/EURUSD/2025/07/Exness_EURUSD_2025_07.zip
    wget https://ticks.ex2archive.com/ticks/EURUSD/2025/08/Exness_EURUSD_2025_08.zip
@@ -53,6 +58,7 @@ https://ticks.ex2archive.com/ticks/{SYMBOL}/{YYYY}/{MM}/Exness_{SYMBOL}_{YYYY}_{
    ```
 
 2. **Mini** (EURUSDm):
+
    ```bash
    wget https://ticks.ex2archive.com/ticks/EURUSDm/2025/07/Exness_EURUSDm_2025_07.zip
    wget https://ticks.ex2archive.com/ticks/EURUSDm/2025/08/Exness_EURUSDm_2025_08.zip
@@ -60,6 +66,7 @@ https://ticks.ex2archive.com/ticks/{SYMBOL}/{YYYY}/{MM}/Exness_{SYMBOL}_{YYYY}_{
    ```
 
 3. **Cent** (EURUSDc):
+
    ```bash
    wget https://ticks.ex2archive.com/ticks/EURUSDc/2025/07/Exness_EURUSDc_2025_07.zip
    wget https://ticks.ex2archive.com/ticks/EURUSDc/2025/08/Exness_EURUSDc_2025_08.zip
@@ -72,6 +79,7 @@ https://ticks.ex2archive.com/ticks/{SYMBOL}/{YYYY}/{MM}/Exness_{SYMBOL}_{YYYY}_{
    ```
 
 **Data Format**:
+
 - CSV format: `timestamp_ms,bid,ask`
 - No header row
 - Timestamp in milliseconds since epoch
@@ -176,6 +184,7 @@ for variant, df in variants.items():
 ```
 
 **Expected Output**:
+
 ```
 EURUSD: SQ = 26.57
 EURUSDm: SQ = 0.78
@@ -217,6 +226,7 @@ print(f"Raw_Spread: SQ = {raw_results['signal_quality_score']:.2f}")
 ```
 
 **Expected Output**:
+
 ```
 Raw_Spread: SQ = 0.84
 ```
@@ -292,6 +302,7 @@ validate_analysis('Cent', variants['EURUSDc'], expected_sq=0.78)
 ### Generated Data Files
 
 **Histogram Data**:
+
 ```python
 # Save histogram data for each variant
 for variant, df in variants.items():
@@ -308,6 +319,7 @@ for variant, df in variants.items():
 ```
 
 **Mode-Truncated Results**:
+
 ```python
 # Consolidate results
 results_df = pd.DataFrame([
@@ -326,9 +338,11 @@ results_df.to_csv('mode_truncated_results.csv', index=False)
 ## Troubleshooting
 
 ### Issue 1: Data Type Errors
+
 **Error**: `TypeError: unsupported operand type(s) for -: 'str' and 'str'`
 
 **Solution**: Ensure numeric conversion during CSV loading:
+
 ```python
 df['bid'] = pd.to_numeric(df['bid'], errors='coerce')
 df['ask'] = pd.to_numeric(df['ask'], errors='coerce')
@@ -336,9 +350,11 @@ df = df.dropna()  # Remove rows with conversion errors
 ```
 
 ### Issue 2: Download Failures
+
 **Error**: `HTTP 404 Not Found`
 
 **Solution**: Verify URL pattern and date availability:
+
 ```python
 # Check if data exists before downloading
 import requests
@@ -348,7 +364,9 @@ if response.status_code != 200:
 ```
 
 ### Issue 3: Memory Issues (Large Files)
+
 **Solution**: Process monthly data separately, then aggregate:
+
 ```python
 # Load and analyze month by month
 monthly_results = []
@@ -367,20 +385,20 @@ avg_sq = np.mean([r['signal_quality_score'] for r in monthly_results])
 
 ### Mode-Truncated Analysis
 
-| Variant | Modal % | Non-Modal % | CV_truncated | Signal Score | Status |
-|---------|---------|-------------|--------------|--------------|--------|
-| Standard | 77.5% | 22.5% | 118.1% | **26.57** | ✅ Expected |
-| Mini | 98.4% | 1.6% | 48.9% | 0.78 | ✅ Expected |
-| Cent | 98.4% | 1.6% | 48.9% | 0.78 | ✅ Expected |
+| Variant  | Modal % | Non-Modal % | CV_truncated | Signal Score | Status      |
+| -------- | ------- | ----------- | ------------ | ------------ | ----------- |
+| Standard | 77.5%   | 22.5%       | 118.1%       | **26.57**    | ✅ Expected |
+| Mini     | 98.4%   | 1.6%        | 48.9%        | 0.78         | ✅ Expected |
+| Cent     | 98.4%   | 1.6%        | 48.9%        | 0.78         | ✅ Expected |
 
 ### Hurdle Model (Raw_Spread)
 
-| Component | Expected Value |
-|-----------|---------------|
-| Zero % | 98.3% |
-| Positive % | 1.7% |
-| Non-modal (of total) | 1.4% |
-| Signal Score | 0.84 |
+| Component            | Expected Value |
+| -------------------- | -------------- |
+| Zero %               | 98.3%          |
+| Positive %           | 1.7%           |
+| Non-modal (of total) | 1.4%           |
+| Signal Score         | 0.84           |
 
 ---
 
@@ -404,6 +422,7 @@ When using this analysis methodology:
 ## Contact & Support
 
 For questions about this analysis:
+
 - Review [README.md](../README.md) for overview
 - Check [01-methodology.md](../01-methodology.md) for statistical framework
 - See [05-final-recommendations.md](../05-final-recommendations.md) for ML guidance

@@ -8,6 +8,7 @@
 ## Overview
 
 Zero-spread deviations occur when execution price deviates from the bid-ask midpoint at moments when bid==ask (zero spread). These events reveal microstructure inefficiencies and provide signals for:
+
 - Mean reversion trading
 - Volatility regime detection
 - Flash crash prediction
@@ -27,21 +28,26 @@ Zero-spread deviations occur when execution price deviates from the bid-ask midp
 ### Variants Used
 
 #### 1. Raw_Spread Variant
+
 **Purpose**: Zero-spread event detection
 **Characteristics**:
+
 - Bid and Ask columns represent execution prices
 - Zero-spread events: bid==ask (exact equality)
 - ~907K zero-spread events in Sep 2024 (EURUSD)
 
 **File format**:
+
 ```csv
 Exness,Symbol,Timestamp,Bid,Ask
 Exness,EURUSD,2024-01-01 22:05:16.191Z,1.10450,1.10450
 ```
 
 #### 2. Standard Variant
+
 **Purpose**: Reference bid/ask quotes
 **Characteristics**:
+
 - Traditional quote data (always bid < ask)
 - Minimum spread: 0.5 pips (NEVER zero)
 - Used for position ratio calculation
@@ -53,16 +59,19 @@ Exness,EURUSD,2024-01-01 22:05:16.191Z,1.10450,1.10450
 ## Position Ratio Formula
 
 **Definition**:
+
 ```python
 position_ratio = (raw_mid - std_bid) / (std_ask - std_bid)
 ```
 
 Where:
+
 - `raw_mid = (raw_bid + raw_ask) / 2` (execution midpoint)
 - `std_bid` = Standard variant bid (from ASOF merge)
 - `std_ask` = Standard variant ask (from ASOF merge)
 
 **Interpretation**:
+
 - `position_ratio = 0.5` → execution at midpoint (no deviation)
 - `position_ratio < 0.5` → execution closer to bid (bid-biased)
 - `position_ratio > 0.5` → execution closer to ask (ask-biased)
@@ -79,6 +88,7 @@ Where:
 **Objective**: Test if deviations return to midpoint over time
 
 **Methodology**:
+
 1. Identify deviations: `|position_ratio - 0.5| > 0.05`
 2. Sample 5K deviations per month (random seed=42 for reproducibility)
 3. Track future position ratio at horizons: [5, 10, 30, 60, 300, 600] seconds
@@ -95,6 +105,7 @@ Where:
 **Objective**: Predict future volatility from deviation features
 
 **Features (4 total)**:
+
 1. **Deviation magnitude**: `abs(position_ratio - 0.5)`
 2. **Persistence**: Duration of consecutive deviations (same type within 60s)
 3. **Spread width**: Standard variant spread at deviation time (basis points)
@@ -105,6 +116,7 @@ Where:
 **Model**: Linear regression (OLS) with standardized features
 
 **Baseline (Sep 2024)**:
+
 - R² = 0.185
 - Recent volatility correlation: r=0.418 (dominant predictor)
 
@@ -115,10 +127,12 @@ Where:
 **Objective**: Test if extreme deviations predict flash crashes
 
 **Definition**:
+
 - **Extreme deviation**: position_ratio < 0.2 or > 0.8
 - **Flash crash**: Bid-ask spread spike >3× normal within next 60s
 
 **Methodology**:
+
 1. Sample 1K extreme + 1K normal deviations
 2. Calculate flash crash rate at horizons: [5, 15, 30, 60]s
 3. Compute lift: `extreme_rate - normal_rate`
@@ -139,28 +153,33 @@ Where:
 ## Service Level Objectives (SLOs)
 
 ### Availability
+
 - Data loading success rate: ≥99% (max 1 failed file per 32)
 - Analysis completion rate: 100% (all phases must complete or fail explicitly)
 - **Actual (Phase 1-3)**: 100% success (16/16 months)
 
 ### Correctness
+
 - Position ratio calculation: Exact match to Sep 2024 baseline methodology
 - Statistical test p-values: Reproducible within ±0.001 variance
 - Temporal comparison: Month-by-month results internally consistent
 - **Actual**: Mean reversion methodology exact match, volatility model reproduced ±0.01
 
 ### Security
+
 - No data leakage: Results saved only to `/tmp/` (ephemeral storage) during analysis
 - No credential exposure: Public data source, no auth required
 - **Actual**: All analyses use public data, no credentials
 
 ### Observability
+
 - Progress logging: Per-month status updates to stdout
 - Error propagation: Exception raised with full context (file, month, error type)
 - Result validation: Statistical sanity checks after each analysis
 - **Actual**: INFO-level logging for all months, exceptions with context
 
 ### Maintainability
+
 - Code reuse: ≥80% from existing Sep 2024 scripts
 - Function modularity: Single responsibility per function
 - Documentation: Inline comments for statistical formulas only
@@ -173,6 +192,7 @@ Where:
 **Philosophy**: Raise and propagate all errors - no fallbacks, defaults, retries, or silent handling
 
 **Exception hierarchy**:
+
 ```python
 class MultiPeriodValidationError(Exception):
     """Base exception for multi-period validation"""
@@ -199,6 +219,7 @@ class LinAlgError(MultiPeriodValidationError):
 ```
 
 **Usage**:
+
 ```python
 # Data loading
 try:
@@ -228,16 +249,19 @@ except np.linalg.LinAlgError as e:
 **Data volume**: 281.5 MB compressed
 
 **Objectives**:
+
 1. Validate Sep 2024 baseline across time periods
 2. Detect regime shifts (year-over-year comparison)
 3. Assess temporal stability (coefficient of variation)
 4. Identify structural breaks
 
 **Sampling**:
+
 - 5K deviations per month (random seed=42)
 - Consistent across all analyses for comparability
 
 **Success criteria**:
+
 - Baseline reproduction: Sep 2024 metrics within tolerance
 - Temporal stability: CV < 20% for mean reversion
 - Availability: ≥95% month success rate
@@ -247,6 +271,7 @@ except np.linalg.LinAlgError as e:
 ## Reproducibility
 
 ### Environment
+
 ```bash
 # Python 3.9+
 pandas>=2.0.0
@@ -255,6 +280,7 @@ scipy>=1.10.0  # For statistical tests (Phase 4-5)
 ```
 
 ### Data Download
+
 ```bash
 # See ~/.claude/tools/exness-data/download_eurusd_multiperiod.sh
 curl -O https://ticks.ex2archive.com/ticks/EURUSD/{YYYY}/{MM}/Exness_EURUSD_{YYYY}_{MM}.zip
@@ -262,6 +288,7 @@ curl -O https://ticks.ex2archive.com/ticks/EURUSD_Raw_Spread/{YYYY}/{MM}/Exness_
 ```
 
 ### Execution Order
+
 ```bash
 # Phase 1: Data validation
 python3 scripts/multiperiod-validation/phase1_data_validation.py
@@ -276,6 +303,7 @@ python3 scripts/multiperiod-validation/phase3_volatility_model.py
 ```
 
 ### Random Seed
+
 **Fixed seed = 42** for all sampling operations ensures reproducibility
 
 ---

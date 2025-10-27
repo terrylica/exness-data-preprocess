@@ -9,6 +9,7 @@
 ## Overview
 
 Sep 2024 baseline established initial findings for zero-spread deviation patterns. This single-month analysis provided:
+
 - Mean reversion rates
 - Volatility prediction model
 - Flash crash prediction signals
@@ -25,20 +26,24 @@ Sep 2024 baseline established initial findings for zero-spread deviation pattern
 ### Key Findings
 
 **5-Second Horizon**:
+
 - **70.6%** moved toward midpoint
 - **21.9%** fully reverted (deviation < 0.05)
 
 **60-Second Horizon**:
+
 - **51.9%** moved toward midpoint
 - **2.3%** fully reverted
 
 **Statistical significance**:
+
 - Reversion rate significantly > 50% baseline (p < 0.001)
 - Confirms non-random mean reversion behavior
 
 ### Interpretation
 
 Deviations exhibit strong short-term mean reversion:
+
 - Most revert within 5 seconds
 - Longer horizons show weaker reversion (volatility interference)
 - **Trading signal**: Fade extreme deviations with 5-10s holding period
@@ -53,12 +58,12 @@ Deviations exhibit strong short-term mean reversion:
 
 ### Multi-Factor Model (4 Features)
 
-| Feature | Correlation (r) | Interpretation |
-|---------|----------------|----------------|
-| Recent volatility | **+0.418** | Dominant predictor (GARCH effect) |
-| Deviation magnitude | +0.063 | Weak positive |
-| Persistence | -0.147 | Weak negative |
-| Spread width | -0.025 | Negligible |
+| Feature             | Correlation (r) | Interpretation                    |
+| ------------------- | --------------- | --------------------------------- |
+| Recent volatility   | **+0.418**      | Dominant predictor (GARCH effect) |
+| Deviation magnitude | +0.063          | Weak positive                     |
+| Persistence         | -0.147          | Weak negative                     |
+| Spread width        | -0.025          | Negligible                        |
 
 **Multi-factor R²**: 0.185 (5-minute horizon)
 
@@ -67,11 +72,13 @@ Deviations exhibit strong short-term mean reversion:
 ### Interpretation
 
 **What works**:
+
 - Recent volatility is strongest predictor (volatility persistence)
 - Multi-factor model captures ~18.5% of variance
 - Significantly better than univariate baseline
 
 **What doesn't work**:
+
 - Deviation magnitude alone is very weak (r=0.063)
 - Persistence contributes little
 - Overall R² still modest (81.5% variance unexplained)
@@ -87,9 +94,11 @@ Deviations exhibit strong short-term mean reversion:
 ### Extreme vs Normal Deviations
 
 **Extreme deviation** (position_ratio < 0.2 or > 0.8):
+
 - **94.5%** flash crash rate @ 60s
 
 **Normal deviation** (position_ratio 0.4-0.6):
+
 - **85.7%** flash crash rate @ 60s
 
 **Lift**: **+8.8pp** @ 60s
@@ -99,6 +108,7 @@ Deviations exhibit strong short-term mean reversion:
 ### Interpretation
 
 Extreme deviations significantly predict flash crashes:
+
 - Consistent positive lift across all time horizons
 - Strongest at 60-second horizon
 - **Risk signal**: Extreme deviations indicate elevated crash risk
@@ -113,17 +123,18 @@ Extreme deviations significantly predict flash crashes:
 
 ### K-Means Clusters (k=3)
 
-| Cluster | Deviations | Avg Deviation | Recent Vol | Label |
-|---------|-----------|---------------|------------|-------|
-| 0 | 3,821 | 0.226 | 0.132 bps | High activity |
-| 1 | 1,100 | 0.138 | 0.098 bps | Medium activity |
-| 2 | 79 | 0.196 | 0.220 bps | Low activity (volatile) |
+| Cluster | Deviations | Avg Deviation | Recent Vol | Label                   |
+| ------- | ---------- | ------------- | ---------- | ----------------------- |
+| 0       | 3,821      | 0.226         | 0.132 bps  | High activity           |
+| 1       | 1,100      | 0.138         | 0.098 bps  | Medium activity         |
+| 2       | 79         | 0.196         | 0.220 bps  | Low activity (volatile) |
 
 ### Counter-Intuitive Finding
 
 **Hypothesis tested**: Deviation clusters predict volatility INCREASE
 
 **Actual result**: Deviation clusters predict volatility **DECREASE**
+
 - Cluster events: 42.1% volatility increase
 - Baseline (random): 50% volatility increase
 - **Difference**: -7.9pp (p = 0.0004, statistically significant)
@@ -155,6 +166,7 @@ Extreme deviations significantly predict flash crashes:
 ### Updated Interpretation
 
 Sep 2024 served as **baseline** but was not **representative**:
+
 - Captured correct methodologies ✅
 - Established statistical frameworks ✅
 - But occurred during regime transition ⚠️

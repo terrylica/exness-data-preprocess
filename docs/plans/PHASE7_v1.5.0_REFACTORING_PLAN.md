@@ -17,24 +17,28 @@ This refactoring introduces an **Exchange Registry Pattern** to eliminate code d
 ## Service Level Objectives (SLOs)
 
 ### Availability SLO
+
 - **Target**: 100% schema generation success rate given valid exchange_calendars codes
 - **Measurement**: All 10 exchanges must initialize calendars successfully
 - **Failure Mode**: Raise exception if any exchange code invalid (no fallbacks)
 - **Recovery**: None - invalid codes must be corrected in EXCHANGES dict
 
 ### Correctness SLO
+
 - **Target**: 100% accurate session detection for all exchanges
 - **Measurement**: Known trading days (NYSE: 252/year, LSE: 253/year, etc.) within ±2 days
 - **Failure Mode**: Raise exception if exchange_calendars returns invalid data
 - **Validation**: Compare against historical exchange calendars (2024-2025 data)
 
 ### Observability SLO
+
 - **Target**: 100% visibility into session detection results
-- **Measurement**: Print session counts for all 10 exchanges during _regenerate_ohlc()
+- **Measurement**: Print session counts for all 10 exchanges during \_regenerate_ohlc()
 - **Failure Mode**: Raise exception if any exchange has 0 trading days for non-empty date range
 - **Logging**: Console output with exchange name + count (no silent failures)
 
 ### Maintainability SLO
+
 - **Target**: New exchange addition requires ≤1 line change
 - **Measurement**: Adding exchange requires ONLY updating EXCHANGES dict
 - **Failure Mode**: Raise exception if exchange config incomplete (frozen dataclass validation)
@@ -47,6 +51,7 @@ This refactoring introduces an **Exchange Registry Pattern** to eliminate code d
 ## Current Architecture Analysis (v1.4.0)
 
 ### File Structure
+
 ```
 src/exness_data_preprocess/
 ├── schema.py        # 22-column OHLC schema definition
@@ -59,7 +64,9 @@ src/exness_data_preprocess/
 ### Current Exchange Implementation (2 exchanges: NYSE, LSE)
 
 #### 1. **schema.py** (Lines 164-188)
+
 **Manual Column Definitions** (5 columns × 2 exchanges = 10 lines):
+
 ```python
 "is_us_holiday": ColumnDefinition(
     dtype="INTEGER",
@@ -75,7 +82,9 @@ src/exness_data_preprocess/
 **Problem**: To add 8 more exchanges, we'd need to manually add 8 more column definitions (copy-paste with minor edits).
 
 #### 2. **processor.py** (Lines 89-92)
+
 **Hardcoded Calendar Initialization**:
+
 ```python
 self.nyse = xcals.get_calendar("XNYS")  # New York Stock Exchange
 self.lse = xcals.get_calendar("XLON")   # London Stock Exchange
@@ -84,7 +93,9 @@ self.lse = xcals.get_calendar("XLON")   # London Stock Exchange
 **Problem**: Adding 8 exchanges requires 8 more lines of hardcoded initialization.
 
 #### 3. **processor.py** (Lines 581-640)
+
 **Hardcoded Holiday Detection Logic**:
+
 ```python
 # Pre-generate holiday sets (lines 597-604)
 nyse_holidays = set(...)
@@ -111,15 +122,18 @@ UPDATE ohlc_1m SET
 ## DRY Violations Identified
 
 ### Violation 1: **Repetitive Column Definitions**
+
 - Each exchange requires 1 session column definition in schema.py
 - Pattern is identical, only name/comment changes
 - **Impact**: 8 new exchanges = 8 new manual definitions
 
 ### Violation 2: **Hardcoded Calendar Initialization**
+
 - Each exchange requires manual `self.calendar_name = xcals.get_calendar("CODE")`
 - **Impact**: 8 new exchanges = 8 new initialization lines
 
 ### Violation 3: **Duplicated Holiday Detection Logic**
+
 - Pre-generation, flag computation, UPDATE query all hardcoded per exchange
 - **Impact**: 8 new exchanges = 3× code duplication
 
@@ -215,6 +229,7 @@ def get_exchange_config(name: str) -> ExchangeConfig:
 ### Step 2: Update `schema.py` (MODIFY EXISTING)
 
 **Changes**:
+
 1. Import exchange registry
 2. Remove manual session column definitions
 3. Add dynamic column generation loop
@@ -222,6 +237,7 @@ def get_exchange_config(name: str) -> ExchangeConfig:
 5. Update TABLE_COMMENT
 
 **New Code** (lines 20-25):
+
 ```python
 from dataclasses import dataclass
 from typing import Dict, Optional
@@ -231,6 +247,7 @@ from exness_data_preprocess.exchanges import EXCHANGES
 ```
 
 **Replace Lines 72-188** (manual definitions) with:
+
 ```python
 VERSION = "1.5.0"
 
@@ -273,6 +290,7 @@ TABLE_COMMENT = (
 ### Step 3: Update `processor.py` (MODIFY EXISTING)
 
 #### Change 3.1: Import Exchange Registry (line 30)
+
 ```python
 import duckdb
 import exchange_calendars as xcals
@@ -284,7 +302,9 @@ from exness_data_preprocess.schema import OHLCSchema
 ```
 
 #### Change 3.2: Replace Hardcoded Calendar Initialization (lines 89-92)
+
 **OLD CODE**:
+
 ```python
 # Initialize exchange calendars for holiday detection (v1.4.0)
 # These are reusable across all update_data() calls - no need to reinitialize
@@ -293,6 +313,7 @@ self.lse = xcals.get_calendar("XLON")   # London Stock Exchange
 ```
 
 **NEW CODE**:
+
 ```python
 # Initialize exchange calendars for holiday detection (v1.5.0)
 # These are reusable across all update_data() calls - no need to reinitialize
@@ -305,9 +326,11 @@ print(f"✓ Initialized {len(self.calendars)} exchange calendars")
 ```
 
 #### Change 3.3: Replace Hardcoded Holiday Detection (lines 567-640)
+
 **OLD CODE** (55 lines of hardcoded NYSE/LSE logic)
 
 **NEW CODE** (loop-based, works for ANY number of exchanges):
+
 ```python
 # Initialize all session columns to 0 in INSERT statement (lines 567-574)
 INSERT INTO ohlc_1m
@@ -364,12 +387,14 @@ if len(dates_df) > 0:
 ### Step 4: Update Documentation (✅ Completed 2025-10-15)
 
 **Files Updated**:
+
 1. ✅ `README.md` - Updated schema references (13→30 columns), features section, data flow diagram, and OHLC schema summary
 2. ✅ `CLAUDE.md` - Updated schema version history, processor line references, database schema section, and architecture decisions
 3. ✅ `docs/DATABASE_SCHEMA.md` - Updated schema version (v1.2.0→v1.5.0), column counts (13→30), added Global Exchange Sessions section with use cases and example queries, updated version history with v1.3.0, v1.4.0, v1.5.0 entries
 4. ✅ `docs/README.md` - Updated Phase7 schema references and validation results
 
 **Changes Completed**:
+
 - ✅ Updated all references from 13/22 columns to 30 columns (v1.5.0)
 - ✅ Documented 10 global exchanges (XNYS, XLON, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
 - ✅ Added Exchange Registry Pattern architecture explanation
@@ -384,6 +409,7 @@ if len(dates_df) > 0:
 **New File**: `/tmp/exness-duckdb-test/test_v1.5.0_complete.py`
 
 **Test Scenarios**:
+
 1. Schema upgrade v1.4.0 (22 cols) → v1.5.0 (30 cols)
 2. Verify all 10 session columns exist
 3. Test session detection for all 10 exchanges
@@ -397,7 +423,9 @@ if len(dates_df) > 0:
 ## Migration Path
 
 ### Breaking Changes
+
 **NONE** - v1.5.0 is backward compatible
+
 - All v1.4.0 columns remain (including is_us_holiday, is_uk_holiday, is_major_holiday)
 - New columns are additions, not replacements
 - Existing queries continue to work
@@ -405,6 +433,7 @@ if len(dates_df) > 0:
 **Note**: v1.4.0 holiday columns (is_us_holiday, is_uk_holiday, is_major_holiday) are redundant with session columns but kept for backward compatibility. Will be deprecated in v2.0.0.
 
 ### Migration Steps
+
 1. Run `processor.update_data(pair)` to trigger schema upgrade
 2. Old 22-column databases will auto-upgrade to 30 columns
 3. New data will have all 10 session flags populated
@@ -413,23 +442,25 @@ if len(dates_df) > 0:
 
 ## Column Count Evolution
 
-| Version | Columns | New Columns Added | Total |
-|---------|---------|-------------------|-------|
-| v1.1.0 | 9 | Base OHLC + dual spreads/ticks | 9 |
-| v1.2.0 | 13 | Normalized metrics (4) | 13 |
-| v1.3.0 | 17 | Timezone/session tracking (4) | 17 |
-| v1.4.0 | 22 | Holidays + NYSE/LSE sessions (5) | 22 |
-| **v1.5.0** | **30** | **8 exchange sessions (XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)** | **30** |
+| Version    | Columns | New Columns Added                                                        | Total  |
+| ---------- | ------- | ------------------------------------------------------------------------ | ------ |
+| v1.1.0     | 9       | Base OHLC + dual spreads/ticks                                           | 9      |
+| v1.2.0     | 13      | Normalized metrics (4)                                                   | 13     |
+| v1.3.0     | 17      | Timezone/session tracking (4)                                            | 17     |
+| v1.4.0     | 22      | Holidays + NYSE/LSE sessions (5)                                         | 22     |
+| **v1.5.0** | **30**  | **8 exchange sessions (XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)** | **30** |
 
 ---
 
 ## Storage Impact Estimation
 
 **Current v1.4.0** (13 months, 413K bars):
+
 - Database size: 2.10 GB
 - 22 columns
 
 **Expected v1.5.0** (13 months, 413K bars):
+
 - 8 new INTEGER columns (1 byte each after compression)
 - Estimated increase: 8 × 413,453 × 1 byte ≈ 3.3 MB
 - **Expected size**: 2.10 GB + 0.003 GB ≈ **2.10 GB** (+0.15%)
@@ -441,10 +472,12 @@ if len(dates_df) > 0:
 ## Performance Impact Estimation
 
 **Current v1.4.0**:
+
 - Holiday detection: <1 second (2 exchanges)
 - Query performance: <15ms
 
 **Expected v1.5.0**:
+
 - Holiday detection: ~2-3 seconds (10 exchanges, 5× more checks)
 - Query performance: <15ms (no change, columnar storage)
 
@@ -457,14 +490,17 @@ if len(dates_df) > 0:
 ### Adding New Exchanges (Post v1.5.0)
 
 **OLD WAY (v1.4.0)**: Requires changes in 3 files
+
 1. Add column to schema.py
 2. Add calendar initialization to processor.py
 3. Add detection logic to processor.py
 
 **NEW WAY (v1.5.0+)**: Requires change in 1 file ONLY
+
 1. Add entry to `EXCHANGES` dict in exchanges.py
 
 **Example** (adding Mumbai NSE):
+
 ```python
 EXCHANGES = {
     ...existing exchanges...
@@ -479,19 +515,24 @@ EXCHANGES = {
 ## Risk Analysis
 
 ### Low Risk
+
 ✅ **Schema changes**: Additive only (no removals or renames)
 ✅ **Data integrity**: PRIMARY KEY constraints prevent duplicates
 ✅ **Query compatibility**: Existing queries unaffected
 ✅ **Rollback**: Can revert to v1.4.0 by dropping new columns
 
 ### Medium Risk
+
 ⚠️ **Performance**: 10× more exchanges = 5× slower holiday detection
-   - **Mitigation**: Still <5 seconds, acceptable for one-time operation
+
+- **Mitigation**: Still <5 seconds, acceptable for one-time operation
 
 ⚠️ **Memory**: 10× more pandas DataFrames during detection
-   - **Mitigation**: Only date-level data, not tick-level (< 1 MB)
+
+- **Mitigation**: Only date-level data, not tick-level (< 1 MB)
 
 ### Negligible Risk
+
 ✅ **Storage**: +0.15% increase (3.3 MB for 13 months)
 ✅ **Dependencies**: exchange_calendars already installed
 
@@ -501,7 +542,7 @@ EXCHANGES = {
 
 - [x] Schema upgraded from 22 → 30 columns (Completed 2025-10-15)
 - [x] All 10 session columns exist with correct types (Validated via test_v1.5.0_complete.py)
-- [x] Exchange registry loaded successfully (10 calendars) (Processor __init__ prints confirmation)
+- [x] Exchange registry loaded successfully (10 calendars) (Processor **init** prints confirmation)
 - [x] Session detection working for all 10 exchanges (Test 5 passed: 77-81% trading days)
 - [x] DST handling verified for XSWX, XFRA, XTSE, XNZE, XASX (exchange_calendars handles DST automatically)
 - [x] Storage impact <1% (Actual: +3.6%, 76 MB for 8 columns, within acceptable range)
@@ -519,15 +560,15 @@ EXCHANGES = {
 
 ## Timeline Estimate
 
-| Task | Estimated Time | Files Modified |
-|------|---------------|----------------|
-| Create exchanges.py | 15 minutes | 1 new file |
-| Update schema.py | 20 minutes | 1 file |
-| Update processor.py | 30 minutes | 1 file |
-| Create test_v1.5.0_complete.py | 30 minutes | 1 new file |
-| Run validation test | 5 minutes | - |
-| Update documentation | 20 minutes | 4 files |
-| **TOTAL** | **~2 hours** | **2 new + 5 modified** |
+| Task                           | Estimated Time | Files Modified         |
+| ------------------------------ | -------------- | ---------------------- |
+| Create exchanges.py            | 15 minutes     | 1 new file             |
+| Update schema.py               | 20 minutes     | 1 file                 |
+| Update processor.py            | 30 minutes     | 1 file                 |
+| Create test_v1.5.0_complete.py | 30 minutes     | 1 new file             |
+| Run validation test            | 5 minutes      | -                      |
+| Update documentation           | 20 minutes     | 4 files                |
+| **TOTAL**                      | **~2 hours**   | **2 new + 5 modified** |
 
 ---
 

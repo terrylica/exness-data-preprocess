@@ -10,11 +10,14 @@
 ## Test Results
 
 ### Test 1: Saturday Closure (November 9, 2024)
+
 **Expected**: No OHLC bars (forex market closed all day Saturday)
 **Result**: ✅ **PASS** - 0 bars on Saturday
 
 ### Test 2: Sunday Reopening (November 10, 2024)
+
 **Expected**:
+
 - Market reopens at 22:00 UTC (Monday morning in Asia/Oceania)
 - Western exchanges (NYSE, LSE) show flag=0 (still Sunday in US/Europe)
 - Asian/Oceanic exchanges show flag=1 (Monday morning in their timezone)
@@ -22,6 +25,7 @@
 **Result**: ✅ **PASS** - 115 bars on Sunday starting at 22:05 UTC
 
 **First Sunday Bar** (22:05 UTC):
+
 - NYSE: 0 ✅ (Sunday evening in New York)
 - LSE: 0 ✅ (Sunday night in London)
 - Tokyo: 0 ✅ (Monday 07:05 JST - before market open at 09:00)
@@ -31,6 +35,7 @@
 - Australia: 0 ✅ (Monday 09:05 AEDT - before market open at 10:00)
 
 **Last Sunday Bar** (23:59 UTC):
+
 - NYSE: 0 ✅ (Sunday evening in New York)
 - LSE: 0 ✅ (Sunday night in London)
 - Tokyo: 0 ✅ (Monday 08:59 JST - about to open)
@@ -38,6 +43,7 @@
 - **Australia: 1 ✅ (Monday 10:59 AEDT - market open)**
 
 ### Test 3: Friday Close (November 8, 2024)
+
 **Expected**: Last bar around 22:00 UTC (when forex market closes for the weekend)
 **Result**: ✅ **PASS** - Last bar at 21:58 UTC
 
@@ -49,21 +55,26 @@
 ## Key Findings
 
 ### 1. Weekend Gap Behavior
+
 - ✅ **No trading on Saturday** (entire day gap as expected)
 - ✅ **Forex reopens Sunday 22:00 UTC** (matches industry standard)
 - ✅ **~48 hour gap** from Friday close to Sunday reopen
 
 ### 2. Timezone-Aware Session Detection
+
 - ✅ **Western exchanges correctly show 0 flags on Sunday** (it's Sunday in their local time)
 - ✅ **Asian/Oceanic exchanges correctly show 1 flags on Sunday evening UTC** (it's Monday morning in their local time)
 - ✅ **Exchange-specific trading hours respected** (Tokyo at 07:05 JST shows flag=0 because market doesn't open until 09:00)
 
 ### 3. New Zealand First to Open
+
 - ✅ **NZX is the first exchange to open after the weekend** (Monday 10:00 NZST = Sunday 21:00 UTC)
 - ✅ Database correctly shows NZX flag=1 starting at Sunday 22:05 UTC
 
 ### 4. Staggered Monday Openings
+
 As Monday progresses in UTC (Sunday evening → Monday morning UTC), exchanges light up sequentially:
+
 1. **New Zealand** opens first (Sunday 21:00 UTC = Monday 10:00 NZST)
 2. **Australia** opens next (Sunday 23:00 UTC = Monday 10:00 AEDT)
 3. **Tokyo** opens later (Monday 00:00 UTC = Monday 09:00 JST)
@@ -76,6 +87,7 @@ As Monday progresses in UTC (Sunday evening → Monday morning UTC), exchanges l
 ## SuccessGate-5: Weekend Gap Validation ✅
 
 **Criteria**:
+
 - [ ] No bars exist on Saturday ✅ **VERIFIED**
 - [ ] No Western exchange flags on Sunday ✅ **VERIFIED**
 - [ ] Asian/Oceanic exchanges correctly flag Monday morning (Sunday evening UTC) ✅ **VERIFIED**
@@ -88,6 +100,7 @@ As Monday progresses in UTC (Sunday evening → Monday morning UTC), exchanges l
 ## Conclusion
 
 Weekend gap detection works correctly with `exchange_calendars`:
+
 - Forex market behavior matches industry standard (48-hour weekend gap)
 - Session flags correctly reflect LOCAL timezone trading hours
 - No false positives during weekends for Western exchanges

@@ -87,6 +87,7 @@ When reporting issues, please include:
 ### Submitting Pull Requests
 
 1. **Fork the repository** and create a new branch:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -98,6 +99,7 @@ When reporting issues, please include:
 4. **Update documentation** if needed (README.md, docstrings)
 
 5. **Run all quality checks**:
+
    ```bash
    uv run ruff format .
    uv run ruff check --fix .
@@ -106,6 +108,7 @@ When reporting issues, please include:
    ```
 
 6. **Commit your changes** with clear messages:
+
    ```bash
    git commit -m "feat: add support for custom compression levels"
    ```
@@ -128,6 +131,7 @@ We follow conventional commit format:
 - `chore:` Build process or tooling changes
 
 Examples:
+
 ```
 feat: add support for multiple currency pairs
 fix: handle timezone conversion edge case
@@ -167,6 +171,7 @@ When adding new features:
 5. **Add docstrings** following Google style
 
 Example docstring:
+
 ```python
 def my_function(param1: int, param2: str) -> bool:
     """
@@ -215,6 +220,7 @@ def test_feature_name(fixture1, fixture2):
 ### Integration Tests
 
 Mark integration tests (requiring network access) with:
+
 ```python
 @pytest.mark.integration
 def test_download_real_data():
@@ -263,6 +269,7 @@ def process_data(data: pd.DataFrame, compression: str = "zstd") -> Path:
 ### README Updates
 
 When adding features:
+
 - Add usage examples
 - Update feature list
 - Document any breaking changes

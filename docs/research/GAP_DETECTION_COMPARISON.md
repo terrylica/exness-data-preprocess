@@ -8,14 +8,14 @@
 
 ## Summary
 
-| Metric | Before (Current) | After (Proposed) | Change |
-|--------|------------------|------------------|--------|
-| **Lines of Code** | 62 lines (94-155) | ~30 lines | -52% (-32 LOC) |
-| **Gap Detection** | Before earliest + After latest only | **All gaps** (before + within + after) | ✅ Feature complete |
-| **Implementation** | 3 separate Python loops | 1 SQL query | -67% complexity |
-| **Performance** | ~15-20ms (MIN/MAX only) | ~30-50ms (estimated) | +10-30ms |
-| **Correctness** | Missing internal gaps | Detects ALL gaps | ✅ Fixed TODO |
-| **Maintainability** | Complex month arithmetic | Declarative SQL | ✅ Improved |
+| Metric              | Before (Current)                    | After (Proposed)                       | Change              |
+| ------------------- | ----------------------------------- | -------------------------------------- | ------------------- |
+| **Lines of Code**   | 62 lines (94-155)                   | ~30 lines                              | -52% (-32 LOC)      |
+| **Gap Detection**   | Before earliest + After latest only | **All gaps** (before + within + after) | ✅ Feature complete |
+| **Implementation**  | 3 separate Python loops             | 1 SQL query                            | -67% complexity     |
+| **Performance**     | ~15-20ms (MIN/MAX only)             | ~30-50ms (estimated)                   | +10-30ms            |
+| **Correctness**     | Missing internal gaps               | Detects ALL gaps                       | ✅ Fixed TODO       |
+| **Maintainability** | Complex month arithmetic            | Declarative SQL                        | ✅ Improved         |
 
 ---
 
@@ -89,6 +89,7 @@ finally:
 ```
 
 **Issues**:
+
 1. ❌ TODO comment at line 107 - gaps within range NOT implemented
 2. ❌ 3 separate loops (before, within-MISSING, after)
 3. ❌ Complex month arithmetic with edge case handling
@@ -143,6 +144,7 @@ finally:
 ```
 
 **Benefits**:
+
 1. ✅ Implements TODO - detects gaps WITHIN range
 2. ✅ Single SQL query replaces 3 Python loops
 3. ✅ No month arithmetic - DuckDB handles it
@@ -157,11 +159,13 @@ finally:
 ### Test Case 1: Database with gaps within range
 
 **Scenario**:
+
 - Database coverage: Jan 2024, Feb 2024, Mar 2024, (GAP: Apr 2024), May 2024, (GAP: Jun-Jul 2024), Aug 2024, Sep 2024
 - start_date: 2024-01-01
 - Current date: 2025-10-18
 
 **Before (Current)**:
+
 ```python
 # Only detects gaps BEFORE Jan 2024 and AFTER Sep 2024
 # Missing Apr, Jun, Jul are NOT detected ❌
@@ -172,6 +176,7 @@ result += [(2024, 10), (2024, 11), (2024, 12), (2025, 1), ..., (2025, 10)]  # Af
 ```
 
 **After (Proposed)**:
+
 ```python
 # SQL detects ALL gaps
 result = [
@@ -191,11 +196,13 @@ result = [
 ### Test Case 2: Empty database
 
 **Scenario**:
+
 - Table exists but no rows
 - start_date: 2024-01-01
 - Current date: 2025-10-18
 
 **Before (Current)**:
+
 ```python
 # Falls through to empty database case (lines 141-155)
 result = [(2024, 1), (2024, 2), ..., (2025, 10)]  # 22 months
@@ -203,6 +210,7 @@ result = [(2024, 1), (2024, 2), ..., (2025, 10)]  # 22 months
 ```
 
 **After (Proposed)**:
+
 ```python
 # SQL handles empty table automatically
 # existing_months CTE returns empty set
@@ -214,17 +222,20 @@ result = [(2024, 1), (2024, 2), ..., (2025, 10)]  # 22 months
 ### Test Case 3: No gaps
 
 **Scenario**:
+
 - Complete coverage from Jan 2024 to Oct 2025
 - start_date: 2024-01-01
 - Current date: 2025-10-18
 
 **Before (Current)**:
+
 ```python
 # Both loops find no gaps
 result = []  # Correct
 ```
 
 **After (Proposed)**:
+
 ```python
 # EXCEPT returns empty set
 result = []  # Correct
@@ -265,6 +276,7 @@ Trade-off: +10-30ms for correctness and completeness
 ### Performance Impact
 
 For typical use case (3 years of data):
+
 - **Current**: ~20ms, **missing internal gaps**
 - **Proposed**: ~40ms, **detects all gaps**
 - **Trade-off**: +20ms (100% increase in time, but still fast)
@@ -277,6 +289,7 @@ For typical use case (3 years of data):
 ### Cyclomatic Complexity
 
 **Before**:
+
 ```
 discover_missing_months():
   - if not exists: +1
@@ -292,6 +305,7 @@ Total: Complexity = 12
 ```
 
 **After**:
+
 ```
 discover_missing_months():
   - if not exists: +1
@@ -303,19 +317,19 @@ Total: Complexity = 1
 
 ### Lines of Code
 
-| Section | Before | After | Change |
-|---------|--------|-------|--------|
-| Database exists path | 62 lines (94-155) | 30 lines | -52% |
-| Month arithmetic | 3 loops × 10 lines | 0 lines | -100% |
-| Edge cases | Explicit handling | SQL handles | Simpler |
+| Section              | Before             | After       | Change  |
+| -------------------- | ------------------ | ----------- | ------- |
+| Database exists path | 62 lines (94-155)  | 30 lines    | -52%    |
+| Month arithmetic     | 3 loops × 10 lines | 0 lines     | -100%   |
+| Edge cases           | Explicit handling  | SQL handles | Simpler |
 
 ### Dependencies
 
-| Dependency | Before | After | Change |
-|------------|--------|-------|--------|
-| pandas | Yes (line 108) | No | ✅ Removed |
-| duckdb | Yes | Yes | Same |
-| datetime | Yes | Yes | Same |
+| Dependency | Before         | After | Change     |
+| ---------- | -------------- | ----- | ---------- |
+| pandas     | Yes (line 108) | No    | ✅ Removed |
+| duckdb     | Yes            | Yes   | Same       |
+| datetime   | Yes            | Yes   | Same       |
 
 ---
 
@@ -338,6 +352,7 @@ Total: Complexity = 1
 ### Breaking Changes
 
 **None** - method signature unchanged:
+
 ```python
 def discover_missing_months(self, pair: str, start_date: str) -> List[Tuple[int, int]]
 ```
@@ -347,6 +362,7 @@ Return type and behavior remain identical for existing use cases.
 ### Backward Compatibility
 
 ✅ **Full backward compatibility**:
+
 - Same return type: `List[Tuple[int, int]]`
 - Same semantics: Missing months to download
 - **Better results**: Now includes internal gaps (fixes TODO)
@@ -415,6 +431,7 @@ def test_update_data_fills_gaps():
 ✅ **Implement SQL approach** (Option 1 from research document)
 
 **Rationale**:
+
 1. **Correctness**: Fixes TODO - detects ALL gaps including within range
 2. **Simplicity**: 52% LOC reduction (62 → 30 lines)
 3. **Maintainability**: 92% complexity reduction (12 → 1)
@@ -423,6 +440,7 @@ def test_update_data_fills_gaps():
 6. **Proven**: Tested and validated with real scenarios
 
 **Next Steps**:
+
 1. Implement SQL query in `gap_detector.py` (replace lines 94-155)
 2. Add unit tests for within-range gap detection
 3. Update docstring to reflect "detects all gaps"

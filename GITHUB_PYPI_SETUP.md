@@ -7,21 +7,25 @@
 ## ✅ Completed Automatically
 
 ### 1. Code Changes
+
 - ✅ Updated `pyproject.toml` URLs → `terrylica/exness-data-preprocess`
 - ✅ Updated `CHANGELOG.md` comparison links
 - ✅ Added 6 shields.io badges to `README.md`
 
 ### 2. GitHub Actions Workflows Created
+
 - ✅ `.github/workflows/ci.yml` - Pre-commit CI + Python 3.9-3.13 testing
 - ✅ `.github/workflows/publish.yml` - PyPI Trusted Publishing
 - ✅ `.github/workflows/pre-commit-autoupdate.yml` - Weekly hook updates
 
 ### 3. Git Repository
+
 - ✅ Initialized git repository
 - ✅ Committed all files (75 files, 19,478 lines)
 - ✅ Initial commit: `a982494`
 
 ### 4. GitHub Repository Created
+
 - ✅ Repository: https://github.com/terrylica/exness-data-preprocess
 - ✅ Public repository with description
 - ✅ Code pushed to `main` branch
@@ -30,6 +34,7 @@
 - ✅ Wiki disabled
 
 ### 5. Repository Configuration
+
 ```json
 {
   "name": "exness-data-preprocess",
@@ -37,7 +42,24 @@
   "url": "https://github.com/terrylica/exness-data-preprocess",
   "isPrivate": false,
   "hasIssuesEnabled": true,
-  "topics": ["backtesting", "data-engineering", "duckdb", "eurusd", "financial-data", "forex", "microstructure", "ohlc", "pandas", "parquet", "pyarrow", "python", "quantitative-finance", "tick-data", "time-series", "zstd"]
+  "topics": [
+    "backtesting",
+    "data-engineering",
+    "duckdb",
+    "eurusd",
+    "financial-data",
+    "forex",
+    "microstructure",
+    "ohlc",
+    "pandas",
+    "parquet",
+    "pyarrow",
+    "python",
+    "quantitative-finance",
+    "tick-data",
+    "time-series",
+    "zstd"
+  ]
 }
 ```
 
@@ -72,10 +94,12 @@ You should see a confirmation: "Pending publisher registered!"
 ### Step 5: Verify
 
 You should see the pending publisher listed on the page:
+
 - Project: `exness-data-preprocess`
 - Status: Pending (will change to Active after first successful publish)
 
 **What This Does:**
+
 - Enables password-less publishing to PyPI via GitHub Actions
 - Uses GitHub's OIDC tokens for authentication (no API tokens needed!)
 - Automatically verifies your GitHub URLs with green checkmarks on PyPI
@@ -100,11 +124,13 @@ Open: https://github.com/terrylica/exness-data-preprocess/settings/environments
 ### Step 3: Add Protection Rules (Optional)
 
 **Required Reviewers** (recommended):
+
 - Check "Required reviewers"
 - Add yourself (`terrylica`)
 - This will require you to manually approve each release
 
 **Wait Timer** (optional):
+
 - Set to 0 minutes (or add delay if wanted)
 
 ### Step 4: Save
@@ -112,6 +138,7 @@ Open: https://github.com/terrylica/exness-data-preprocess/settings/environments
 Click **"Save protection rules"**
 
 **What This Does:**
+
 - Requires manual approval before publishing to PyPI
 - Prevents accidental releases
 - Adds extra safety layer
@@ -134,6 +161,7 @@ Open: https://github.com/terrylica/exness-data-preprocess/settings/branches
 ### Step 3: Enable Protection
 
 **Recommended settings:**
+
 - ✅ Require a pull request before merging
 - ✅ Require status checks to pass before merging
   - Search and add: `Pre-commit hooks`
@@ -227,6 +255,7 @@ gh release create v0.1.0 \
 ## 📊 Monitoring & Verification
 
 ### Check CI Status
+
 ```bash
 gh run list --limit 5
 ```
@@ -234,6 +263,7 @@ gh run list --limit 5
 Or visit: https://github.com/terrylica/exness-data-preprocess/actions
 
 ### Check Latest Release
+
 ```bash
 gh release list
 ```
@@ -241,6 +271,7 @@ gh release list
 Or visit: https://github.com/terrylica/exness-data-preprocess/releases
 
 ### Test Package Installation (After First Release)
+
 ```bash
 # Create clean environment
 python -m venv /tmp/test-env
@@ -258,27 +289,32 @@ python -c "import exness_data_preprocess as edp; print(edp.__version__)"
 ## 🔧 Common Commands
 
 ### Run Pre-commit Locally
+
 ```bash
 pre-commit run --all-files
 ```
 
 ### Run Tests Locally
+
 ```bash
 uv run pytest --cov
 ```
 
 ### Build Package Locally
+
 ```bash
 uv build
 ```
 
 ### Check Package Metadata
+
 ```bash
 uv run python -m build --outdir dist/
 twine check dist/*
 ```
 
 ### Manual PyPI Upload (Not Recommended - Use Trusted Publishing Instead!)
+
 ```bash
 # Only if Trusted Publishing fails
 doppler run --project claude-config --config dev -- \
@@ -313,6 +349,7 @@ After your first successful release:
 ✅ **Environment Protection Ready** - Manual approval gate available
 
 **Total Complexity:**
+
 - Workflows: 3 files, ~120 lines YAML
 - Secrets: 0 (Trusted Publishing!)
 - Manual Token Management: None

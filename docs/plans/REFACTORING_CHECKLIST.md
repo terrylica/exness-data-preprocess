@@ -33,6 +33,7 @@
 ## Phase 2 Todo (Database Manager) ✅ COMPLETE
 
 ### Step 2.1: Create database_manager.py ✅
+
 - [x] Copy `_get_or_create_db()` logic (lines 122-210 from processor.py)
 - [x] Copy `_append_ticks_to_db()` logic (lines 217-245 from processor.py)
 - [x] ~~Copy `add_schema_comments()` logic~~ - Does not exist (inline in get_or_create_db)
@@ -41,12 +42,14 @@
 - [x] Add docstrings and type hints
 
 ### Step 2.2: Update processor.py ✅
+
 - [x] Add import: `from exness_data_preprocess.database_manager import DatabaseManager`
 - [x] Add to `__init__()`: `self.db_manager = DatabaseManager(self.base_dir)`
 - [x] Replace `_get_or_create_db()` → delegate to `self.db_manager.get_or_create_db()`
 - [x] Replace `_append_ticks_to_db()` → delegate to `self.db_manager.append_ticks()`
 
 ### Step 2.3: Test ✅
+
 - [x] Run: `uv run pytest -v --tb=short`
 - [x] Verify: 48 tests pass (Result: 48 passed in 101.98s)
 - [x] Commit: Part of Phase 1-5 commit (7054ae8)
@@ -56,12 +59,14 @@
 ## Phase 3 Todo (Session Detector) ✅ COMPLETE
 
 ### Step 3.1: Create session_detector.py ✅
+
 - [x] Extract calendar initialization from `__init__()` (lines 96-101)
 - [x] Extract session detection logic from `_regenerate_ohlc()` (lines 476-547)
 - [x] Create `SessionDetector` class with `__init__()` and `detect_sessions_and_holidays()`
 - [x] Add SLO docstrings (availability, correctness, observability, maintainability)
 
 ### Step 3.2: Update processor.py ✅
+
 - [x] Add import: `from exness_data_preprocess.session_detector import SessionDetector`
 - [x] Remove import: `import exchange_calendars as xcals` (moved to session_detector)
 - [x] Remove type import: `Dict[str, Any]` (no longer needed)
@@ -70,6 +75,7 @@
 - [x] Replace session detection in `_regenerate_ohlc()` → delegate to `self.session_detector`
 
 ### Step 3.3: Test ✅
+
 - [x] Run: `uv run pytest -v --tb=short`
 - [x] Verify: 48 tests pass (Result: 48 passed in 102.70s)
 - [x] Commit: Part of Phase 1-5 commit (7054ae8)
@@ -79,26 +85,31 @@
 ## Phase 4 Todo (Complex Logic) ✅ COMPLETE
 
 ### Step 4.1: Create gap_detector.py ✅
+
 - [x] Copy `_discover_missing_months()` logic
 - [x] Create class with `__init__(base_dir)` and `discover_missing_months()`
 
 ### Step 4.2: Create ohlc_generator.py ✅
+
 - [x] Copy `_regenerate_ohlc()` logic
 - [x] Create class with `__init__(session_detector)` and `regenerate_ohlc()`
 - [x] Use `self.session_detector.detect_sessions_and_holidays()`
 
 ### Step 4.3: Create query_engine.py ✅
+
 - [x] Copy `query_ticks()` logic
 - [x] Copy `query_ohlc()` logic
 - [x] Copy `get_data_coverage()` logic
 - [x] Create class with three methods
 
 ### Step 4.4: Update processor.py ✅
+
 - [x] Add imports for all three modules
 - [x] Add to `__init__()`: Initialize gap_detector, ohlc_generator, query_engine
 - [x] Replace all methods with delegation calls
 
 ### Step 4.5: Test ✅
+
 - [x] Run: `uv run pytest -v --tb=short` after EACH module (Result: 48 passed in 111.02s)
 - [x] Verify: 48 tests pass after EACH module
 - [x] Commit: Part of Phase 1-5 commit (7054ae8)
@@ -108,15 +119,18 @@
 ## Phase 5 Todo (Finalize) - ✅ COMPLETE
 
 ### Step 5.1: Verify processor.py structure ✅
+
 - [x] Check line count: 412 lines (was 885) ✅ Thin facade achieved (53% reduction)
 - [x] Check methods: All thin delegation methods ✅
 - [x] Check imports: All 7 modules imported ✅
 
 ### Step 5.2: Run all tests ✅
+
 - [x] Run: `uv run pytest -v --tb=short`
 - [x] Verify: 48 tests pass (Result: 48 passed in 106.25s) ✅
 
 ### Step 5.3: Create module tests (SKIPPED - optional) ✅
+
 - [x] Create `tests/test_downloader.py` (SKIPPED - existing tests sufficient)
 - [x] Create `tests/test_tick_loader.py` (SKIPPED - existing tests sufficient)
 - [x] Create `tests/test_database_manager.py` (SKIPPED - existing tests sufficient)
@@ -126,11 +140,13 @@
 - [x] Create `tests/test_query_engine.py` (SKIPPED - existing tests sufficient)
 
 ### Step 5.4: Update documentation ✅
+
 - [x] Update `/Users/terryli/eon/exness-data-preprocess/CLAUDE.md` with new module structure
 - [x] Update `/Users/terryli/eon/exness-data-preprocess/docs/README.md` with architecture changes
 - [x] Verify examples still work: Run `uv run python examples/basic_usage.py` ✅
 
 ### Step 5.5: Final validation ✅
+
 - [x] Run: `uv run pytest -v --tb=short` (48 passed in 106.25s)
 - [x] Run: `uv run ruff format .` (6 files formatted)
 - [x] Run: `uv run ruff check .` (all checks passed)
@@ -165,6 +181,7 @@ git reset --hard HEAD  # Rollback to last commit
 **Target**: Thin facade orchestrator ✅ ACHIEVED
 
 **All Extractions Complete**:
+
 - ~~`_get_or_create_db()` - 88 lines~~ ✅ Extracted (Phase 2)
 - ~~`_append_ticks_to_db()` - 28 lines~~ ✅ Extracted (Phase 2)
 - ~~Calendar initialization - 6 lines~~ ✅ Extracted (Phase 3)

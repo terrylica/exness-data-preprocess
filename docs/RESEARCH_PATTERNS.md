@@ -17,23 +17,27 @@ This document defines the research lifecycle pattern and tool selection for tick
 ## Research Lifecycle
 
 ### Phase 1: Exploration
+
 - **Tools**: pandas or Polars for tick-level temporal operations
 - **Operations**: ASOF merges, statistical tests, hypothesis validation
 - **Outputs**: Research scripts, plots, findings
 - **State**: Temporary, fast iteration
 
 ### Phase 2: Validation
+
 - **Actions**: Confirm statistical significance, test temporal stability
 - **Criteria**: Multi-period validation, reproducible methodology
 - **Outputs**: Research reports with validated findings
 
 ### Phase 3: Graduation to DuckDB
+
 - **Action**: Materialize validated results (not the operation)
 - **Process**: Pre-compute metrics, store in DuckDB tables
 - **Documentation**: COMMENT ON statements linking to research source
 - **Interface**: SQL views for querying
 
 ### Phase 4: Production Queries
+
 - **Consumers**: Downstream analysis queries materialized tables
 - **Performance**: Sub-15ms for pre-computed metrics
 - **Source**: DuckDB single source of truth
@@ -46,11 +50,11 @@ This document defines the research lifecycle pattern and tool selection for tick
 
 **Performance Benchmark** (880K ticks, 1 month EURUSD):
 
-| Tool                | Time    | Relative | Use Case                        |
-| ------------------- | ------- | -------- | ------------------------------- |
-| pandas merge_asof   | 0.0374s | 1.00x    | Exploration (tick-level)        |
-| Polars join_asof    | 0.0381s | 1.02x    | Exploration (alternative)       |
-| DuckDB ASOF JOIN    | 0.8911s | 23.83x   | Not suitable for this use case  |
+| Tool              | Time    | Relative | Use Case                       |
+| ----------------- | ------- | -------- | ------------------------------ |
+| pandas merge_asof | 0.0374s | 1.00x    | Exploration (tick-level)       |
+| Polars join_asof  | 0.0381s | 1.02x    | Exploration (alternative)      |
+| DuckDB ASOF JOIN  | 0.8911s | 23.83x   | Not suitable for this use case |
 
 **Benchmark Source**: `/tmp/test_asof_spike.py` (2025-10-17)
 
@@ -61,12 +65,14 @@ This document defines the research lifecycle pattern and tool selection for tick
 ### When to Use Each Tool
 
 **pandas/Polars**:
+
 - Tick-level ASOF merges (microsecond precision)
 - Statistical analysis requiring temporal alignment
 - Research exploration requiring fast iteration
 - Operations where performance = sub-40ms
 
 **DuckDB**:
+
 - Storing validated research results (materialized tables)
 - SQL views for querying pre-computed metrics
 - Date range filtering on tick data
@@ -85,6 +91,7 @@ This document defines the research lifecycle pattern and tool selection for tick
 ### Example: Zero-Spread Deviation Analysis
 
 **Phase 1-2: Exploration and Validation** (pandas)
+
 ```python
 # Research script: docs/research/eurusd-zero-spread-deviations/scripts/
 merged = pd.merge_asof(
@@ -100,6 +107,7 @@ merged["position_ratio"] = (merged["raw_mid"] - merged["std_bid"]) / (
 ```
 
 **Phase 3: Graduation to DuckDB** (materialize results)
+
 ```sql
 -- Store validated findings (created via pandas, stored in DuckDB)
 CREATE TABLE eurusd_spread_deviations AS
@@ -128,6 +136,7 @@ Mean reversion validated: 87.3% of extreme deviations revert within 10 ticks.';
 ```
 
 **Phase 4: Query via SQL Views** (sub-15ms)
+
 ```sql
 -- SQL view for querying (fast on materialized data)
 CREATE VIEW extreme_deviations AS
@@ -160,6 +169,7 @@ Mean reversion validated: 87.3% revert within 10 ticks.';
 **Naming**: `phase{N}_{operation}.py` (e.g., `phase2_mean_reversion.py`)
 
 **Requirements**:
+
 - Use pandas or Polars for ASOF operations
 - Document data sources and temporal tolerance
 - Include validation methodology
@@ -170,6 +180,7 @@ Mean reversion validated: 87.3% revert within 10 ticks.';
 **Future LHF Feature**: `make materialize-research` command
 
 **Process**:
+
 1. Load validated research results (CSV, Parquet, or pandas DataFrame)
 2. Create DuckDB table with appropriate schema
 3. Generate COMMENT ON statements from research documentation
@@ -177,6 +188,7 @@ Mean reversion validated: 87.3% revert within 10 ticks.';
 5. Update database schema documentation
 
 **Example**:
+
 ```bash
 # Future command (not yet implemented)
 make materialize-research \
@@ -203,6 +215,7 @@ make materialize-research \
 ### Query Optimization
 
 **On Materialized Tables**:
+
 - Date range filtering: `WHERE Timestamp BETWEEN x AND y`
 - Aggregations: `GROUP BY DATE_TRUNC('hour', Timestamp)`
 - Views: Pre-defined query patterns with COMMENT ON

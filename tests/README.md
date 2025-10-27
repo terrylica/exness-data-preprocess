@@ -5,6 +5,7 @@
 The test suite needs to be completely rewritten for the v2.0.0 architecture.
 
 **Previous test files (removed)**:
+
 - `test_processor.py` - Tested v1.0.0 Parquet-based storage and monthly DuckDB files
 - `test_api.py` - Tested v1.0.0 API functions (process_month, analyze_ticks, etc.)
 - `test_cli.py` - Tested v1.0.0 CLI commands
@@ -14,14 +15,17 @@ The test suite needs to be completely rewritten for the v2.0.0 architecture.
 The v2.0.0 refactoring introduced significant changes that require new tests:
 
 ### Storage Architecture
+
 - **Old**: Monthly DuckDB files (eurusd_ohlc_2024_08.duckdb) + Parquet tick storage
 - **New**: Single DuckDB file per instrument (eurusd.duckdb) with all years
 
 ### API Changes
+
 - **Old**: `process_month(year, month)`, `query_ohlc(year, month)`, `analyze_ticks(year, month)`
 - **New**: `update_data(pair, start_date)`, `query_ohlc(pair, timeframe, start_date, end_date)`, `query_ticks(pair, variant, start_date, end_date)`
 
 ### Schema Changes
+
 - **Old**: 7-column OHLC (Timestamp, Open, High, Low, Close, spread_avg, tick_count)
 - **New**: Phase7 13-column (v1.2.0) OHLC - See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py)
 
@@ -143,6 +147,7 @@ uv run pytest tests/test_integration.py -v
 ## Contributing
 
 When writing new tests:
+
 1. Follow pytest conventions
 2. Use descriptive test names
 3. Mock external dependencies (network calls, file I/O when appropriate)
