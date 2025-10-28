@@ -54,7 +54,7 @@ AI Agent Discovery:
     >>> print(get_args(TimeframeType))  # ('1m', '5m', '15m', ...)
 """
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __author__ = "Terry Li <terry@eonlabs.com>"
 __license__ = "MIT"
 

@@ -43,7 +43,7 @@ class ConfigModel(BaseModel):
         >>> print(config.base_dir)  # Path object with expanduser() applied
     """
 
-    base_dir: Optional[str] = Field(
+    base_dir: Optional[Path] = Field(
         default=None,
         description="Default base directory for data storage (supports ~ expansion)"
     )

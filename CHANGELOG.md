@@ -5,6 +5,11 @@ All notable changes to exness-data-preprocess will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+### 💅 Code Style
+
+- Format markdown files with prettier Standardized formatting for CHANGELOG.md.
+
 ### ✨ Features
 
 - **phase4**: Add dry-run mode and config file support Implements Phase 4 features from adversarial probe recommendations. Both features follow SSoT methodology with iterative plan updates. **Dry-Run Mode**: - Preview download operations without file system changes - Estimates based on historical averages (~9.5M ticks/month, ~11 MB/month) - Returns DryRunResult with gap analysis and size estimates - CLI: exness-preprocess process --dry-run **Config File Support**: - Persistent user preferences in ~/.exness-preprocess.yaml - Pydantic validation with off-the-shelf PyYAML - Priority resolution: CLI flags > config > defaults - Optional (no error if missing) - CLI: exness-preprocess --config /path/to/config.yaml **Implementation**: - config.py (new): ConfigModel with Pydantic + PyYAML loader - models.py: DryRunResult model with 2 computed fields - processor.py: dry_run + config parameters, union return type - api.py: dry_run forwarding for v1.0.0 API compatibility - cli.py: --dry-run + --config flags with precedence logic - pyproject.toml: pyyaml>=6.0.0 dependency **SLOs**: - Availability: Features optional, no breaking changes - Correctness: Gap detector reused, Pydantic validation on config - Observability: Dry-run prints estimate summary - Maintainability: Off-the-shelf PyYAML, no custom config parser **Testing**: - All 48 tests passing - Backward compatible (all new parameters optional) - Config file errors propagate (no silent fallbacks) **Time**: ~1.5 hours (as estimated in probe report) Related: v0.6.0 probe recommendations (items 4-5) SSoT Plan: docs/PHASE4_DRY_RUN_CONFIG_PLAN.yaml v2.0.0
