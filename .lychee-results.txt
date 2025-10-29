@@ -1,0 +1,144 @@
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/plan/multiperiod_validation_plan_v1.0.9.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/src/exness_data_preprocess/exchanges.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/src/exness_data_preprocess/ohlc_generator.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/MODULE_ARCHITECTURE.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/DATABASE_SCHEMA.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/src/exness_data_preprocess/session_detector.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase3_volatility_model.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/multiperiod-validation/mean_reversion_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/multiperiod-validation/data_validation.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase4_flash_crash_prediction.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase2_mean_reversion.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase5_regime_detection.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/findings/phase2-mean-reversion-report.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/plan/multiperiod_validation_plan_v1.0.9.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase1_data_validation.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/multiperiod-validation/volatility_model_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/findings/phase3-volatility-model-report.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/DOCUMENTATION.md#-understanding-the-data | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/liquidity_crisis_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/regime_detection_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/01_mean_reversion_analysis.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/02_volatility_model_simple.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/04_regime_detection_analysis.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#volatility-model | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#mean-reversion | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/03_liquidity_crisis_detection.py | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/volatility_model_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/mean_reversion_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#regime-detection | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#flash-crash | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/05-trading-implications.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/histogram/cent_histogram.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/mode-truncated/variance_decomposition.png | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/mode-truncated/signal_quality_comparison.png | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/mode-truncated-results/non_mode_analysis_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/histogram/standard_histogram.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/mode-truncated/distribution_overlay.png | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/histogram/mini_histogram.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/plans/docs/RESEARCH_PATTERNS.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/plans/RESEARCH_PATTERNS.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/guides | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/api | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/CURRENT_ARCHITECTURE_STATUS.yaml | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/hurdle-model/hurdle_decomposition.png | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/hurdle-model-results/rawspread_vs_standard_results.csv | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/archive/research/compression-benchmarks/README.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/archive/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md | Cannot find file: File not found. Check if file exists and path is correct
+[ERROR] file:///Users/terryli/eon/exness-data-preprocess/docs/archive/EXNESS_DATA_SOURCES.md | Cannot find file: File not found. Check if file exists and path is correct
+# Summary
+
+| Status         | Count |
+|----------------|-------|
+| 🔍 Total       | 300   |
+| ✅ Successful  | 155   |
+| ⏳ Timeouts    | 0     |
+| 🔀 Redirected  | 0     |
+| 👻 Excluded    | 97    |
+| ❓ Unknown     | 0     |
+| 🚫 Errors      | 48    |
+| ⛔ Unsupported | 0     |
+
+## Errors per input
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/archive/EXNESS_DATA_SOURCES.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/archive/research/compression-benchmarks/README.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/archive/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/plans/RESEARCH_PATTERNS_CANONICALIZATION_2025-10-17.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/plans/docs/RESEARCH_PATTERNS.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/plans/RESEARCH_PATTERNS.md> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-spread-analysis/02-mode-truncated-analysis.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/histogram/cent_histogram.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/histogram/mini_histogram.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/histogram/standard_histogram.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/mode-truncated-results/non_mode_analysis_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/mode-truncated/distribution_overlay.png> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/mode-truncated/signal_quality_comparison.png> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/mode-truncated/variance_decomposition.png> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-spread-analysis/03-hurdle-model-analysis.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/hurdle-model-results/rawspread_vs_standard_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/visualizations/hurdle-model/hurdle_decomposition.png> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-spread-analysis/README.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/api> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/CURRENT_ARCHITECTURE_STATUS.yaml> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/guides> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/02-baseline-sep2024.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/liquidity_crisis_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/mean_reversion_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/regime_detection_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/baseline-sep2024/volatility_model_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#flash-crash> | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#mean-reversion> | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#regime-detection> | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#volatility-model> | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/01_mean_reversion_analysis.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/02_volatility_model_simple.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/03_liquidity_crisis_detection.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/baseline-sep2024/04_regime_detection_analysis.py> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/03-multiperiod-validation.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/multiperiod-validation/data_validation.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/multiperiod-validation/mean_reversion_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/multiperiod-validation/volatility_model_results.csv> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/plan/multiperiod_validation_plan_v1.0.9.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/findings/phase2-mean-reversion-report.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/findings/phase3-volatility-model-report.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase1_data_validation.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase2_mean_reversion.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase3_volatility_model.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase4_flash_crash_prediction.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/scripts/multiperiod-validation/phase5_regime_detection.py> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/data/plan/multiperiod_validation_plan_v1.0.9.md> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/README.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/docs/research/eurusd-zero-spread-deviations/05-trading-implications.md> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/docs/research/HYBRID_SESSION_DETECTION_ANALYSIS.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/DATABASE_SCHEMA.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/MODULE_ARCHITECTURE.md> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/src/exness_data_preprocess/exchanges.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/src/exness_data_preprocess/ohlc_generator.py> | Cannot find file: File not found. Check if file exists and path is correct
+* [ERROR] <file:///Users/terryli/eon/src/exness_data_preprocess/session_detector.py> | Cannot find file: File not found. Check if file exists and path is correct
+
+### Errors in /Users/terryli/eon/exness-data-preprocess/DOCUMENTATION.md
+
+* [ERROR] <file:///Users/terryli/eon/exness-data-preprocess/DOCUMENTATION.md#-understanding-the-data> | Cannot find fragment: Fragment not found in document. Check if fragment exists or page structure
+
