@@ -1,0 +1,342 @@
+openapi: 3.1.0
+info:
+  title: Repository Structure Refactoring Plan
+  version: 1.0.0
+  description: |
+    Single Source of Truth for repository organization refactoring.
+
+    Intent: Reduce root-level clutter and improve documentation hierarchy.
+    Constraint: Must not break existing links, CI/CD, or user workflows.
+
+    Scope:
+      - Untrack cache files (.lychee*)
+      - Consolidate documentation (remove redundancy)
+      - Organize loose files into subdirectories
+      - Maintain backward compatibility for critical files
+
+    Status: In Progress
+
+  contact:
+    name: exness-data-preprocess
+    url: https://github.com/terrylica/exness-data-preprocess
+
+paths:
+  /implementation:
+    summary: Implementation steps and discoveries
+
+components:
+  schemas:
+    SLOs:
+      type: object
+      required:
+        - availability
+        - correctness
+        - observability
+        - maintainability
+      properties:
+        availability:
+          type: string
+          description: |
+            All existing file references remain valid during transition.
+            GitHub links continue working via redirect handling.
+            CI/CD workflows unaffected by file moves.
+          example: "100% - Graceful migration, no broken links"
+
+        correctness:
+          type: string
+          description: |
+            Git history preserved for moved files.
+            No data loss during file operations.
+            CLAUDE.md and README.md references updated atomically.
+            Raise on any git operation failure.
+          example: "Atomic updates, git mv for history preservation"
+
+        observability:
+          type: string
+          description: |
+            Each refactoring action generates distinct commit.
+            Commit messages follow conventional format.
+            SSoT plan tracks discoveries and decisions.
+          example: "Conventional commits, SSoT discovery log"
+
+        maintainability:
+          type: string
+          description: |
+            Uses git mv (preserves history, not custom scripts).
+            Directory structure follows common conventions.
+            Plan documents rationale for each decision.
+          example: "Git native operations, conventional structure"
+
+    ImplementationStrategy:
+      type: object
+      required:
+        - approach
+        - priorities
+        - validation
+      properties:
+        approach:
+          type: string
+          enum:
+            - incremental_commits
+          description: |
+            Execute refactoring in 9 atomic commits.
+            Each commit is independently revertible.
+            Priority 1 (quick wins) before Priority 2 (medium effort).
+
+        priorities:
+          type: object
+          properties:
+            priority1_quick_wins:
+              type: array
+              items:
+                type: string
+              example:
+                - "1A: Untrack lychee cache files (<2 min)"
+                - "1B: Move test plan to docs/plans/ (<2 min)"
+                - "1C: Archive release notes (<5 min)"
+
+            priority2_medium_effort:
+              type: array
+              items:
+                type: string
+              example:
+                - "2D: Remove redundant DOCUMENTATION.md (5-10 min)"
+                - "2E: Organize phase plans into docs/phases/ (5-10 min)"
+                - "2F: Move GITHUB_PYPI_SETUP.md to docs/setup/ (5 min)"
+
+            priority3_deferred:
+              type: array
+              items:
+                type: string
+              example:
+                - "Review AGENTS.md, AUTHORS.md (requires deeper analysis)"
+                - "Merge cliff-release-notes.toml (requires testing)"
+
+        validation:
+          type: object
+          properties:
+            per_commit:
+              type: string
+              example: "Verify git mv success, check for broken references"
+            final:
+              type: string
+              example: "Run pytest (48 tests), verify CLAUDE.md references, check git log"
+
+    RefactoringActions:
+      type: object
+      description: Concrete implementation steps
+      properties:
+        action_1a_untrack_lychee:
+          type: object
+          properties:
+            files:
+              type: array
+              items:
+                type: string
+              example:
+                - ".lychee-results.json"
+                - ".lychee-results.txt"
+                - ".lycheecache"
+            command:
+              type: string
+              example: "git rm --cached .lychee-results.json .lychee-results.txt .lycheecache"
+            commit_message:
+              type: string
+              example: "chore: untrack lychee cache files"
+            risk:
+              type: string
+              example: "None - cache files, no references"
+            validation:
+              type: string
+              example: "git status shows files as untracked"
+
+        action_1b_move_test_plan:
+          type: object
+          properties:
+            source:
+              type: string
+              example: "tests/archive/E2E_TESTING_PLAN_v1.0.0.md"
+            destination:
+              type: string
+              example: "docs/plans/E2E_TESTING_PLAN_v1.0.0.md"
+            command:
+              type: string
+              example: "git mv tests/archive/E2E_TESTING_PLAN_v1.0.0.md docs/plans/"
+            commit_message:
+              type: string
+              example: "docs: move test plan to docs/plans/"
+            risk:
+              type: string
+              example: "Low - internal doc, no external references"
+            validation:
+              type: string
+              example: "File exists at new location, git log shows move"
+            cleanup:
+              type: string
+              example: "Remove empty tests/archive/ directory"
+
+        action_1c_archive_release_notes:
+          type: object
+          properties:
+            files:
+              type: array
+              items:
+                type: string
+              example:
+                - "RELEASE_NOTES.md"
+                - "RELEASE_NOTES_SHORT.md"
+            destination:
+              type: string
+              example: "docs/releases/"
+            commands:
+              type: array
+              items:
+                type: string
+              example:
+                - "mkdir -p docs/releases"
+                - "git mv RELEASE_NOTES.md docs/releases/"
+                - "git mv RELEASE_NOTES_SHORT.md docs/releases/"
+            commit_message:
+              type: string
+              example: "docs: archive release notes to docs/releases/"
+            risk:
+              type: string
+              example: "Low - generated files, GitHub Releases is SSoT"
+            validation:
+              type: string
+              example: "Check for references in README.md, CONTRIBUTING.md"
+
+        action_2d_remove_documentation_md:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "DOCUMENTATION.md"
+            rationale:
+              type: string
+              example: "Content duplicates docs/README.md navigation hub"
+            precondition:
+              type: string
+              example: "Verify no external links reference this file"
+            command:
+              type: string
+              example: "git rm DOCUMENTATION.md"
+            commit_message:
+              type: string
+              example: "docs: remove redundant DOCUMENTATION.md (content in docs/README.md)"
+            risk:
+              type: string
+              example: "Medium - must verify no CLAUDE.md or README.md references"
+            validation:
+              type: string
+              example: "grep -r 'DOCUMENTATION.md' . --include='*.md'"
+
+        action_2e_organize_phase_plans:
+          type: object
+          properties:
+            files:
+              type: array
+              items:
+                type: string
+              example:
+                - "docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml"
+                - "docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml"
+                - "docs/PHASE4_DRY_RUN_CONFIG_PLAN.yaml"
+            destination:
+              type: string
+              example: "docs/phases/"
+            commands:
+              type: array
+              items:
+                type: string
+              example:
+                - "mkdir -p docs/phases"
+                - "git mv docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml docs/phases/"
+                - "git mv docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml docs/phases/"
+                - "git mv docs/PHASE4_DRY_RUN_CONFIG_PLAN.yaml docs/phases/"
+            commit_message:
+              type: string
+              example: "docs: organize phase plans into docs/phases/"
+            references_to_update:
+              type: array
+              items:
+                type: string
+              example:
+                - "CLAUDE.md (lines referencing PHASE*.yaml)"
+                - "docs/README.md (if linking to phase plans)"
+            risk:
+              type: string
+              example: "Medium - must update all references in CLAUDE.md"
+            validation:
+              type: string
+              example: "grep -r 'PHASE.*\\.yaml' CLAUDE.md docs/README.md"
+
+        action_2f_move_github_pypi_setup:
+          type: object
+          properties:
+            source:
+              type: string
+              example: "GITHUB_PYPI_SETUP.md"
+            destination:
+              type: string
+              example: "docs/setup/GITHUB_PYPI_SETUP.md"
+            commands:
+              type: array
+              items:
+                type: string
+              example:
+                - "mkdir -p docs/setup"
+                - "git mv GITHUB_PYPI_SETUP.md docs/setup/"
+            commit_message:
+              type: string
+              example: "docs: move GitHub/PyPI setup to docs/setup/"
+            references_to_update:
+              type: array
+              items:
+                type: string
+              example:
+                - "CONTRIBUTING.md (if linking to setup guide)"
+                - "docs/README.md (if in navigation)"
+            risk:
+              type: string
+              example: "Low - infrastructure doc, few external references"
+            validation:
+              type: string
+              example: "grep -r 'GITHUB_PYPI_SETUP' . --include='*.md'"
+
+    DiscoveredNuances:
+      type: object
+      description: Implementation learnings (updated during execution)
+      properties:
+        version:
+          type: string
+          example: "1.0.0"
+        discoveries:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              finding:
+                type: string
+              impact:
+                type: string
+          example: []
+
+  x-implementation-findings:
+    version: "1.0.0"
+    status: "In Progress"
+    notes: |
+      Implementation started: 2025-10-28
+
+      Estimated time: ~30 minutes (10 min Priority 1, 20 min Priority 2)
+      Actual time: TBD
+
+      Commits planned: 9 total
+        - Priority 1: 3 commits (1A, 1B, 1C)
+        - Priority 2: 3 commits (2D, 2E, 2F)
+        - SSoT update: 1 commit
+        - CLAUDE.md update: 1 commit
+        - Validation: 1 commit (if fixes needed)
