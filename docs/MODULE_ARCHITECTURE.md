@@ -26,7 +26,7 @@
   - Bug fix: Now detects internal gaps missed by Python MIN/MAX
 - All optimizations: Backward compatible (no API changes)
 - Validation: All 48 tests pass, spike tests validate measured results
-- SSoT Plans: PHASE2_SESSION_VECTORIZATION_PLAN.yaml, PHASE3_SQL_GAP_DETECTION_PLAN.yaml
+- SSoT Plans: phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml, phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml
 
 ### v1.3.1 (2025-10-17) - Documentation Accuracy Update
 

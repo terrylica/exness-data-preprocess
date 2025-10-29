@@ -28,8 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Optimization Plans (v1.7.0)
 
-- **[docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)** - SSoT plan v2.0.0 (2.2x speedup)
-- **[docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)** - SSoT plan v2.0.0 (complete coverage)
+- **[docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml](docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)** - SSoT plan v2.0.0 (2.2x speedup)
+- **[docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml](docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)** - SSoT plan v2.0.0 (complete coverage)
 - **[docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)** - Phase 1 validation
 - **[docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)** - Phase 2 validation
 
@@ -86,14 +86,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Pre-compute trading minutes, vectorized .isin() lookup
   - Measured: 5.99s → 2.69s for 302K bars across 10 exchanges
   - Combined Phase 1+2: **~16x total speedup** (8.05s → 0.50s)
-  - SSoT: [`docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
+  - SSoT: [`docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
   - Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
 
 - **SQL Gap Detection** (Phase 3): Complete coverage + 46% LOC reduction
   - SQL EXCEPT query detects ALL gaps (internal + edges)
   - Bug fix: Now detects internal gaps missed by Python MIN/MAX
   - Measured: 41 → 42 gaps detected (spike test validation)
-  - SSoT: [`docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
+  - SSoT: [`docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
 
 **Pattern**: Spike test first (validate theory) → Implement → Iterative SSoT plan updates
 

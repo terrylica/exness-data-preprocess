@@ -88,8 +88,8 @@
 
 **Optimization Plans (SSoT)**:
 
-- [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml) - OpenAPI 3.1.0 specification for session vectorization
-- [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml) - OpenAPI 3.1.0 specification for SQL gap detection
+- [`phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml) - OpenAPI 3.1.0 specification for session vectorization
+- [`phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml) - OpenAPI 3.1.0 specification for SQL gap detection
 
 **Validation Results**:
 
@@ -236,8 +236,8 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 | **Zero-Spread**          | [`research/eurusd-zero-spread-deviations/README.md`](research/eurusd-zero-spread-deviations/README.md)                                                                               | Research                 |
 | **Phase7 v1.1.0**        | [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) | Specification            |
 | **Methodology**          | [`research/eurusd-zero-spread-deviations/01-methodology.md`](research/eurusd-zero-spread-deviations/01-methodology.md)                                                               | Reference                |
-| **Phase 2 Optimization** | [`PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](PHASE2_SESSION_VECTORIZATION_PLAN.yaml)                                                                                                   | SSoT Plan                |
-| **Phase 3 Optimization** | [`PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                                           | SSoT Plan                |
+| **Phase 2 Optimization** | [`phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)                                                                                                   | SSoT Plan                |
+| **Phase 3 Optimization** | [`phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                                           | SSoT Plan                |
 | **Spike Test Phase 1**   | [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)                                                                           | Validation               |
 | **Spike Test Phase 2**   | [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)                                                                           | Validation               |
 | **API Reference**        | [`../README.md`](../README.md)                                                                                                                                                       | Main Doc                 |
