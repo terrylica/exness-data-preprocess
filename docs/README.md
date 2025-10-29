@@ -187,15 +187,6 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ---
 
-## Implementation Plans
-
-### OpenAPI Specifications
-
-- **[`implementation-plan.yaml`](implementation-plan.yaml)** - Machine-readable project specification (OpenAPI 3.1.1)
-- **[`planning-index.yaml`](planning-index.yaml)** - Planning document index
-
-**Usage**: AI coding assistants (Cursor IDE, Claude Code CLI) can parse these specs
-
 ---
 
 ## Validation & Test Artifacts
