@@ -5,6 +5,41 @@ All notable changes to exness-data-preprocess will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+### 💅 Code Style
+
+- Format markdown files with prettier Standardized formatting for CHANGELOG.md.
+
+
+### 📚 Documentation
+
+- Move test plan to docs/plans/ - Move tests/archive/E2E_TESTING_PLAN_v1.0.0.md -> docs/plans/ - Remove empty tests/archive/ directory - Consistent with docs/ organization strategy Impact: Planning docs consolidated in docs/plans/ Risk: Low (internal doc, no external references)
+
+- Archive release notes to docs/releases/ - Move RELEASE_NOTES.md, RELEASE_NOTES_SHORT.md -> docs/releases/ - No references in README.md, CONTRIBUTING.md, or CLAUDE.md - GitHub Releases is SSoT for release information Impact: -2 root files, cleaner project root Risk: Low (generated files, no external references)
+
+- Remove redundant DOCUMENTATION.md - Remove DOCUMENTATION.md (content duplicates docs/README.md) - Update README.md link to point to docs/README.md - Both files serve as navigation hubs with identical purpose Impact: -1 root file, single documentation entry point Risk: Low (historical CHANGELOG references preserved, README updated)
+
+- Organize phase plans into docs/phases/ - Move PHASE2*.yaml, PHASE3*.yaml, PHASE4*.yaml -> docs/phases/ - Update 4 references in CLAUDE.md - Consolidate SSoT planning files in dedicated subdirectory Impact: -3 docs/ root files, improved organization Risk: Low (all references updated, git mv preserves history)
+
+- Move GitHub/PyPI setup to docs/setup/ - Move GITHUB_PYPI_SETUP.md -> docs/setup/ - No active references in README.md or CONTRIBUTING.md - Historical CHANGELOG references preserved Impact: -1 root file, infrastructure docs consolidated Risk: Low (no external links, CHANGELOG preserved)
+
+- Update repository refactoring SSoT to v2.0.0 - Mark plan as Completed - Record 3 implementation discoveries - Document actual execution metrics (6 commits, ~25 minutes) - Track impact: 50% clutter reduction (30 -> 15 items) Findings: - README.md had active reference to DOCUMENTATION.md (updated) - Phase YAML files referenced in 7 locations (all updated) - GITHUB_PYPI_SETUP.md only in historical CHANGELOG (safe move) Zero regressions: All references updated, git history preserved
+
+- Archive obsolete implementation-plan.yaml (2024-11-24) - Move implementation-plan.yaml -> archive/implementation-plan-2024-11-24.yaml - Remove references from docs/README.md - File showed 24 tests (obsolete, current: 48 tests) - Status: completed (no longer active planning doc) Impact: Cleaner docs/ root (-1 file) Risk: Low (archived with timestamp for historical reference)
+
+- Remove outdated planning-index.yaml - Remove planning-index.yaml (last updated 2024-11-24) - Remove entire 'Implementation Plans' section from docs/README.md - Index referenced archived implementation-plan.yaml - Research plans have own README files (no central index needed) Impact: -1 docs/ root file, -1 obsolete section in docs/README.md Risk: None (outdated index with no active purpose)
+
+- Update refactoring SSoT plans to completion status - REPOSITORY_REFACTORING_PLAN.yaml: v2.0.0 -> v3.0.0 - PRIORITY3_CLEANUP_PLAN.yaml: v1.0.0 -> v2.0.0 (Completed) Combined Priority 1-3 Impact: - Root MD files: 10 -> 4 (-60%) - docs/ root files: 12 -> 8 (-33%) - Total clutter: 30 -> 12 items (-60%) Total: 11 commits, ~40 minutes, zero regressions
+
+
+### 🧰 Maintenance
+
+- Untrack lychee cache files - Remove .lychee-results.json, .lychee-results.txt, .lycheecache from tracking - Files remain gitignored via .gitignore rules - Add REPOSITORY_REFACTORING_PLAN.yaml SSoT (v1.0.0) Impact: Cleaner git status, prevent cache pollution Risk: None (cache files, no external references)
+
+- Remove redundant AGENTS.md developer guidelines - Content duplicates CONTRIBUTING.md - Misleading name (not AI agent configuration) - No active references found Impact: -1 root file, cleaner project root Risk: None (zero references, content preserved in CONTRIBUTING.md)
+
+- Remove redundant AUTHORS.md - Git log is SSoT for contributor history - pyproject.toml defines author (Eon Labs) and maintainer (Terry Li) - No active references found Impact: -1 root file Risk: None (contributor info preserved in pyproject.toml and git log)
+
 ### 💅 Code Style
 
 - Format markdown files with prettier Standardized formatting for CHANGELOG.md.
