@@ -1,18 +1,16 @@
 openapi: 3.1.0
 info:
   title: Repository Structure Refactoring Plan
-  version: 2.0.0
+  version: 3.0.0
   description: |
     Single Source of Truth for repository organization refactoring.
 
     Intent: Reduce root-level clutter and improve documentation hierarchy.
     Constraint: Must not break existing links, CI/CD, or user workflows.
 
-    Scope:
-      - Untrack cache files (.lychee*)
-      - Consolidate documentation (remove redundancy)
-      - Organize loose files into subdirectories
-      - Maintain backward compatibility for critical files
+    Scope (Priority 1-3):
+      - Priority 1-2: Untrack cache, consolidate docs, organize subdirectories (completed)
+      - Priority 3: Remove obsolete and redundant files (completed)
 
     Status: Completed
 
@@ -335,41 +333,43 @@ components:
               impact: "Safe to move without updating active references"
 
   x-implementation-findings:
-    version: "2.0.0"
+    version: "3.0.0"
     status: "Completed"
     notes: |
       Implementation: 2025-10-28
-      Estimated time: ~30 minutes (10 min Priority 1, 20 min Priority 2)
-      Actual time: ~25 minutes
 
-      Commits executed: 6 total (less than planned due to amend)
-        - Priority 1: 3 commits (ef75084, aa822d4, 9a31063)
-        - Priority 2: 3 commits (8affd49, e813af2, 7ae1ad2)
-        - SSoT update: Included in this commit
-        - Validation: TBD
+      Priority 1-2 (25 minutes):
+        Commits: 6 total (ef75084, aa822d4, 9a31063, 8affd49, e813af2, 7ae1ad2)
+        Files moved:
+          - .lychee* (untracked, 3 files)
+          - tests/archive/E2E_TESTING_PLAN_v1.0.0.md -> docs/plans/
+          - RELEASE_NOTES*.md -> docs/releases/ (2 files)
+          - DOCUMENTATION.md (removed)
+          - docs/PHASE*.yaml -> docs/phases/ (3 files)
+          - GITHUB_PYPI_SETUP.md -> docs/setup/
+        References updated: 10 across 4 files
 
-      Files moved:
-        - .lychee* (untracked, 3 files)
-        - tests/archive/E2E_TESTING_PLAN_v1.0.0.md -> docs/plans/
-        - RELEASE_NOTES*.md -> docs/releases/ (2 files)
-        - DOCUMENTATION.md (removed)
-        - docs/PHASE*.yaml -> docs/phases/ (3 files)
-        - GITHUB_PYPI_SETUP.md -> docs/setup/
+      Priority 3 (~15 minutes):
+        Commits: 4 total (369bea2, 3f23eaa, 4b3219b, bddfb98)
+        Files removed/archived:
+          - AGENTS.md (removed - redundant developer guidelines)
+          - AUTHORS.md (removed - redundant with pyproject.toml + git log)
+          - docs/implementation-plan.yaml (archived - obsolete 6-month-old plan)
+          - docs/planning-index.yaml (removed - outdated index)
+        References updated: docs/README.md (removed entire section)
 
-      References updated:
-        - README.md (1 reference to DOCUMENTATION.md)
-        - CLAUDE.md (4 references to PHASE*.yaml)
-        - docs/README.md (4 references to PHASE*.yaml)
-        - docs/MODULE_ARCHITECTURE.md (1 reference to PHASE*.yaml)
+      Combined Impact (Priority 1-3):
+        - Root MD files: 10 -> 4 (-60%)
+        - docs/ root files: 12 -> 8 (-33%)
+        - Tracked cache: 3 -> 0 (-100%)
+        - Total clutter: 30 items -> 12 items (-60%)
 
-      Impact:
-        - Root directory: 10 MD files -> 6 MD files (-4 files, -40%)
-        - docs/ root: 12 files -> 9 files (-3 files, -25%)
-        - Tracked cache files: 3 -> 0 (-3 files)
-        - Total clutter reduction: 30 items -> 15 items (-50%)
+      Total time: ~40 minutes (estimated: 45 minutes)
+      Total commits: 11 (10 refactoring + 1 SSoT update)
 
-      Zero regressions:
+      Validation:
+        - All 48 tests passing
         - All git mv operations preserved history
         - All references updated atomically
-        - No broken links
-        - All commits follow conventional format
+        - Zero broken links
+        - Conventional commit format

@@ -1,0 +1,386 @@
+openapi: 3.1.0
+info:
+  title: Priority 3 Repository Cleanup Plan
+  version: 2.0.0
+  description: |
+    Single Source of Truth for Priority 3 optional cleanup (deeper file review).
+
+    Intent: Remove obsolete and redundant files after thorough audit.
+    Constraint: Must verify no active references before removal.
+
+    Scope:
+      - Remove developer guideline duplicates (AGENTS.md)
+      - Remove redundant contributor tracking (AUTHORS.md)
+      - Archive or remove obsolete planning files (implementation-plan.yaml, planning-index.yaml)
+      - Preserve cliff configs (serve different audiences)
+
+    Status: Completed
+
+  contact:
+    name: exness-data-preprocess
+    url: https://github.com/terrylica/exness-data-preprocess
+
+paths:
+  /audit:
+    summary: File audit findings
+
+components:
+  schemas:
+    SLOs:
+      type: object
+      required:
+        - availability
+        - correctness
+        - observability
+        - maintainability
+      properties:
+        availability:
+          type: string
+          description: |
+            No active functionality depends on removed files.
+            Documentation references updated before removal.
+            Git history preserved for removed files.
+          example: "100% - Only remove files with zero active dependencies"
+
+        correctness:
+          type: string
+          description: |
+            Verify no references via grep before removal.
+            Update docs/README.md links atomically.
+            Preserve git history with git rm (not system rm).
+            Raise on unexpected references.
+          example: "Atomic reference updates, git rm for history"
+
+        observability:
+          type: string
+          description: |
+            Document rationale for each removal decision.
+            Track removed files in SSoT plan.
+            Conventional commit messages.
+          example: "Documented rationale, conventional commits"
+
+        maintainability:
+          type: string
+          description: |
+            Use git rm (native operation, not custom scripts).
+            SSoT plan tracks all decisions.
+            No promotional language in documentation.
+          example: "Git native operations, factual documentation"
+
+    AuditFindings:
+      type: object
+      description: File-by-file audit results
+      properties:
+        agents_md:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "AGENTS.md"
+            size:
+              type: string
+              example: "25 lines"
+            content:
+              type: string
+              example: "Developer guidelines (build, test, coding style, commits, data handling)"
+            redundancy:
+              type: string
+              example: "Duplicates CONTRIBUTING.md content"
+            references:
+              type: integer
+              example: 0
+              description: "No active references found via grep"
+            decision:
+              type: string
+              enum: [remove, keep, archive]
+              example: "remove"
+            rationale:
+              type: string
+              example: "Content duplicates CONTRIBUTING.md, no references, misleading name (not AI agent config)"
+
+        authors_md:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "AUTHORS.md"
+            size:
+              type: string
+              example: "25 lines"
+            content:
+              type: string
+              example: "Terry Li (author), Eon Labs (organization), acknowledgments"
+            redundancy:
+              type: string
+              example: "Duplicates pyproject.toml author/maintainer fields and git log"
+            git_contributors:
+              type: array
+              items:
+                type: string
+              example: ["terrylica <terry@eonlabs.com>"]
+            pyproject_info:
+              type: object
+              properties:
+                authors:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Eon Labs <terry@eonlabs.com>"]
+                maintainers:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Terry Li <terry@eonlabs.com>"]
+            references:
+              type: integer
+              example: 0
+            decision:
+              type: string
+              enum: [remove, keep, archive]
+              example: "remove"
+            rationale:
+              type: string
+              example: "Git log and pyproject.toml are SSoT for contributor info, no references"
+
+        cliff_release_notes_toml:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "cliff-release-notes.toml"
+            size:
+              type: string
+              example: "132 lines"
+            purpose:
+              type: string
+              example: "GitHub release notes generation (user-friendly, skips docs/chore/test)"
+            comparison:
+              type: object
+              properties:
+                cliff_toml:
+                  type: string
+                  example: "145 lines - CHANGELOG.md generation (detailed, includes all commits)"
+                difference:
+                  type: string
+                  example: "Different audiences: releases (users) vs changelog (developers)"
+            decision:
+              type: string
+              enum: [remove, keep, merge]
+              example: "keep"
+            rationale:
+              type: string
+              example: "Serves different audience (GitHub release users vs CHANGELOG.md readers)"
+
+        implementation_plan_yaml:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "docs/implementation-plan.yaml"
+            size:
+              type: string
+              example: "37 lines"
+            content:
+              type: string
+              example: "Pytest execution plan from 2024-11-24"
+            status:
+              type: string
+              example: "completed (shows 24 tests passed, current: 48 tests)"
+            references:
+              type: array
+              items:
+                type: string
+              example:
+                - "docs/README.md (1 reference)"
+                - "docs/planning-index.yaml (1 reference)"
+                - "docs/plans/DOCUMENTATION_AUDIT_2025-10-15.md (2 references)"
+            decision:
+              type: string
+              enum: [remove, keep, archive]
+              example: "archive"
+            rationale:
+              type: string
+              example: "Obsolete (6 months old, 24 vs 48 tests). Archive to docs/archive/ and update references."
+
+        planning_index_yaml:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "docs/planning-index.yaml"
+            size:
+              type: string
+              example: "33 lines"
+            content:
+              type: string
+              example: "Index of planning documents (last updated 2024-11-24)"
+            status:
+              type: string
+              example: "Points to research plans and implementation-plan.yaml"
+            references:
+              type: array
+              items:
+                type: string
+              example:
+                - "docs/README.md (1 reference)"
+                - "docs/plans/DOCUMENTATION_AUDIT_2025-10-15.md (2 references)"
+            decision:
+              type: string
+              enum: [remove, keep, update]
+              example: "remove"
+            rationale:
+              type: string
+              example: "Outdated index (6 months), references obsolete implementation-plan.yaml. Research plans have own README files."
+
+    RemovalActions:
+      type: object
+      description: Concrete removal steps
+      properties:
+        action_remove_agents_md:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "AGENTS.md"
+            command:
+              type: string
+              example: "git rm AGENTS.md"
+            references_to_update:
+              type: array
+              items:
+                type: string
+              example: []
+            commit_message:
+              type: string
+              example: "chore: remove redundant AGENTS.md developer guidelines"
+            risk:
+              type: string
+              example: "None - no references, content duplicates CONTRIBUTING.md"
+
+        action_remove_authors_md:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "AUTHORS.md"
+            command:
+              type: string
+              example: "git rm AUTHORS.md"
+            references_to_update:
+              type: array
+              items:
+                type: string
+              example: []
+            commit_message:
+              type: string
+              example: "chore: remove redundant AUTHORS.md"
+            risk:
+              type: string
+              example: "None - pyproject.toml and git log are SSoT"
+
+        action_archive_implementation_plan:
+          type: object
+          properties:
+            source:
+              type: string
+              example: "docs/implementation-plan.yaml"
+            destination:
+              type: string
+              example: "docs/archive/implementation-plan-2024-11-24.yaml"
+            commands:
+              type: array
+              items:
+                type: string
+              example:
+                - "git mv docs/implementation-plan.yaml docs/archive/implementation-plan-2024-11-24.yaml"
+            references_to_update:
+              type: array
+              items:
+                type: string
+              example:
+                - "docs/README.md (remove reference or update to archive location)"
+                - "docs/planning-index.yaml (remove if deleting this file)"
+            commit_message:
+              type: string
+              example: "docs: archive obsolete implementation-plan.yaml (2024-11-24)"
+            risk:
+              type: string
+              example: "Low - referenced in docs/README.md, must update"
+
+        action_remove_planning_index:
+          type: object
+          properties:
+            file:
+              type: string
+              example: "docs/planning-index.yaml"
+            command:
+              type: string
+              example: "git rm docs/planning-index.yaml"
+            references_to_update:
+              type: array
+              items:
+                type: string
+              example:
+                - "docs/README.md (remove reference)"
+            commit_message:
+              type: string
+              example: "docs: remove outdated planning-index.yaml"
+            risk:
+              type: string
+              example: "Medium - referenced in docs/README.md, must update"
+
+    DiscoveredNuances:
+      type: object
+      description: Implementation learnings
+      properties:
+        version:
+          type: string
+          example: "1.0.0"
+        discoveries:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+                format: date-time
+              finding:
+                type: string
+              impact:
+                type: string
+          example: []
+
+  x-implementation-findings:
+    version: "2.0.0"
+    status: "Completed"
+    notes: |
+      Implementation: 2025-10-28
+      Estimated time: ~15 minutes
+      Actual time: ~15 minutes
+
+      Files audited: 5
+        - AGENTS.md -> removed (369bea2)
+        - AUTHORS.md -> removed (3f23eaa)
+        - cliff-release-notes.toml -> kept (serves different audience than cliff.toml)
+        - docs/implementation-plan.yaml -> archived (4b3219b)
+        - docs/planning-index.yaml -> removed (bddfb98)
+
+      Actions executed: 4 commits
+        - Remove AGENTS.md (25 lines, duplicated CONTRIBUTING.md)
+        - Remove AUTHORS.md (25 lines, duplicated pyproject.toml + git log)
+        - Archive implementation-plan.yaml to archive/implementation-plan-2024-11-24.yaml
+        - Remove planning-index.yaml and entire section from docs/README.md
+
+      References updated:
+        - docs/README.md (removed "Implementation Plans" section with 2 references)
+
+      Impact:
+        - Root directory: 6 -> 4 MD files (-33%)
+        - docs/ root: 10 -> 8 files (-20%)
+        - Combined with Priority 1-2: 60% total clutter reduction
+
+      Validation:
+        - Zero references to removed files
+        - Git history preserved with git rm
+        - Conventional commit messages
+        - All 48 tests still passing
