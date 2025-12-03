@@ -308,11 +308,7 @@ SQ_hurdle = P(spread > 0 AND non-modal) × CV_truncated
 
 ## Data Files
 
-**Hurdle Model Results**: [../data/hurdle-model-results/rawspread_vs_standard_results.csv](../data/hurdle-model-results/rawspread_vs_standard_results.csv)
-
-**Visualizations**:
-
-- [../visualizations/hurdle-model/hurdle_decomposition.png](../visualizations/hurdle-model/hurdle_decomposition.png)
+Hurdle model results and visualizations are archived with the comprehensive research findings.
 
 ---
 

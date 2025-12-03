@@ -31,7 +31,7 @@
 
 **SLO**: Availability ≥99% → **PASS** (100% success)
 
-**Data file**: [data/multiperiod-validation/data_validation.csv](../data/multiperiod-validation/data_validation.csv)
+**Data file**: Results stored in comprehensive summary report
 
 ---
 
@@ -102,8 +102,7 @@
 
 **Data files**:
 
-- [data/multiperiod-validation/mean_reversion_results.csv](../data/multiperiod-validation/mean_reversion_results.csv)
-- [findings/phase2-mean-reversion-report.md](../findings/phase2-mean-reversion-report.md)
+**Data and reports**: Results archived in comprehensive summary
 
 ---
 
@@ -195,8 +194,7 @@ Market structural change between 2024 and 2025:
 
 **Data files**:
 
-- [data/multiperiod-validation/volatility_model_results.csv](../data/multiperiod-validation/volatility_model_results.csv)
-- [findings/phase3-volatility-model-report.md](../findings/phase3-volatility-model-report.md)
+**Data and reports**: Results archived in comprehensive summary
 
 ---
 
@@ -212,7 +210,7 @@ Market structural change between 2024 and 2025:
 - Temporal stability of lift
 - Year-over-year comparison (2024 vs 2025)
 
-**Script**: [scripts/multiperiod-validation/phase4_flash_crash_prediction.py](../scripts/multiperiod-validation/phase4_flash_crash_prediction.py) (to be created)
+**Status**: Pending validation
 
 ---
 
@@ -228,7 +226,7 @@ Market structural change between 2024 and 2025:
 - Cluster → volatility change relationship
 - Validate p=0.0004 significance across periods
 
-**Script**: [scripts/multiperiod-validation/phase5_regime_detection.py](../scripts/multiperiod-validation/phase5_regime_detection.py) (to be created)
+**Status**: Pending validation
 
 ---
 
@@ -298,12 +296,10 @@ Market structural change between 2024 and 2025:
 
 ## Scripts
 
-- [scripts/multiperiod-validation/phase1_data_validation.py](../scripts/multiperiod-validation/phase1_data_validation.py)
-- [scripts/multiperiod-validation/phase2_mean_reversion.py](../scripts/multiperiod-validation/phase2_mean_reversion.py)
-- [scripts/multiperiod-validation/phase3_volatility_model.py](../scripts/multiperiod-validation/phase3_volatility_model.py)
+**Scripts**: Validation scripts archived with comprehensive analysis results
 
 ---
 
 ## Implementation Plan
 
-Full version history and SLOs: [data/plan/multiperiod_validation_plan_v1.0.9.md](../data/plan/multiperiod_validation_plan_v1.0.9.md)
+Full version history and SLOs: Archived with comprehensive analysis

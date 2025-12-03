@@ -21,7 +21,7 @@ Sep 2024 baseline established initial findings for zero-spread deviation pattern
 
 ## Analysis 1: Mean Reversion
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#mean-reversion)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-3a-mean-reversion-analysis)
 
 ### Key Findings
 
@@ -54,7 +54,7 @@ Deviations exhibit strong short-term mean reversion:
 
 ## Analysis 2: Volatility Prediction Model
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#volatility-model)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-2-enhanced-volatility-modeling)
 
 ### Multi-Factor Model (4 Features)
 
@@ -89,7 +89,7 @@ Deviations exhibit strong short-term mean reversion:
 
 ## Analysis 3: Flash Crash Prediction
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#flash-crash)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-3c-liquidity-crisis-detection)
 
 ### Extreme vs Normal Deviations
 
@@ -119,7 +119,7 @@ Extreme deviations significantly predict flash crashes:
 
 ## Analysis 4: Regime Detection (Clustering)
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#regime-detection)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-3b-regime-detection-analysis)
 
 ### K-Means Clusters (k=3)
 
@@ -176,17 +176,7 @@ Sep 2024 served as **baseline** but was not **representative**:
 
 ## Data Files
 
-- **Mean reversion**: [data/baseline-sep2024/mean_reversion_results.csv](../data/baseline-sep2024/mean_reversion_results.csv)
-- **Volatility model**: [data/baseline-sep2024/volatility_model_results.csv](../data/baseline-sep2024/volatility_model_results.csv)
-- **Flash crash**: [data/baseline-sep2024/liquidity_crisis_results.csv](../data/baseline-sep2024/liquidity_crisis_results.csv)
-- **Regime detection**: [data/baseline-sep2024/regime_detection_results.csv](../data/baseline-sep2024/regime_detection_results.csv)
-
-## Scripts
-
-- [scripts/baseline-sep2024/01_mean_reversion_analysis.py](../scripts/baseline-sep2024/01_mean_reversion_analysis.py)
-- [scripts/baseline-sep2024/02_volatility_model_simple.py](../scripts/baseline-sep2024/02_volatility_model_simple.py)
-- [scripts/baseline-sep2024/03_liquidity_crisis_detection.py](../scripts/baseline-sep2024/03_liquidity_crisis_detection.py)
-- [scripts/baseline-sep2024/04_regime_detection_analysis.py](../scripts/baseline-sep2024/04_regime_detection_analysis.py)
+Data files and scripts for this analysis are archived in the comprehensive summary report.
 
 ---
 

@@ -310,5 +310,4 @@ Sep 2024 baseline **underestimated** the true reversion rate:
 
 ## Full Plan Document
 
-Complete implementation plan with SLOs and phased approach:
-[data/plan/multiperiod_validation_plan_v1.0.9.md](../data/plan/multiperiod_validation_plan_v1.0.9.md)
+Complete implementation plan with SLOs and phased approach archived with comprehensive analysis results.

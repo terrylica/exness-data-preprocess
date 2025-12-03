@@ -700,6 +700,6 @@ Based on real data validation (Sep 2024):
 
 - **Validation Report**: [`/tmp/exness-duckdb-test/FINDINGS.md`](/tmp/exness-duckdb-test/FINDINGS.md)
 - **Test Script**: [`/tmp/exness-duckdb-test/test_real_unified.py`](/tmp/exness-duckdb-test/test_real_unified.py)
-- **Phase7 Spec**: [`docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
-- **Compression Benchmarks**: [`docs/research/compression-benchmarks/README.md`](research/compression-benchmarks/README.md)
-- **Data Sources Guide**: [`docs/EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)
+- **Phase7 Spec**: Archived - see DATABASE_SCHEMA.md for current schema
+- **Compression Benchmarks**: Archived - DuckDB compression validated
+- **Data Sources Guide**: [`docs/EXNESS_DATA_SOURCES.md`](../EXNESS_DATA_SOURCES.md)

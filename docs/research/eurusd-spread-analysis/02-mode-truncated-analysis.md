@@ -304,16 +304,4 @@ Standard provides 34× more effective microstructure information
 
 ## Data Files
 
-**Mode-Truncated Results**: [../data/mode-truncated-results/non_mode_analysis_results.csv](../data/mode-truncated-results/non_mode_analysis_results.csv)
-
-**Histogram Data**:
-
-- [../data/histogram/standard_histogram.csv](../data/histogram/standard_histogram.csv)
-- [../data/histogram/mini_histogram.csv](../data/histogram/mini_histogram.csv)
-- [../data/histogram/cent_histogram.csv](../data/histogram/cent_histogram.csv)
-
-**Visualizations**:
-
-- [../visualizations/mode-truncated/signal_quality_comparison.png](../visualizations/mode-truncated/signal_quality_comparison.png)
-- [../visualizations/mode-truncated/variance_decomposition.png](../visualizations/mode-truncated/variance_decomposition.png)
-- [../visualizations/mode-truncated/distribution_overlay.png](../visualizations/mode-truncated/distribution_overlay.png)
+Analysis results, histogram data, and visualizations are archived with the comprehensive research findings.

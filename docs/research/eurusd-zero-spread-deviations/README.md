@@ -93,7 +93,7 @@ position_ratio = (raw_mid - std_bid) / (std_ask - std_bid)
 2. **[Baseline: Sep 2024](02-baseline-sep2024.md)** - Original single-month analysis
 3. **[Multi-Period Validation](03-multiperiod-validation.md)** - 16-month temporal stability testing
 4. **[Discoveries & Plan Evolution](04-discoveries-and-plan-evolution.md)** - Version-tracked findings during implementation
-5. **[Trading Implications](05-trading-implications.md)** - Risk management strategies (pending Phase 4-5)
+5. **Trading Implications** - Risk management strategies (pending Phase 4-5 validation)
 
 ### Data & Scripts
 

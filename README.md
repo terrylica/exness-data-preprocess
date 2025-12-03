@@ -406,7 +406,7 @@ Data is sourced from Exness's public tick data repository:
 - Vectorized approach: 2.69s (302K bars, 10 exchanges)
 - Combined Phase 1+2: ~16x total speedup (8.05s → 0.50s)
 - Implementation: Pre-compute trading minutes, vectorized `.isin()` lookup
-- SSoT: [`docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
+- SSoT: [`docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
 - Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
 
 **SQL Gap Detection** - Complete coverage with 46% code reduction:
@@ -414,7 +414,7 @@ Data is sourced from Exness's public tick data repository:
 - Bug fix: Python approach missed internal gaps (41 detected vs 42 actual)
 - SQL EXCEPT operator detects ALL gaps (before + within + after existing data)
 - Code reduced from 62 lines to 34 lines (46% reduction)
-- SSoT: [`docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
+- SSoT: [`docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
 
 **Release Notes**: See [`CHANGELOG.md`](CHANGELOG.md) for complete v0.5.0 details
 

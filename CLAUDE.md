@@ -56,7 +56,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Module Pattern (v1.7.0)
 
-- **Facade orchestrator** (processor.py) coordinating 7 specialized modules
+- **Facade orchestrator** (processor.py) coordinating 6 module instances + 1 static utility
 - **Separation of concerns** with single-responsibility modules
 - **SLO-based design** (Availability, Correctness, Observability, Maintainability)
 - **Off-the-shelf libraries** (httpx, pandas, DuckDB, exchange_calendars)

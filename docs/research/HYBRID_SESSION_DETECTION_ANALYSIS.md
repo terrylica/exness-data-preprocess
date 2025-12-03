@@ -918,11 +918,11 @@ with Pool(processes=10) as pool:
 
 ### 10.4 Internal Documentation
 
-- [`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py`](../../../src/exness_data_preprocess/session_detector.py)
-- [`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py`](../../../src/exness_data_preprocess/ohlc_generator.py)
-- [`/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/exchanges.py`](../../../src/exness_data_preprocess/exchanges.py)
-- [`/Users/terryli/eon/exness-data-preprocess/docs/MODULE_ARCHITECTURE.md`](../../MODULE_ARCHITECTURE.md)
-- [`/Users/terryli/eon/exness-data-preprocess/docs/DATABASE_SCHEMA.md`](../../DATABASE_SCHEMA.md)
+- `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/session_detector.py`
+- `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/ohlc_generator.py`
+- `/Users/terryli/eon/exness-data-preprocess/src/exness_data_preprocess/exchanges.py`
+- [`/Users/terryli/eon/exness-data-preprocess/docs/MODULE_ARCHITECTURE.md`](/Users/terryli/eon/exness-data-preprocess/docs/MODULE_ARCHITECTURE.md)
+- [`/Users/terryli/eon/exness-data-preprocess/docs/DATABASE_SCHEMA.md`](/Users/terryli/eon/exness-data-preprocess/docs/DATABASE_SCHEMA.md)
 
 ---
 

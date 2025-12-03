@@ -144,6 +144,6 @@ Generated: 2025-10-04
 
 ## Related Documentation
 
-- [CURRENT_ARCHITECTURE_STATUS.yaml](../../CURRENT_ARCHITECTURE_STATUS.yaml) - Project architecture
-- [docs/api/](../../api/) - API documentation
-- [docs/guides/](../../guides/) - User guides
+- [MODULE_ARCHITECTURE.md](../../MODULE_ARCHITECTURE.md) - Module architecture
+- [DATABASE_SCHEMA.md](../../DATABASE_SCHEMA.md) - Database schema reference
+- [README.md](../../README.md) - Documentation hub

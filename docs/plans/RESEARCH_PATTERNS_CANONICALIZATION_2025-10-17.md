@@ -148,7 +148,7 @@ Canonicalized architectural insights from ASOF join performance benchmarking and
 - Hybrid pattern summary
 - Single source of truth scope
 
-**Link**: [`docs/RESEARCH_PATTERNS.md`](docs/RESEARCH_PATTERNS.md)
+**Link**: [`docs/RESEARCH_PATTERNS.md`](../RESEARCH_PATTERNS.md)
 
 ### Level 1: Overview (docs/README.md)
 
@@ -158,7 +158,7 @@ Canonicalized architectural insights from ASOF join performance benchmarking and
 - pandas/Polars 24x faster than DuckDB
 - Use case allocation
 
-**Link**: [`RESEARCH_PATTERNS.md`](RESEARCH_PATTERNS.md)
+**Link**: [`docs/RESEARCH_PATTERNS.md`](../RESEARCH_PATTERNS.md)
 
 ### Level 2: Detailed Specification (docs/RESEARCH_PATTERNS.md)
 
