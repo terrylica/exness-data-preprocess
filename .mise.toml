@@ -9,6 +9,22 @@ PACKAGE_NAME = "exness_data_preprocess"
 # Validation temp directory
 VALIDATION_TMP = "./tmp/validation"
 
+# ADR: /docs/adr/2025-12-10-clickhouse-pydantic-config.md
+# ClickHouse SSoT Configuration
+# Connection identity
+CLICKHOUSE_NAME = "exness-clickhouse-local"
+CLICKHOUSE_MODE = "local"  # "local" or "cloud"
+CLICKHOUSE_TYPE = "dev"    # "dev", "test", or "prod"
+# Connection parameters (match existing clickhouse_client.py defaults)
+CLICKHOUSE_HOST = "localhost"
+CLICKHOUSE_PORT = "8123"
+CLICKHOUSE_DATABASE = "exness"
+# Output paths
+DBEAVER_CONFIG_PATH = ".dbeaver/data-sources.json"
+# Cloud credentials (read from .env for security)
+# CLICKHOUSE_USER_READONLY - set in .env
+# CLICKHOUSE_PASSWORD_READONLY - set in .env
+
 [tools]
 python = "3.14"
 
@@ -470,3 +486,24 @@ engine.close()
 print('✅ OHLC validation passed')
 "
 '''
+
+# =============================================================================
+# DBeaver Config Generation
+# ADR: /docs/adr/2025-12-10-clickhouse-pydantic-config.md
+# =============================================================================
+
+[tasks.db-client-generate]
+description = "Generate DBeaver config from Pydantic model"
+run = "uv run scripts/generate_dbeaver_config.py --output ${DBEAVER_CONFIG_PATH}"
+
+[tasks."db-client:cloud"]
+description = "Generate config for ClickHouse Cloud"
+run = "uv run scripts/generate_dbeaver_config.py --mode cloud --output ${DBEAVER_CONFIG_PATH}"
+
+[tasks."db-client:dry-run"]
+description = "Preview generated config without writing"
+run = "uv run scripts/generate_dbeaver_config.py --dry-run"
+
+[tasks.dbeaver]
+description = "Launch DBeaver with project workspace"
+run = '"/Applications/DBeaver.app/Contents/MacOS/dbeaver" -data .dbeaver-workspace &'

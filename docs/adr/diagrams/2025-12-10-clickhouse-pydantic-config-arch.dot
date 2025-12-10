@@ -1,0 +1,17 @@
+// Architecture: Config flow from mise to DBeaver
+digraph arch {
+  rankdir=LR;
+
+  // Layers
+  mise [label=".mise.toml\n[env] + [tasks]"];
+  script [label="scripts/\ngenerate_dbeaver_config.py"];
+  model [label="ClickHouseConnection\nPydantic Model"];
+  client [label="clickhouse_client.py\n(MODE fallback)"];
+  dbeaver [label=".dbeaver/\ndata-sources.json"];
+
+  // Flow
+  mise -> script [label="env vars"];
+  mise -> client [label="env vars"];
+  script -> model [label="instantiate"];
+  model -> dbeaver [label="serialize"];
+}

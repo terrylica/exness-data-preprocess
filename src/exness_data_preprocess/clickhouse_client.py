@@ -2,6 +2,7 @@
 ClickHouse connection management.
 
 ADR: /docs/adr/2025-12-09-exness-clickhouse-migration.md
+ADR: /docs/adr/2025-12-10-clickhouse-pydantic-config.md
 
 Provides a thin wrapper around clickhouse-connect for:
 - Connection configuration via environment variables
@@ -9,12 +10,13 @@ Provides a thin wrapper around clickhouse-connect for:
 - Query execution with proper error propagation
 
 Configuration (environment variables):
+- CLICKHOUSE_MODE: Connection mode - "local" or "cloud" (preferred over CLICKHOUSE_SECURE)
 - CLICKHOUSE_HOST: ClickHouse server hostname (default: localhost)
-- CLICKHOUSE_PORT: Native protocol port (default: 8123)
+- CLICKHOUSE_PORT: Native protocol port (default: 8123 local, 8443 cloud)
 - CLICKHOUSE_USER: Username (default: default)
 - CLICKHOUSE_PASSWORD: Password (default: empty)
 - CLICKHOUSE_DATABASE: Default database (default: exness)
-- CLICKHOUSE_SECURE: Use HTTPS (default: false for local, true for cloud)
+- CLICKHOUSE_SECURE: Use HTTPS (fallback if MODE not set, default: false for local)
 """
 
 import os
@@ -75,23 +77,36 @@ def get_client(
     """
     # Resolve configuration from parameters or environment
     resolved_host = host or os.environ.get("CLICKHOUSE_HOST", DEFAULT_HOST)
-    resolved_port = port or int(os.environ.get("CLICKHOUSE_PORT", DEFAULT_PORT))
     resolved_user = user or os.environ.get("CLICKHOUSE_USER", DEFAULT_USER)
     resolved_password = password or os.environ.get("CLICKHOUSE_PASSWORD", DEFAULT_PASSWORD)
     resolved_database = database or os.environ.get("CLICKHOUSE_DATABASE", DEFAULT_DATABASE)
 
-    # Secure defaults to True for non-localhost connections
+    # Mode-based SSL detection (ADR: 2025-12-10-clickhouse-pydantic-config)
+    # CLICKHOUSE_MODE takes precedence over CLICKHOUSE_SECURE for clarity
     if secure is None:
-        env_secure = os.environ.get("CLICKHOUSE_SECURE", "").lower()
-        if env_secure in ("true", "1", "yes"):
+        mode = os.environ.get("CLICKHOUSE_MODE", "").lower()
+        if mode == "cloud":
+            # Cloud mode: SSL enabled, port 8443
             resolved_secure = True
-        elif env_secure in ("false", "0", "no"):
+            resolved_port = port or int(os.environ.get("CLICKHOUSE_PORT", "8443"))
+        elif mode == "local":
+            # Local mode: SSL disabled, port 8123
             resolved_secure = False
+            resolved_port = port or int(os.environ.get("CLICKHOUSE_PORT", str(DEFAULT_PORT)))
         else:
-            # Auto-detect: secure for non-localhost
-            resolved_secure = resolved_host not in ("localhost", "127.0.0.1")
+            # Fallback: existing CLICKHOUSE_SECURE logic for backward compatibility
+            resolved_port = port or int(os.environ.get("CLICKHOUSE_PORT", str(DEFAULT_PORT)))
+            env_secure = os.environ.get("CLICKHOUSE_SECURE", "").lower()
+            if env_secure in ("true", "1", "yes"):
+                resolved_secure = True
+            elif env_secure in ("false", "0", "no"):
+                resolved_secure = False
+            else:
+                # Auto-detect: secure for non-localhost
+                resolved_secure = resolved_host not in ("localhost", "127.0.0.1")
     else:
         resolved_secure = secure
+        resolved_port = port or int(os.environ.get("CLICKHOUSE_PORT", str(DEFAULT_PORT)))
 
     try:
         client = clickhouse_connect.get_client(

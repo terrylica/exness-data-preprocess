@@ -1,0 +1,21 @@
+// After: mise [env] as SSoT, DBeaver config generation
+digraph after {
+  rankdir=TB;
+
+  // SSoT
+  mise_env [label=".mise.toml [env]\n(SSoT)"];
+
+  // Pydantic Model
+  pydantic [label="ClickHouseConnection\n(Pydantic v2)"];
+
+  // Consumers
+  clickhouse_client [label="clickhouse_client.py"];
+  dbeaver_script [label="generate_dbeaver_config.py"];
+  dbeaver_json [label=".dbeaver/data-sources.json"];
+
+  // Relationships
+  mise_env -> pydantic [label="CLICKHOUSE_*"];
+  pydantic -> clickhouse_client [label="validated config"];
+  pydantic -> dbeaver_script [label="model fields"];
+  dbeaver_script -> dbeaver_json [label="generates"];
+}

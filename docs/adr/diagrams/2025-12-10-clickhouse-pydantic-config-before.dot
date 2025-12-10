@@ -1,0 +1,20 @@
+// Before: Scattered configuration, no DBeaver integration
+digraph before {
+  rankdir=TB;
+
+  // Sources
+  env_vars [label="Env Vars\n(scattered)"];
+  code_defaults [label="Code Defaults\n(hardcoded)"];
+
+  // Consumer
+  clickhouse_client [label="clickhouse_client.py"];
+
+  // Relationships
+  env_vars -> clickhouse_client [label="CLICKHOUSE_SECURE"];
+  env_vars -> clickhouse_client [label="CLICKHOUSE_HOST"];
+  code_defaults -> clickhouse_client [label="port=8123"];
+  code_defaults -> clickhouse_client [label="db='exness'"];
+
+  // Missing
+  dbeaver [label="DBeaver\n(manual setup)"];
+}
