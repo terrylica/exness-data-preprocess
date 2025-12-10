@@ -130,10 +130,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         """
 
         result = execute_query(self.client, query, parameters=params)
-        return result.result_set.to_pandas() if hasattr(result, 'result_set') else pd.DataFrame(
-            result.result_rows,
-            columns=["timestamp", "bid", "ask"]
-        )
+        return pd.DataFrame(result.result_rows, columns=["timestamp", "bid", "ask"])
 
     def query_ohlc(
         self,
@@ -219,52 +216,56 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
                 {offset_sql}
             """
         else:
-            # On-demand resampling using toStartOfInterval
+            # On-demand resampling using CTE to avoid ClickHouse nested aggregate issue
+            # ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
             query = f"""
+                WITH base AS (
+                    SELECT
+                        toStartOfInterval(timestamp, INTERVAL {{minutes:UInt32}} MINUTE) AS ts,
+                        argMin(open, timestamp) AS open,
+                        max(high) AS high,
+                        min(low) AS low,
+                        argMax(close, timestamp) AS close,
+                        avg(raw_spread_avg) AS raw_spread_avg,
+                        avg(standard_spread_avg) AS standard_spread_avg,
+                        sum(tick_count_raw_spread) AS tick_count_raw_spread,
+                        sum(tick_count_standard) AS tick_count_standard,
+                        max(ny_hour) AS ny_hour,
+                        max(london_hour) AS london_hour,
+                        any(ny_session) AS ny_session,
+                        any(london_session) AS london_session,
+                        max(is_us_holiday) AS is_us_holiday,
+                        max(is_uk_holiday) AS is_uk_holiday,
+                        max(is_major_holiday) AS is_major_holiday,
+                        max(is_nyse_session) AS is_nyse_session,
+                        max(is_lse_session) AS is_lse_session,
+                        max(is_xswx_session) AS is_xswx_session,
+                        max(is_xfra_session) AS is_xfra_session,
+                        max(is_xtse_session) AS is_xtse_session,
+                        max(is_xnze_session) AS is_xnze_session,
+                        max(is_xtks_session) AS is_xtks_session,
+                        max(is_xasx_session) AS is_xasx_session,
+                        max(is_xhkg_session) AS is_xhkg_session,
+                        max(is_xses_session) AS is_xses_session
+                    FROM {self.DATABASE}.ohlc_1m
+                    WHERE {where_sql}
+                    GROUP BY ts
+                )
                 SELECT
-                    toStartOfInterval(timestamp, INTERVAL {{minutes:UInt32}} MINUTE) AS timestamp,
-                    argMin(open, timestamp) AS open,
-                    max(high) AS high,
-                    min(low) AS low,
-                    argMax(close, timestamp) AS close,
-                    avg(raw_spread_avg) AS raw_spread_avg,
-                    avg(standard_spread_avg) AS standard_spread_avg,
-                    sum(tick_count_raw_spread) AS tick_count_raw_spread,
-                    sum(tick_count_standard) AS tick_count_standard,
-                    -- Normalized metrics recalculated
-                    if(avg(raw_spread_avg) > 0,
-                       (max(high) - min(low)) / avg(raw_spread_avg),
-                       NULL) AS range_per_spread,
-                    if(sum(tick_count_raw_spread) > 0,
-                       (max(high) - min(low)) / sum(tick_count_raw_spread),
-                       NULL) AS range_per_tick,
-                    if(avg(raw_spread_avg) > 0,
-                       abs(argMax(close, timestamp) - argMin(open, timestamp)) / avg(raw_spread_avg),
-                       NULL) AS body_per_spread,
-                    if(sum(tick_count_raw_spread) > 0,
-                       abs(argMax(close, timestamp) - argMin(open, timestamp)) / sum(tick_count_raw_spread),
-                       NULL) AS body_per_tick,
-                    -- Session columns: take max (any non-zero means session was active)
-                    max(ny_hour) AS ny_hour,
-                    max(london_hour) AS london_hour,
-                    any(ny_session) AS ny_session,
-                    any(london_session) AS london_session,
-                    max(is_us_holiday) AS is_us_holiday,
-                    max(is_uk_holiday) AS is_uk_holiday,
-                    max(is_major_holiday) AS is_major_holiday,
-                    max(is_nyse_session) AS is_nyse_session,
-                    max(is_lse_session) AS is_lse_session,
-                    max(is_xswx_session) AS is_xswx_session,
-                    max(is_xfra_session) AS is_xfra_session,
-                    max(is_xtse_session) AS is_xtse_session,
-                    max(is_xnze_session) AS is_xnze_session,
-                    max(is_xtks_session) AS is_xtks_session,
-                    max(is_xasx_session) AS is_xasx_session,
-                    max(is_xhkg_session) AS is_xhkg_session,
-                    max(is_xses_session) AS is_xses_session
-                FROM {self.DATABASE}.ohlc_1m
-                WHERE {where_sql}
-                GROUP BY toStartOfInterval(timestamp, INTERVAL {{minutes:UInt32}} MINUTE)
+                    ts AS timestamp,
+                    open, high, low, close,
+                    raw_spread_avg, standard_spread_avg,
+                    tick_count_raw_spread, tick_count_standard,
+                    if(raw_spread_avg > 0, (high - low) / raw_spread_avg, NULL) AS range_per_spread,
+                    if(tick_count_raw_spread > 0, (high - low) / tick_count_raw_spread, NULL) AS range_per_tick,
+                    if(raw_spread_avg > 0, abs(close - open) / raw_spread_avg, NULL) AS body_per_spread,
+                    if(tick_count_raw_spread > 0, abs(close - open) / tick_count_raw_spread, NULL) AS body_per_tick,
+                    ny_hour, london_hour, ny_session, london_session,
+                    is_us_holiday, is_uk_holiday, is_major_holiday,
+                    is_nyse_session, is_lse_session, is_xswx_session, is_xfra_session,
+                    is_xtse_session, is_xnze_session, is_xtks_session, is_xasx_session,
+                    is_xhkg_session, is_xses_session
+                FROM base
                 ORDER BY timestamp
                 {limit_sql}
                 {offset_sql}
@@ -272,12 +273,9 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
 
         result = execute_query(self.client, query, parameters=params)
 
-        # Convert to DataFrame
-        if hasattr(result, 'result_set'):
-            return result.result_set.to_pandas()
-        else:
-            columns = [col[0] for col in result.column_names] if hasattr(result, 'column_names') else None
-            return pd.DataFrame(result.result_rows, columns=columns)
+        # Convert to DataFrame using column names from result
+        columns = result.column_names if hasattr(result, 'column_names') else None
+        return pd.DataFrame(result.result_rows, columns=columns)
 
     def get_data_coverage(self, instrument: PairType = "EURUSD") -> CoverageInfo:
         """
@@ -455,11 +453,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         """
 
         result = execute_query(self.client, query, parameters=params)
-
-        if hasattr(result, "result_set"):
-            df = result.result_set.to_pandas()
-        else:
-            df = pd.DataFrame(result.result_rows, columns=["timestamp", "bid", "ask"])
+        df = pd.DataFrame(result.result_rows, columns=["timestamp", "bid", "ask"])
 
         # Check if there's more data
         has_more = len(df) > page_size

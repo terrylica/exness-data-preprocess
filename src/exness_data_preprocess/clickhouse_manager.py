@@ -93,142 +93,110 @@ class ClickHouseManager(ClickHouseClientMixin):
         self._create_holidays_table()
 
     def _create_raw_spread_ticks_table(self) -> None:
-        """Create raw_spread_ticks table with proper codecs and comments."""
+        """Create raw_spread_ticks table with proper codecs.
+
+        Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
+        Schema documentation is in table-level COMMENT and /docs/DATABASE_SCHEMA.md.
+        """
         execute_command(
             self.client,
             f"""
             CREATE TABLE IF NOT EXISTS {self.DATABASE}.raw_spread_ticks (
-                instrument LowCardinality(String)
-                    COMMENT 'Forex pair symbol (e.g., EURUSD). FK: conceptually links to instrument metadata.',
-                timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4)
-                    COMMENT 'Tick timestamp with microsecond precision. Primary time dimension.',
-                bid Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Bid price from Raw_Spread variant (97.81% zero-spread execution prices).',
+                instrument LowCardinality(String),
+                timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4),
+                bid Float64 CODEC(Gorilla, ZSTD),
                 ask Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Ask price from Raw_Spread variant. Often equals bid (zero-spread).'
             ) ENGINE = ReplacingMergeTree()
             PARTITION BY toYYYYMM(timestamp)
             ORDER BY (instrument, timestamp)
-            COMMENT 'Raw_Spread tick data from Exness. Primary source for BID-only OHLC construction. Deduplication via ReplacingMergeTree on (instrument, timestamp).'
+            COMMENT 'Raw_Spread tick data from Exness. Columns: instrument (forex pair), timestamp (microsecond precision), bid/ask (97.81% zero-spread execution prices). Deduplication via ReplacingMergeTree.'
             """,
         )
 
     def _create_standard_ticks_table(self) -> None:
-        """Create standard_ticks table with proper codecs and comments."""
+        """Create standard_ticks table with proper codecs.
+
+        Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
+        """
         execute_command(
             self.client,
             f"""
             CREATE TABLE IF NOT EXISTS {self.DATABASE}.standard_ticks (
-                instrument LowCardinality(String)
-                    COMMENT 'Forex pair symbol (e.g., EURUSD). FK: conceptually links to instrument metadata.',
-                timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4)
-                    COMMENT 'Tick timestamp with microsecond precision. Primary time dimension.',
-                bid Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Bid price from Standard variant (traditional quotes, always Bid < Ask).',
+                instrument LowCardinality(String),
+                timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4),
+                bid Float64 CODEC(Gorilla, ZSTD),
                 ask Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Ask price from Standard variant. Always > bid (never zero-spread).'
             ) ENGINE = ReplacingMergeTree()
             PARTITION BY toYYYYMM(timestamp)
             ORDER BY (instrument, timestamp)
-            COMMENT 'Standard tick data from Exness. Reference quotes for position ratio calculation. ASOF merged with raw_spread_ticks.'
+            COMMENT 'Standard tick data from Exness. Columns: instrument (forex pair), timestamp (microsecond), bid/ask (traditional quotes, always Bid < Ask). ASOF merged with raw_spread_ticks.'
             """,
         )
 
     def _create_ohlc_table(self) -> None:
-        """Create ohlc_1m table with Phase7 30-column schema."""
+        """Create ohlc_1m table with Phase7 30-column schema.
+
+        Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
+        Full schema documentation: /docs/DATABASE_SCHEMA.md
+        """
         execute_command(
             self.client,
             f"""
             CREATE TABLE IF NOT EXISTS {self.DATABASE}.ohlc_1m (
-                instrument LowCardinality(String)
-                    COMMENT 'Forex pair symbol. FK: links to raw_spread_ticks and standard_ticks.',
-                timestamp DateTime64(0, 'UTC') CODEC(DoubleDelta, LZ4)
-                    COMMENT 'Minute-aligned bar timestamp. Primary time dimension for OHLC.',
-                open Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'First BID price in minute from raw_spread_ticks.',
-                high Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Maximum BID price in minute from raw_spread_ticks.',
-                low Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Minimum BID price in minute from raw_spread_ticks.',
-                close Float64 CODEC(Gorilla, ZSTD)
-                    COMMENT 'Last BID price in minute from raw_spread_ticks.',
-                raw_spread_avg Nullable(Float64) CODEC(Gorilla, ZSTD)
-                    COMMENT 'AVG(ask-bid) from raw_spread_ticks. Usually ~0 (97.81% zero-spread).',
-                standard_spread_avg Nullable(Float64) CODEC(Gorilla, ZSTD)
-                    COMMENT 'AVG(ask-bid) from standard_ticks. Always > 0 (~0.7 pips).',
-                tick_count_raw_spread Nullable(UInt32) CODEC(T64, ZSTD)
-                    COMMENT 'COUNT(*) from raw_spread_ticks in this minute.',
-                tick_count_standard Nullable(UInt32) CODEC(T64, ZSTD)
-                    COMMENT 'COUNT(*) from standard_ticks in this minute.',
-                range_per_spread Nullable(Float32) CODEC(Gorilla, ZSTD)
-                    COMMENT 'Normalized metric: (high-low) / raw_spread_avg.',
-                range_per_tick Nullable(Float32) CODEC(Gorilla, ZSTD)
-                    COMMENT 'Normalized metric: (high-low) / tick_count_raw_spread.',
-                body_per_spread Nullable(Float32) CODEC(Gorilla, ZSTD)
-                    COMMENT 'Normalized metric: |close-open| / raw_spread_avg.',
-                body_per_tick Nullable(Float32) CODEC(Gorilla, ZSTD)
-                    COMMENT 'Normalized metric: |close-open| / tick_count_raw_spread.',
-                ny_hour UInt8 CODEC(T64, ZSTD)
-                    COMMENT 'Hour in New York timezone (0-23). FK: joins with exchange_sessions.',
-                london_hour UInt8 CODEC(T64, ZSTD)
-                    COMMENT 'Hour in London timezone (0-23). FK: joins with exchange_sessions.',
-                ny_session LowCardinality(String)
-                    COMMENT 'NY session label: pre_market, market_open, post_market, closed.',
-                london_session LowCardinality(String)
-                    COMMENT 'London session label: pre_market, market_open, post_market, closed.',
-                is_us_holiday UInt8
-                    COMMENT 'Boolean: 1 if US market holiday. FK: joins with holidays table.',
-                is_uk_holiday UInt8
-                    COMMENT 'Boolean: 1 if UK market holiday. FK: joins with holidays table.',
-                is_major_holiday UInt8
-                    COMMENT 'Boolean: 1 if major holiday (Christmas, New Year, etc.).',
-                is_nyse_session UInt8
-                    COMMENT 'Boolean: 1 if NYSE is open. FK: joins with exchange_sessions (NYSE).',
-                is_lse_session UInt8
-                    COMMENT 'Boolean: 1 if LSE is open. FK: joins with exchange_sessions (LSE).',
-                is_xswx_session UInt8
-                    COMMENT 'Boolean: 1 if SIX Swiss Exchange is open.',
-                is_xfra_session UInt8
-                    COMMENT 'Boolean: 1 if Frankfurt Stock Exchange is open.',
-                is_xtse_session UInt8
-                    COMMENT 'Boolean: 1 if Toronto Stock Exchange is open.',
-                is_xnze_session UInt8
-                    COMMENT 'Boolean: 1 if New Zealand Stock Exchange is open.',
-                is_xtks_session UInt8
-                    COMMENT 'Boolean: 1 if Tokyo Stock Exchange is open.',
-                is_xasx_session UInt8
-                    COMMENT 'Boolean: 1 if Australian Securities Exchange is open.',
-                is_xhkg_session UInt8
-                    COMMENT 'Boolean: 1 if Hong Kong Stock Exchange is open.',
+                instrument LowCardinality(String),
+                timestamp DateTime64(0, 'UTC') CODEC(DoubleDelta, LZ4),
+                open Float64 CODEC(Gorilla, ZSTD),
+                high Float64 CODEC(Gorilla, ZSTD),
+                low Float64 CODEC(Gorilla, ZSTD),
+                close Float64 CODEC(Gorilla, ZSTD),
+                raw_spread_avg Nullable(Float64) CODEC(Gorilla, ZSTD),
+                standard_spread_avg Nullable(Float64) CODEC(Gorilla, ZSTD),
+                tick_count_raw_spread Nullable(UInt32) CODEC(T64, ZSTD),
+                tick_count_standard Nullable(UInt32) CODEC(T64, ZSTD),
+                range_per_spread Nullable(Float32) CODEC(Gorilla, ZSTD),
+                range_per_tick Nullable(Float32) CODEC(Gorilla, ZSTD),
+                body_per_spread Nullable(Float32) CODEC(Gorilla, ZSTD),
+                body_per_tick Nullable(Float32) CODEC(Gorilla, ZSTD),
+                ny_hour UInt8 CODEC(T64, ZSTD),
+                london_hour UInt8 CODEC(T64, ZSTD),
+                ny_session LowCardinality(String),
+                london_session LowCardinality(String),
+                is_us_holiday UInt8,
+                is_uk_holiday UInt8,
+                is_major_holiday UInt8,
+                is_nyse_session UInt8,
+                is_lse_session UInt8,
+                is_xswx_session UInt8,
+                is_xfra_session UInt8,
+                is_xtse_session UInt8,
+                is_xnze_session UInt8,
+                is_xtks_session UInt8,
+                is_xasx_session UInt8,
+                is_xhkg_session UInt8,
                 is_xses_session UInt8
-                    COMMENT 'Boolean: 1 if Singapore Exchange is open.'
             ) ENGINE = ReplacingMergeTree()
             PARTITION BY toYYYYMM(timestamp)
             ORDER BY (instrument, timestamp)
-            COMMENT 'Phase7 30-column OHLC bars at 1-minute resolution. BID-only prices from raw_spread_ticks. Supports on-demand resampling to 5m/1h/1d.'
+            COMMENT 'Phase7 30-column OHLC bars at 1-minute resolution. BID-only prices from raw_spread_ticks. Supports on-demand resampling to 5m/1h/1d. See /docs/DATABASE_SCHEMA.md for column details.'
             """,
         )
 
     def _create_exchange_sessions_table(self) -> None:
-        """Create exchange_sessions lookup table."""
+        """Create exchange_sessions lookup table.
+
+        Note: Using column COMMENTs only (no CODECs needed for small lookup table).
+        """
         execute_command(
             self.client,
             f"""
             CREATE TABLE IF NOT EXISTS {self.DATABASE}.exchange_sessions (
-                exchange_code LowCardinality(String)
-                    COMMENT 'Exchange MIC code (NYSE, LSE, XHKG, etc.). Primary key.',
-                name String
-                    COMMENT 'Full exchange name (e.g., New York Stock Exchange).',
-                timezone String
-                    COMMENT 'IANA timezone (e.g., America/New_York).',
-                open_hour UInt8
-                    COMMENT 'Market open hour in local timezone (0-23).',
-                open_minute UInt8
-                    COMMENT 'Market open minute (0-59). Usually 0 or 30.',
-                close_hour UInt8
-                    COMMENT 'Market close hour in local timezone (0-23).',
-                close_minute UInt8
-                    COMMENT 'Market close minute (0-59). Usually 0 or 30.'
+                exchange_code LowCardinality(String) COMMENT 'Exchange MIC code (NYSE, LSE, etc.)',
+                name String COMMENT 'Full exchange name',
+                timezone String COMMENT 'IANA timezone (e.g., America/New_York)',
+                open_hour UInt8 COMMENT 'Market open hour (0-23)',
+                open_minute UInt8 COMMENT 'Market open minute (0-59)',
+                close_hour UInt8 COMMENT 'Market close hour (0-23)',
+                close_minute UInt8 COMMENT 'Market close minute (0-59)'
             ) ENGINE = MergeTree()
             ORDER BY exchange_code
             COMMENT 'Exchange trading hours. ~10 rows. JOIN with ohlc_1m on is_*_session columns.'
@@ -236,17 +204,17 @@ class ClickHouseManager(ClickHouseClientMixin):
         )
 
     def _create_holidays_table(self) -> None:
-        """Create holidays lookup table."""
+        """Create holidays lookup table.
+
+        Note: Using column COMMENTs only (no CODECs needed for small lookup table).
+        """
         execute_command(
             self.client,
             f"""
             CREATE TABLE IF NOT EXISTS {self.DATABASE}.holidays (
-                date Date
-                    COMMENT 'Holiday date. Part of composite primary key.',
-                exchange_code LowCardinality(String)
-                    COMMENT 'Exchange MIC code. FK: exchange_sessions.exchange_code.',
-                holiday_name String
-                    COMMENT 'Holiday name (e.g., Christmas Day, Independence Day).'
+                date Date COMMENT 'Holiday date',
+                exchange_code LowCardinality(String) COMMENT 'Exchange MIC code',
+                holiday_name String COMMENT 'Holiday name (e.g., Christmas Day)'
             ) ENGINE = MergeTree()
             ORDER BY (exchange_code, date)
             COMMENT 'Exchange holidays. ~1000 rows/year. JOIN with ohlc_1m on is_*_holiday columns.'
