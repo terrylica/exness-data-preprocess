@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/terrylica/exness-data-preprocess/compare/v1.0.0...v1.1.0) (2025-12-10)
+
+
+### Features
+
+* add ClickHouse E2E validation pipeline with pagination API ([2ec7325](https://github.com/terrylica/exness-data-preprocess/commit/2ec7325905459f3073e591af4f800b942de9a099))
+
 # [1.0.0](https://github.com/terrylica/exness-data-preprocess/compare/v0.8.0...v1.0.0) (2025-12-10)
 
 
