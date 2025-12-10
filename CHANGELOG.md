@@ -1,3 +1,28 @@
+# [1.0.0](https://github.com/terrylica/exness-data-preprocess/compare/v0.8.0...v1.0.0) (2025-12-10)
+
+
+* feat!: prune codebase - remove unused deps, archive docs, extract mixin ([e0d48b8](https://github.com/terrylica/exness-data-preprocess/commit/e0d48b8fe7ba44d2c3bc326661102a0b3d3b33b7))
+
+
+### BREAKING CHANGES
+
+* Remove deprecated api.py and cli.py modules
+
+Dependency cleanup:
+- Remove httpx, pyarrow, polars (unused)
+- Move tqdm to optional [examples] extra
+- Consolidate dev dependencies to [dependency-groups]
+
+Documentation archival:
+- Archive 20 planning/research docs to docs/archive/
+- Update .gitignore for node_modules, lychee patterns
+
+Code refactoring:
+- Extract ClickHouseClientMixin from 4 modules (~45 lines saved)
+- Delete api.py (304 lines) and cli.py (252 lines)
+
+ADR: docs/adr/2025-12-09-codebase-pruning.md
+
 # [0.8.0](https://github.com/terrylica/exness-data-preprocess/compare/v0.7.2...v0.8.0) (2025-12-10)
 
 ### Features
