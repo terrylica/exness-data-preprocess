@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/terrylica/exness-data-preprocess/compare/v1.1.0...v1.2.0) (2025-12-10)
+
+
+### Bug Fixes
+
+* **clickhouse:** resolve E2E validation bugs in schema and query engine ([5c618f7](https://github.com/terrylica/exness-data-preprocess/commit/5c618f717cadc23097e9fd11d2fed87947ecf25f))
+
+
+### Features
+
+* add DBeaver config generation with CLICKHOUSE_MODE support ([0e97618](https://github.com/terrylica/exness-data-preprocess/commit/0e9761818f137461623f744af92f0b1e98b3a797))
+
 # [1.1.0](https://github.com/terrylica/exness-data-preprocess/compare/v1.0.0...v1.1.0) (2025-12-10)
 
 
