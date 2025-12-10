@@ -1,10 +1,13 @@
 """
-Exness Data Preprocessing (v2.1.0)
+Exness Data Preprocessing (v2.2.0)
 
-Professional forex tick data preprocessing with unified single-file DuckDB storage.
+Professional forex tick data preprocessing with DuckDB (local) and ClickHouse (cloud) backends.
+
+ADR: /docs/adr/2025-12-09-exness-clickhouse-migration.md
 
 Architecture (v2.0.0+):
-- One DuckDB file per instrument (eurusd.duckdb, not monthly files)
+- DuckDB backend: One file per instrument (eurusd.duckdb) for local development
+- ClickHouse backend: Single-table design with instrument column for cloud deployment
 - Dual-variant storage (Raw_Spread + Standard) for Phase7 compliance
 - Incremental updates with automatic gap detection
 - Phase7 30-column OHLC schema (v1.6.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday tracking, and 10 global exchange sessions with trading hour detection
@@ -71,8 +74,19 @@ from exness_data_preprocess.models import (
 )
 from exness_data_preprocess.processor import ExnessDataProcessor
 
+# ClickHouse backend exports (v2.2.0)
+from exness_data_preprocess.clickhouse_client import (
+    ClickHouseConnectionError,
+    ClickHouseQueryError,
+    get_client as get_clickhouse_client,
+)
+from exness_data_preprocess.clickhouse_manager import ClickHouseManager
+from exness_data_preprocess.clickhouse_gap_detector import ClickHouseGapDetector
+from exness_data_preprocess.clickhouse_query_engine import ClickHouseQueryEngine
+from exness_data_preprocess.clickhouse_ohlc_generator import ClickHouseOHLCGenerator
+
 __all__ = [
-    # Main class
+    # Main class (DuckDB backend)
     "ExnessDataProcessor",
     # Pydantic models
     "UpdateResult",
@@ -86,6 +100,14 @@ __all__ = [
     "supported_pairs",
     "supported_timeframes",
     "supported_variants",
+    # ClickHouse backend (v2.2.0)
+    "ClickHouseManager",
+    "ClickHouseGapDetector",
+    "ClickHouseQueryEngine",
+    "ClickHouseOHLCGenerator",
+    "ClickHouseConnectionError",
+    "ClickHouseQueryError",
+    "get_clickhouse_client",
     # Package metadata
     "__version__",
 ]
