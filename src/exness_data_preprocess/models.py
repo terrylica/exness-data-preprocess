@@ -361,6 +361,59 @@ class CoverageInfo(BaseModel):
     }
 
 
+class CursorResult(BaseModel):
+    """
+    Result from cursor-based pagination query.
+
+    ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
+
+    Used for memory-efficient pagination through large tick datasets.
+    The cursor is an ISO 8601 timestamp marking the last row returned.
+
+    Attributes:
+        data: DataFrame containing the current page of results
+        next_cursor: ISO 8601 timestamp for the next page (None if no more data)
+        has_more: Whether more data is available after this page
+        page_size: Number of rows requested per page
+
+    Example:
+        >>> engine = ClickHouseQueryEngine()
+        >>> result = engine.query_ticks_paginated("EURUSD", page_size=10000)
+        >>> while result.has_more:
+        ...     process(result.data)
+        ...     result = engine.query_ticks_paginated("EURUSD", cursor=result.next_cursor)
+    """
+
+    data: object = Field(
+        description="DataFrame containing the current page of results (pd.DataFrame)"
+    )
+    next_cursor: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 timestamp to pass for next page (None if no more data)"
+    )
+    has_more: bool = Field(
+        description="Whether more data is available after this page"
+    )
+    page_size: int = Field(
+        ge=1,
+        description="Number of rows requested per page"
+    )
+
+    model_config = {
+        "arbitrary_types_allowed": True,  # Allow pd.DataFrame
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": "<DataFrame with 10000 rows>",
+                    "next_cursor": "2024-08-01 12:30:45.123456+00:00",
+                    "has_more": True,
+                    "page_size": 10000
+                }
+            ]
+        }
+    }
+
+
 class DryRunResult(BaseModel):
     """
     Result from dry-run mode (preview without executing).

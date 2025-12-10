@@ -1,7 +1,7 @@
 🔍 Scanning for non-repo-relative paths in: /Users/terryli/eon/exness-data-preprocess
    Violations: paths not starting with / or http(s)
 
-❌ Found 141 violation(s):
+❌ Found 140 violation(s):
 
 /Users/terryli/eon/exness-data-preprocess/README.md:112:- **Column Definitions**: See [`schema.py`](src/exness_data_preprocess/schema.py) - Single source of truth
 /Users/terryli/eon/exness-data-preprocess/README.md:113:- **Comprehensive Reference**: See [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) - Query examples and usage patterns
@@ -54,7 +54,7 @@
 /Users/terryli/eon/exness-data-preprocess/docs/DATABASE_SCHEMA.md:244:**Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
 /Users/terryli/eon/exness-data-preprocess/docs/DATABASE_SCHEMA.md:258:**Architecture**: Exchange Registry Pattern (v1.6.0) - Session columns dynamically generated from centralized EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
 
-... and 91 more (showing first 50)
+... and 90 more (showing first 50)
 
 📝 Fix: Convert relative paths to repo-relative paths starting with /
    WRONG: [Link](../docs/foo.md)

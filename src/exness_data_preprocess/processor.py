@@ -149,7 +149,6 @@ class ExnessDataProcessor:
             False to propagate exceptions (standard behavior)
         """
         # Clean up any temporary files
-        import shutil
         if self.temp_dir.exists():
             try:
                 # Remove old temp files (keep directory structure)
@@ -419,7 +418,7 @@ class ExnessDataProcessor:
             print(f"  Raw_Spread:      {estimated_raw:,}")
             print(f"  Standard:        {estimated_std:,}")
             print(f"Estimated size:    {estimated_size:.1f} MB")
-            print(f"\nMonths to download:")
+            print("\nMonths to download:")
             for gap in gap_month_strings[:10]:  # Show first 10
                 print(f"  {gap}")
             if len(gap_month_strings) > 10:

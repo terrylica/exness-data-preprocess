@@ -16,7 +16,8 @@ Handles:
 - Parameterized queries for safe, efficient access
 """
 
-from typing import Literal
+
+from collections.abc import Iterator
 
 import pandas as pd
 from clickhouse_connect.driver import Client
@@ -26,7 +27,13 @@ from exness_data_preprocess.clickhouse_client import (
     ClickHouseQueryError,
     execute_query,
 )
-from exness_data_preprocess.models import CoverageInfo, PairType, TimeframeType, VariantType
+from exness_data_preprocess.models import (
+    CoverageInfo,
+    CursorResult,
+    PairType,
+    TimeframeType,
+    VariantType,
+)
 
 
 class ClickHouseQueryEngine(ClickHouseClientMixin):
@@ -64,9 +71,12 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         start_date: str | None = None,
         end_date: str | None = None,
         limit: int | None = None,
+        offset: int | None = None,
     ) -> pd.DataFrame:
         """
-        Query tick data with optional date range filtering.
+        Query tick data with optional date range filtering and pagination.
+
+        ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
 
         Args:
             instrument: Instrument symbol (e.g., "EURUSD")
@@ -74,6 +84,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             start_date: Start date (YYYY-MM-DD), inclusive
             end_date: End date (YYYY-MM-DD), inclusive
             limit: Maximum number of rows to return
+            offset: Number of rows to skip (for pagination)
 
         Returns:
             DataFrame with tick data (timestamp, bid, ask)
@@ -87,6 +98,9 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             >>> df = engine.query_ticks("EURUSD", start_date="2024-01-01", end_date="2024-12-31")
             >>> # Query Standard ticks with limit
             >>> df = engine.query_ticks("EURUSD", variant="standard", limit=1000)
+            >>> # Paginate through results
+            >>> page1 = engine.query_ticks("EURUSD", limit=1000, offset=0)
+            >>> page2 = engine.query_ticks("EURUSD", limit=1000, offset=1000)
         """
         table_name = f"{variant}_ticks"
         instrument = instrument.upper()
@@ -104,6 +118,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
 
         where_sql = " AND ".join(where_parts)
         limit_sql = f"LIMIT {limit}" if limit else ""
+        offset_sql = f"OFFSET {offset}" if offset else ""
 
         query = f"""
             SELECT timestamp, bid, ask
@@ -111,6 +126,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             WHERE {where_sql}
             ORDER BY timestamp
             {limit_sql}
+            {offset_sql}
         """
 
         result = execute_query(self.client, query, parameters=params)
@@ -125,9 +141,13 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         timeframe: TimeframeType = "1m",
         start_date: str | None = None,
         end_date: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> pd.DataFrame:
         """
-        Query OHLC data with optional date range filtering and resampling.
+        Query OHLC data with optional date range filtering, resampling, and pagination.
+
+        ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
 
         Uses parameterized view pattern for on-demand resampling.
 
@@ -136,6 +156,8 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             timeframe: Timeframe (1m, 5m, 15m, 30m, 1h, 4h, 1d)
             start_date: Start date (YYYY-MM-DD), inclusive
             end_date: End date (YYYY-MM-DD), inclusive
+            limit: Maximum number of rows to return
+            offset: Number of rows to skip (for pagination)
 
         Returns:
             DataFrame with OHLC data
@@ -150,6 +172,8 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             >>> df = engine.query_ohlc("EURUSD", timeframe="1m", start_date="2024-01-01", end_date="2024-01-31")
             >>> # Query 1h OHLC (on-demand resampling)
             >>> df = engine.query_ohlc("EURUSD", timeframe="1h", start_date="2024-01-01")
+            >>> # Paginate through results
+            >>> page1 = engine.query_ohlc("EURUSD", limit=1000, offset=0)
         """
         instrument = instrument.upper()
 
@@ -181,6 +205,8 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)
+        limit_sql = f"LIMIT {limit}" if limit else ""
+        offset_sql = f"OFFSET {offset}" if offset else ""
 
         if timeframe == "1m":
             # Direct query for 1m data
@@ -189,6 +215,8 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
                 FROM {self.DATABASE}.ohlc_1m
                 WHERE {where_sql}
                 ORDER BY timestamp
+                {limit_sql}
+                {offset_sql}
             """
         else:
             # On-demand resampling using toStartOfInterval
@@ -238,6 +266,8 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
                 WHERE {where_sql}
                 GROUP BY toStartOfInterval(timestamp, INTERVAL {{minutes:UInt32}} MINUTE)
                 ORDER BY timestamp
+                {limit_sql}
+                {offset_sql}
             """
 
         result = execute_query(self.client, query, parameters=params)
@@ -360,3 +390,153 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             f"SELECT DISTINCT instrument FROM {self.DATABASE}.raw_spread_ticks ORDER BY instrument",
         )
         return [row[0] for row in result.result_rows]
+
+    def query_ticks_paginated(
+        self,
+        instrument: PairType = "EURUSD",
+        variant: VariantType = "raw_spread",
+        cursor: str | None = None,
+        page_size: int = 100_000,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> CursorResult:
+        """
+        Query tick data with cursor-based pagination.
+
+        ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
+
+        More efficient than OFFSET for large datasets because it uses timestamp
+        as cursor instead of row counting.
+
+        Args:
+            instrument: Instrument symbol (e.g., "EURUSD")
+            variant: "raw_spread" or "standard"
+            cursor: ISO 8601 timestamp to start from (exclusive), None for first page
+            page_size: Number of rows per page (default: 100,000)
+            start_date: Start date filter (YYYY-MM-DD), inclusive
+            end_date: End date filter (YYYY-MM-DD), inclusive
+
+        Returns:
+            CursorResult with data, next_cursor, has_more, and page_size
+
+        Example:
+            >>> engine = ClickHouseQueryEngine()
+            >>> result = engine.query_ticks_paginated("EURUSD", page_size=10000)
+            >>> print(f"Got {len(result.data)} rows, has_more={result.has_more}")
+            >>> if result.has_more:
+            ...     next_page = engine.query_ticks_paginated("EURUSD", cursor=result.next_cursor)
+        """
+        table_name = f"{variant}_ticks"
+        instrument = instrument.upper()
+
+        # Build WHERE clauses
+        where_parts = ["instrument = {instrument:String}"]
+        params: dict = {"instrument": instrument}
+
+        if cursor:
+            where_parts.append("timestamp > {cursor:DateTime64}")
+            params["cursor"] = cursor
+        if start_date:
+            where_parts.append("timestamp >= {start_date:DateTime64}")
+            params["start_date"] = start_date
+        if end_date:
+            where_parts.append("timestamp <= {end_date:DateTime64}")
+            params["end_date"] = end_date
+
+        where_sql = " AND ".join(where_parts)
+
+        # Fetch page_size + 1 to detect if there's more data
+        query = f"""
+            SELECT timestamp, bid, ask
+            FROM {self.DATABASE}.{table_name}
+            WHERE {where_sql}
+            ORDER BY timestamp
+            LIMIT {page_size + 1}
+        """
+
+        result = execute_query(self.client, query, parameters=params)
+
+        if hasattr(result, "result_set"):
+            df = result.result_set.to_pandas()
+        else:
+            df = pd.DataFrame(result.result_rows, columns=["timestamp", "bid", "ask"])
+
+        # Check if there's more data
+        has_more = len(df) > page_size
+        if has_more:
+            df = df.iloc[:page_size]  # Trim to page_size
+
+        # Get next cursor from last timestamp
+        next_cursor = None
+        if has_more and len(df) > 0:
+            last_ts = df.iloc[-1]["timestamp"]
+            next_cursor = str(last_ts)
+
+        return CursorResult(
+            data=df,
+            next_cursor=next_cursor,
+            has_more=has_more,
+            page_size=page_size,
+        )
+
+    def query_ticks_batches(
+        self,
+        instrument: PairType = "EURUSD",
+        variant: VariantType = "raw_spread",
+        batch_size: int = 100_000,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        max_batches: int | None = None,
+    ) -> Iterator[pd.DataFrame]:
+        """
+        Iterate through tick data in memory-efficient batches.
+
+        ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
+
+        Uses cursor-based pagination internally to avoid loading entire dataset
+        into memory. Each batch is yielded and can be garbage collected after
+        processing.
+
+        Args:
+            instrument: Instrument symbol (e.g., "EURUSD")
+            variant: "raw_spread" or "standard"
+            batch_size: Number of rows per batch (default: 100,000 = ~8MB)
+            start_date: Start date filter (YYYY-MM-DD), inclusive
+            end_date: End date filter (YYYY-MM-DD), inclusive
+            max_batches: Maximum number of batches to yield (None = unlimited)
+
+        Yields:
+            DataFrame batches of tick data
+
+        Example:
+            >>> engine = ClickHouseQueryEngine()
+            >>> for batch in engine.query_ticks_batches("EURUSD", batch_size=50000):
+            ...     process(batch)  # ~4MB per batch
+            ...     # Batch garbage collected after loop iteration
+        """
+        cursor = None
+        batch_count = 0
+
+        while True:
+            result = self.query_ticks_paginated(
+                instrument=instrument,
+                variant=variant,
+                cursor=cursor,
+                page_size=batch_size,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            if len(result.data) == 0:
+                break
+
+            yield result.data
+            batch_count += 1
+
+            if max_batches is not None and batch_count >= max_batches:
+                break
+
+            if not result.has_more:
+                break
+
+            cursor = result.next_cursor

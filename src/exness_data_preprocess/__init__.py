@@ -61,8 +61,21 @@ __version__ = "1.0.0"
 __author__ = "Terry Li <terry@eonlabs.com>"
 __license__ = "MIT"
 
+# ClickHouse backend exports (v2.2.0)
+from exness_data_preprocess.clickhouse_client import (
+    ClickHouseConnectionError,
+    ClickHouseQueryError,
+)
+from exness_data_preprocess.clickhouse_client import (
+    get_client as get_clickhouse_client,
+)
+from exness_data_preprocess.clickhouse_gap_detector import ClickHouseGapDetector
+from exness_data_preprocess.clickhouse_manager import ClickHouseManager
+from exness_data_preprocess.clickhouse_ohlc_generator import ClickHouseOHLCGenerator
+from exness_data_preprocess.clickhouse_query_engine import ClickHouseQueryEngine
 from exness_data_preprocess.models import (
     CoverageInfo,
+    CursorResult,
     DryRunResult,
     PairType,
     TimeframeType,
@@ -74,23 +87,13 @@ from exness_data_preprocess.models import (
 )
 from exness_data_preprocess.processor import ExnessDataProcessor
 
-# ClickHouse backend exports (v2.2.0)
-from exness_data_preprocess.clickhouse_client import (
-    ClickHouseConnectionError,
-    ClickHouseQueryError,
-    get_client as get_clickhouse_client,
-)
-from exness_data_preprocess.clickhouse_manager import ClickHouseManager
-from exness_data_preprocess.clickhouse_gap_detector import ClickHouseGapDetector
-from exness_data_preprocess.clickhouse_query_engine import ClickHouseQueryEngine
-from exness_data_preprocess.clickhouse_ohlc_generator import ClickHouseOHLCGenerator
-
 __all__ = [
     # Main class (DuckDB backend)
     "ExnessDataProcessor",
     # Pydantic models
     "UpdateResult",
     "CoverageInfo",
+    "CursorResult",
     "DryRunResult",
     # Type definitions
     "PairType",

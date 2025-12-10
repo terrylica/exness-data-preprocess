@@ -24,7 +24,6 @@ from clickhouse_connect.driver import Client
 
 from exness_data_preprocess.clickhouse_base import ClickHouseClientMixin
 from exness_data_preprocess.clickhouse_client import (
-    ClickHouseQueryError,
     execute_command,
     execute_query,
 )

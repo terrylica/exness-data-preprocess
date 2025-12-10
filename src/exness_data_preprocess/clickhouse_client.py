@@ -23,7 +23,6 @@ from typing import Any
 import clickhouse_connect
 from clickhouse_connect.driver import Client
 
-
 # Connection defaults
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8123

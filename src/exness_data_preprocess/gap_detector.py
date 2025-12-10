@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import List, Tuple
 
 import duckdb
-import pandas as pd
 
 
 class GapDetector:
