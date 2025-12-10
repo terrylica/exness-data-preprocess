@@ -55,11 +55,6 @@
 
 ### Implementation Architecture v1.7.0
 
-**Refactoring Plans**:
-
-- [`plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md`](plans/PHASE7_v1.6.0_REFACTORING_PROGRESS.md) - Complete refactoring progress
-- [`plans/REFACTORING_CHECKLIST.md`](plans/REFACTORING_CHECKLIST.md) - Quick reference checklist
-
 **Pattern**: Facade with 7 specialized modules
 
 **Key Modules**:
@@ -261,5 +256,11 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ---
 
-**Last Updated**: 2025-10-18
+## Archived Documentation
+
+Historical planning, research, and completed phase documents are archived in [`archive/`](archive/).
+
+---
+
+**Last Updated**: 2025-12-09
 **Maintainer**: Terry Li <terry@eonlabs.com>

@@ -22,17 +22,17 @@ Handles:
 import pandas as pd
 from clickhouse_connect.driver import Client
 
+from exness_data_preprocess.clickhouse_base import ClickHouseClientMixin
 from exness_data_preprocess.clickhouse_client import (
     ClickHouseQueryError,
     execute_command,
     execute_query,
-    get_client,
 )
 from exness_data_preprocess.exchanges import EXCHANGES
 from exness_data_preprocess.session_detector import SessionDetector
 
 
-class ClickHouseOHLCGenerator:
+class ClickHouseOHLCGenerator(ClickHouseClientMixin):
     """
     Generate Phase7 30-column OHLC from dual-variant tick data in ClickHouse.
 
@@ -61,21 +61,7 @@ class ClickHouseOHLCGenerator:
             client: Optional ClickHouse client (creates one if not provided)
         """
         self.session_detector = session_detector
-        self._client = client
-        self._owns_client = client is None
-
-    @property
-    def client(self) -> Client:
-        """Get or create ClickHouse client."""
-        if self._client is None:
-            self._client = get_client()
-        return self._client
-
-    def close(self) -> None:
-        """Close client connection if we own it."""
-        if self._owns_client and self._client is not None:
-            self._client.close()
-            self._client = None
+        self._init_client(client)
 
     def regenerate_ohlc(
         self,

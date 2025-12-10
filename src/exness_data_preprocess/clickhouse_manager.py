@@ -25,15 +25,15 @@ Codec Selection (research-validated):
 import pandas as pd
 from clickhouse_connect.driver import Client
 
+from exness_data_preprocess.clickhouse_base import ClickHouseClientMixin
 from exness_data_preprocess.clickhouse_client import (
     ClickHouseQueryError,
     execute_command,
     execute_query,
-    get_client,
 )
 
 
-class ClickHouseManager:
+class ClickHouseManager(ClickHouseClientMixin):
     """
     Manage ClickHouse database schema and connections.
 
@@ -59,21 +59,7 @@ class ClickHouseManager:
         Args:
             client: Optional ClickHouse client (creates one if not provided)
         """
-        self._client = client
-        self._owns_client = client is None
-
-    @property
-    def client(self) -> Client:
-        """Get or create ClickHouse client."""
-        if self._client is None:
-            self._client = get_client()
-        return self._client
-
-    def close(self) -> None:
-        """Close client connection if we own it."""
-        if self._owns_client and self._client is not None:
-            self._client.close()
-            self._client = None
+        self._init_client(client)
 
     def ensure_schema(self) -> None:
         """

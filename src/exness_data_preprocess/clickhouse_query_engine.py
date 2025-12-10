@@ -21,15 +21,15 @@ from typing import Literal
 import pandas as pd
 from clickhouse_connect.driver import Client
 
+from exness_data_preprocess.clickhouse_base import ClickHouseClientMixin
 from exness_data_preprocess.clickhouse_client import (
     ClickHouseQueryError,
     execute_query,
-    get_client,
 )
 from exness_data_preprocess.models import CoverageInfo, PairType, TimeframeType, VariantType
 
 
-class ClickHouseQueryEngine:
+class ClickHouseQueryEngine(ClickHouseClientMixin):
     """
     Query tick and OHLC data from ClickHouse.
 
@@ -55,21 +55,7 @@ class ClickHouseQueryEngine:
         Args:
             client: Optional ClickHouse client (creates one if not provided)
         """
-        self._client = client
-        self._owns_client = client is None
-
-    @property
-    def client(self) -> Client:
-        """Get or create ClickHouse client."""
-        if self._client is None:
-            self._client = get_client()
-        return self._client
-
-    def close(self) -> None:
-        """Close client connection if we own it."""
-        if self._owns_client and self._client is not None:
-            self._client.close()
-            self._client = None
+        self._init_client(client)
 
     def query_ticks(
         self,

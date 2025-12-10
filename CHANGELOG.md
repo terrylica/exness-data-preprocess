@@ -1,9 +1,8 @@
 # [0.8.0](https://github.com/terrylica/exness-data-preprocess/compare/v0.7.2...v0.8.0) (2025-12-10)
 
-
 ### Features
 
-* add ClickHouse backend for cloud deployment ([c9b51a3](https://github.com/terrylica/exness-data-preprocess/commit/c9b51a3b374eea74375cc86afdd8cb9391fe73e8))
+- add ClickHouse backend for cloud deployment ([c9b51a3](https://github.com/terrylica/exness-data-preprocess/commit/c9b51a3b374eea74375cc86afdd8cb9391fe73e8))
 
 # Changelog
 

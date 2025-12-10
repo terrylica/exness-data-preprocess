@@ -100,3 +100,10 @@ uv.lock
 # Pre-commit
 # .pre-commit-config.yaml should be tracked, not ignored
 .token-info.md
+
+# Node.js (semantic-release)
+node_modules/
+
+# Link checking (lychee)
+.lychee*
+.lycheecache
