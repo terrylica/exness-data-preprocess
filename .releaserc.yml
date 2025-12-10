@@ -1,0 +1,22 @@
+# semantic-release configuration for Python project
+# Uses @semantic-release/exec instead of @semantic-release/npm
+branches:
+  - main
+
+plugins:
+  - "@semantic-release/commit-analyzer"
+  - "@semantic-release/release-notes-generator"
+  - "@semantic-release/changelog"
+  - - "@semantic-release/exec"
+    - prepareCmd: |
+        # Update version in pyproject.toml
+        sed -i '' 's/^version = ".*"/version = "${nextRelease.version}"/' pyproject.toml
+        # Update version in __init__.py
+        sed -i '' 's/^__version__ = ".*"/__version__ = "${nextRelease.version}"/' src/exness_data_preprocess/__init__.py
+  - - "@semantic-release/git"
+    - assets:
+        - pyproject.toml
+        - src/exness_data_preprocess/__init__.py
+        - CHANGELOG.md
+      message: "chore(release): bump version ${lastRelease.version} → ${nextRelease.version} [skip ci]"
+  - "@semantic-release/github"
