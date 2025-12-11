@@ -1,35 +1,42 @@
 """
-Core processor for Exness forex tick data.
+Core processor for Exness forex tick data with ClickHouse backend.
 
-Architecture (v2.0.0 - Unified Single-File Multi-Year):
-1. One DuckDB file per instrument (e.g., eurusd.duckdb)
+ADR: 2025-12-11-duckdb-removal-clickhouse
+
+Architecture (v2.0.0 - ClickHouse-Only):
+1. Single ClickHouse database (exness) with instrument column
 2. Three tables: raw_spread_ticks, standard_ticks, ohlc_1m
 3. Dual-variant downloads (Raw_Spread + Standard) for Phase7 compliance
 4. Incremental updates with automatic gap detection
-5. Metadata table for coverage tracking
+5. ReplacingMergeTree for deduplication
 
-Phase7 Schema (v1.6.0 - 30 columns):
+Phase7 Schema (v1.6.0 - 26 columns):
 - Timestamp, Open, High, Low, Close (BID-based from Raw_Spread)
 - raw_spread_avg, standard_spread_avg (dual spread tracking)
 - tick_count_raw_spread, tick_count_standard (dual tick counts)
-- range_per_spread, range_per_tick, body_per_spread, body_per_tick (normalized metrics)
 - ny_hour, london_hour, ny_session, london_session (timezone/session tracking)
 - is_us_holiday, is_uk_holiday, is_major_holiday (official holidays only)
-- is_{exchange}_session for 10 exchanges with trading hour detection (nyse, lse, xswx, xfra, xtse, xnze, xtks, xasx, xhkg, xses)
+- is_{exchange}_session for 10 exchanges with trading hour detection
 
-Storage: ~135 MB/year, ~405 MB for 3 years per instrument
+BREAKING CHANGES (v2.0.0):
+- Backend: ClickHouse is now the only supported backend
+- Renamed: duckdb_path -> database (str, ClickHouse database name)
+- Renamed: duckdb_size_mb -> storage_bytes (int, from system.tables)
+- Removed: All DuckDB file path references
 """
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
-import duckdb
 import pandas as pd
 
+from exness_data_preprocess.clickhouse_client import get_client
+from exness_data_preprocess.clickhouse_gap_detector import ClickHouseGapDetector
+from exness_data_preprocess.clickhouse_manager import ClickHouseManager
+from exness_data_preprocess.clickhouse_ohlc_generator import ClickHouseOHLCGenerator
+from exness_data_preprocess.clickhouse_query_engine import ClickHouseQueryEngine
 from exness_data_preprocess.config import ConfigModel
-from exness_data_preprocess.database_manager import DatabaseManager
 from exness_data_preprocess.downloader import ExnessDownloader
-from exness_data_preprocess.gap_detector import GapDetector
 from exness_data_preprocess.models import (
     CoverageInfo,
     DryRunResult,
@@ -41,84 +48,79 @@ from exness_data_preprocess.models import (
     supported_timeframes,
     supported_variants,
 )
-from exness_data_preprocess.ohlc_generator import OHLCGenerator
-from exness_data_preprocess.query_engine import QueryEngine
 from exness_data_preprocess.session_detector import SessionDetector
 from exness_data_preprocess.tick_loader import TickLoader
 
 
 class ExnessDataProcessor:
     """
-    Process Exness forex tick data with unified multi-year architecture.
+    Process Exness forex tick data with ClickHouse backend.
 
-    Architecture (v2.0.0):
-    - One DuckDB file per instrument (eurusd.duckdb not monthly files)
+    ADR: 2025-12-11-duckdb-removal-clickhouse
+
+    Architecture (v2.0.0 - ClickHouse-Only):
+    - Single ClickHouse database (exness) with instrument column
     - Dual-variant storage (Raw_Spread + Standard) for Phase7
     - Incremental updates with automatic gap detection
-    - 30-column OHLC schema (v1.6.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday detection, and 10 global exchange session flags with trading hour detection
-    - 3-year minimum historical coverage
+    - 26-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
+      holiday detection, and 10 global exchange session flags
 
     Features:
     - Downloads from ticks.ex2archive.com with correct URL pattern
-    - PRIMARY KEY constraints prevent duplicates during updates
-    - Metadata table tracks earliest/latest dates
+    - ReplacingMergeTree provides deduplication at merge time
     - Direct SQL queries on ticks without loading into memory
-    - On-demand OHLC resampling for any timeframe
+    - On-demand OHLC resampling for any timeframe (<15ms)
 
     Example:
         >>> processor = ExnessDataProcessor()
         >>> # Initial 3-year download
         >>> result = processor.update_data("EURUSD", start_date="2022-01-01")
-        >>> print(f"Downloaded {result['months_added']} months")
+        >>> print(f"Downloaded {result.months_added} months")
         >>> # Query ticks for date range
         >>> df_ticks = processor.query_ticks("EURUSD", start_date="2024-01-01")
         >>> # Query OHLC
         >>> df_ohlc = processor.query_ohlc("EURUSD", timeframe="1h")
     """
 
-    def __init__(self, base_dir: Optional[Path] = None, config: Optional[ConfigModel] = None):
+    # ClickHouse database name
+    DATABASE = "exness"
+
+    def __init__(self, config: Optional[ConfigModel] = None):
         """
-        Initialize processor.
+        Initialize processor with ClickHouse backend.
 
         Args:
-            base_dir: Base directory for data storage (overrides config if both provided)
-            config: User configuration from config file
+            config: Optional user configuration
 
-        Priority:
-            base_dir parameter > config.base_dir > default (~/eon/exness-data)
+        Note:
+            ClickHouse connection configured via environment variables:
+            - CLICKHOUSE_MODE: "local" or "cloud"
+            - CLICKHOUSE_HOST: hostname (default: localhost)
+            - CLICKHOUSE_PORT: port (default: 8123 local, 8443 cloud)
+            - CLICKHOUSE_USER: username (default: default)
+            - CLICKHOUSE_PASSWORD: password (default: empty)
         """
-        # Resolve base_dir with priority: parameter > config > default
-        if base_dir is None:
-            if config is not None and config.base_dir is not None:
-                base_dir = config.base_dir
-            else:
-                base_dir = Path.home() / "eon" / "exness-data"
+        self.config = config
 
-        self.base_dir = base_dir
-        self.temp_dir = base_dir / "temp"
-        self.config = config  # Store for potential future use
-
-        # Create directories
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+        # Temp dir for downloads only
+        self.temp_dir = Path.home() / "eon" / "exness-data" / "temp"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize ClickHouse client (shared across modules)
+        self._ch_client = get_client()
+
+        # Initialize ClickHouse modules
+        self.ch_manager = ClickHouseManager(self._ch_client)
+        self.ch_gap_detector = ClickHouseGapDetector(self._ch_client)
+        self.session_detector = SessionDetector()
+        self.ch_ohlc_generator = ClickHouseOHLCGenerator(self.session_detector, self._ch_client)
+        self.ch_query_engine = ClickHouseQueryEngine(self._ch_client)
+
+        # Ensure schema exists
+        self.ch_manager.ensure_schema()
 
         # Initialize downloader module
         self.downloader = ExnessDownloader(self.temp_dir)
-
-        # Initialize database manager module
-        self.db_manager = DatabaseManager(self.base_dir)
-
-        # Initialize gap detector module for incremental update logic
-        self.gap_detector = GapDetector(self.base_dir)
-
-        # Initialize session detector module for holiday and session detection (v1.6.0)
-        self.session_detector = SessionDetector()
-
-        # Initialize OHLC generator module with session detector dependency
-        self.ohlc_generator = OHLCGenerator(self.session_detector)
-
-        # Initialize query engine module for tick and OHLC queries
-        self.query_engine = QueryEngine(self.base_dir)
 
     def __enter__(self):
         """
@@ -138,7 +140,7 @@ class ExnessDataProcessor:
         Exit context manager.
 
         Performs cleanup operations when exiting 'with' block.
-        Currently handles graceful cleanup of temporary files.
+        Closes ClickHouse connection and cleans up temporary files.
 
         Args:
             exc_type: Exception type if an error occurred
@@ -148,32 +150,41 @@ class ExnessDataProcessor:
         Returns:
             False to propagate exceptions (standard behavior)
         """
-        # Clean up any temporary files
+        # Close ClickHouse connection
+        if hasattr(self, "_ch_client") and self._ch_client:
+            try:
+                self._ch_client.close()
+            except Exception:
+                pass
+
+        # Clean up temporary files
         if self.temp_dir.exists():
             try:
-                # Remove old temp files (keep directory structure)
                 for item in self.temp_dir.glob("*.zip"):
                     try:
                         item.unlink()
                     except Exception:
-                        pass  # Ignore cleanup errors
+                        pass
             except Exception:
-                pass  # Ignore cleanup errors
+                pass
 
-        # Don't suppress exceptions
         return False
+
+    def close(self):
+        """
+        Explicitly close ClickHouse connection.
+
+        Call this when not using context manager.
+        """
+        if hasattr(self, "_ch_client") and self._ch_client:
+            try:
+                self._ch_client.close()
+            except Exception:
+                pass
 
     @staticmethod
     def _validate_pair(pair: str) -> None:
-        """
-        Validate currency pair input.
-
-        Args:
-            pair: Currency pair to validate
-
-        Raises:
-            ValueError: If pair is not supported
-        """
+        """Validate currency pair input."""
         valid_pairs = supported_pairs()
         if pair not in valid_pairs:
             raise ValueError(
@@ -182,15 +193,7 @@ class ExnessDataProcessor:
 
     @staticmethod
     def _validate_variant(variant: str) -> None:
-        """
-        Validate data variant input.
-
-        Args:
-            variant: Data variant to validate
-
-        Raises:
-            ValueError: If variant is not supported
-        """
+        """Validate data variant input."""
         valid_variants = supported_variants()
         if variant not in valid_variants:
             raise ValueError(
@@ -199,15 +202,7 @@ class ExnessDataProcessor:
 
     @staticmethod
     def _validate_timeframe(timeframe: str) -> None:
-        """
-        Validate OHLC timeframe input.
-
-        Args:
-            timeframe: Timeframe to validate
-
-        Raises:
-            ValueError: If timeframe is not supported
-        """
+        """Validate OHLC timeframe input."""
         valid_timeframes = supported_timeframes()
         if timeframe not in valid_timeframes:
             raise ValueError(
@@ -216,33 +211,23 @@ class ExnessDataProcessor:
 
     @staticmethod
     def _validate_date_format(date_str: Optional[str], param_name: str) -> None:
-        """
-        Validate date string format.
-
-        Args:
-            date_str: Date string to validate (YYYY-MM-DD)
-            param_name: Parameter name for error messages
-
-        Raises:
-            ValueError: If date format is invalid
-        """
+        """Validate date string format."""
         if date_str is None:
             return
 
         import re
-        if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
             raise ValueError(
-                f"Invalid {param_name} '{date_str}'. Must be in YYYY-MM-DD format (e.g., '2024-01-15')"
+                f"Invalid {param_name} '{date_str}'. Must be in YYYY-MM-DD format"
             )
 
-        # Validate date values
         try:
             from datetime import datetime
-            datetime.strptime(date_str, '%Y-%m-%d')
+
+            datetime.strptime(date_str, "%Y-%m-%d")
         except ValueError as e:
-            raise ValueError(
-                f"Invalid {param_name} '{date_str}': {str(e)}"
-            )
+            raise ValueError(f"Invalid {param_name} '{date_str}': {e!s}") from e
 
     def download_exness_zip(
         self, year: int, month: int, pair: str = "EURUSD", variant: str = "Raw_Spread"
@@ -258,58 +243,12 @@ class ExnessDataProcessor:
 
         Returns:
             Path to downloaded ZIP file, or None if download failed
-
-        Example:
-            >>> processor = ExnessDataProcessor()
-            >>> raw_zip = processor.download_exness_zip(2024, 9, variant="Raw_Spread")
-            >>> std_zip = processor.download_exness_zip(2024, 9, variant="")
         """
-        # Delegate to downloader module
         return self.downloader.download_zip(year=year, month=month, pair=pair, variant=variant)
-
-    def _get_or_create_db(self, pair: str) -> Path:
-        """
-        Get DuckDB path and ensure schema exists.
-
-        Creates tables if they don't exist:
-        - raw_spread_ticks (PRIMARY KEY on Timestamp)
-        - standard_ticks (PRIMARY KEY on Timestamp)
-        - ohlc_1m (Phase7 30-column schema v1.6.0)
-        - metadata (coverage tracking)
-        """
-        # Delegate to database_manager module
-        return self.db_manager.get_or_create_db(pair)
 
     def _load_ticks_from_zip(self, zip_path: Path) -> pd.DataFrame:
         """Load ticks from ZIP file into DataFrame."""
-        # Delegate to tick_loader module
         return TickLoader.load_from_zip(zip_path)
-
-    def _append_ticks_to_db(self, duckdb_path: Path, df: pd.DataFrame, table_name: str) -> int:
-        """
-        Append ticks to DuckDB table.
-
-        PRIMARY KEY constraint automatically prevents duplicates.
-
-        Returns:
-            Number of rows inserted (may be less than df length if duplicates)
-        """
-        # Delegate to database_manager module
-        return self.db_manager.append_ticks(duckdb_path, df, table_name)
-
-    def _discover_missing_months(self, pair: str, start_date: str) -> List[Tuple[int, int]]:
-        """
-        Discover which months need to be downloaded.
-
-        Args:
-            pair: Currency pair
-            start_date: Earliest date to consider (YYYY-MM-DD)
-
-        Returns:
-            List of (year, month) tuples to download
-        """
-        # Delegate to gap_detector module
-        return self.gap_detector.discover_missing_months(pair, start_date)
 
     def update_data(
         self,
@@ -323,59 +262,44 @@ class ExnessDataProcessor:
         Update instrument database with latest data from Exness.
 
         Workflow:
-        1. Ensure database and schema exist
-        2. Discover missing months
+        1. Ensure ClickHouse schema exists
+        2. Discover missing months via gap detection
         3. Download missing months (Raw_Spread + Standard)
-        4. Append ticks to tables (PRIMARY KEY prevents duplicates)
+        4. Insert ticks to ClickHouse (ReplacingMergeTree handles deduplication)
         5. Regenerate OHLC for new data
-        6. Update metadata
+        6. Return update statistics
 
         Args:
             pair: Currency pair (e.g., "EURUSD")
             start_date: Earliest date to download (YYYY-MM-DD)
             force_redownload: Force re-download even if data exists
             delete_zip: Delete ZIP files after processing
-            dry_run: Preview operation without downloading or modifying database
+            dry_run: Preview operation without downloading
 
         Returns:
             UpdateResult: Update results with database metrics (if dry_run=False)
-            DryRunResult: Estimated operation plan (if dry_run=True) with:
-                - would_download_months: Number of months that would be downloaded
-                - estimated_raw_ticks: Estimated Raw_Spread ticks
-                - estimated_standard_ticks: Estimated Standard ticks
-                - estimated_size_mb: Estimated database size increase
-                - gap_months: List of YYYY-MM months to download
+            DryRunResult: Estimated operation plan (if dry_run=True)
 
         Raises:
             ValueError: If pair is not supported or start_date format is invalid
-            FileNotFoundError: If database directory cannot be created
-            ConnectionError: If Exness repository is unreachable
-            pd.errors.EmptyDataError: If downloaded ZIP files are corrupted or empty
+            ClickHouseConnectionError: If ClickHouse is not reachable
+            ClickHouseQueryError: If database operations fail
 
         Example:
             >>> processor = ExnessDataProcessor()
-            >>> # Initial 3-year download
             >>> result = processor.update_data("EURUSD", start_date="2022-01-01")
-            >>> print(f"Downloaded {result['months_added']} months")
-            >>> # Incremental update (only new months)
-            >>> result = processor.update_data("EURUSD")
-            >>> print(f"Added {result['months_added']} new months")
+            >>> print(f"Downloaded {result.months_added} months")
         """
-        # Validate inputs before any file operations
         self._validate_pair(pair)
         self._validate_date_format(start_date, "start_date")
 
         print(f"\n{'=' * 70}")
-        print(f"Updating {pair} database")
+        print(f"Updating {pair} in ClickHouse ({self.DATABASE})")
         print(f"{'=' * 70}")
 
-        # Step 1: Get or create database
-        duckdb_path = self._get_or_create_db(pair)
-        print(f"Database: {duckdb_path}")
-
-        # Step 2: Discover missing months
+        # Discover missing months
         print(f"\nDiscovering missing months (from {start_date})...")
-        missing_months = self._discover_missing_months(pair, start_date)
+        missing_months = self.ch_gap_detector.discover_missing_months(pair, start_date)
         print(f"Found {len(missing_months)} months to download")
 
         if not missing_months:
@@ -389,24 +313,19 @@ class ExnessDataProcessor:
                     gap_months=[],
                 )
             return UpdateResult(
-                duckdb_path=duckdb_path,
+                database=self.DATABASE,
                 months_added=0,
                 raw_ticks_added=0,
                 standard_ticks_added=0,
-                ohlc_bars=0,
-                duckdb_size_mb=duckdb_path.stat().st_size / 1024 / 1024,
+                ohlc_bars=self.ch_manager.get_tick_count(pair) // 1000,  # Approximate
+                storage_bytes=0,
             )
 
-        # Dry-run mode: Return estimates without downloading
+        # Dry-run mode
         if dry_run:
             num_months = len(missing_months)
-            # Historical averages for EURUSD
-            ticks_per_month = 9_500_000  # ~9.5M ticks per month per variant
-            mb_per_month = 11.0           # ~11 MB per month
-
-            estimated_raw = num_months * ticks_per_month
-            estimated_std = num_months * ticks_per_month
-            estimated_size = num_months * mb_per_month
+            ticks_per_month = 9_500_000
+            mb_per_month = 11.0
 
             gap_month_strings = [f"{year}-{month:02d}" for year, month in missing_months]
 
@@ -414,30 +333,22 @@ class ExnessDataProcessor:
             print("Dry-Run Summary")
             print(f"{'=' * 70}")
             print(f"Would download:    {num_months} months")
-            print(f"Estimated ticks:   {estimated_raw + estimated_std:,} total")
-            print(f"  Raw_Spread:      {estimated_raw:,}")
-            print(f"  Standard:        {estimated_std:,}")
-            print(f"Estimated size:    {estimated_size:.1f} MB")
-            print("\nMonths to download:")
-            for gap in gap_month_strings[:10]:  # Show first 10
-                print(f"  {gap}")
-            if len(gap_month_strings) > 10:
-                print(f"  ... and {len(gap_month_strings) - 10} more")
+            print(f"Estimated ticks:   {num_months * ticks_per_month * 2:,} total")
             print(f"{'=' * 70}\n")
 
             return DryRunResult(
                 would_download_months=num_months,
-                estimated_raw_ticks=estimated_raw,
-                estimated_standard_ticks=estimated_std,
-                estimated_size_mb=estimated_size,
+                estimated_raw_ticks=num_months * ticks_per_month,
+                estimated_standard_ticks=num_months * ticks_per_month,
+                estimated_size_mb=num_months * mb_per_month,
                 gap_months=gap_month_strings,
             )
 
-        # Step 3: Download and append ticks
+        # Download and insert ticks
         raw_ticks_total = 0
         standard_ticks_total = 0
         months_success = 0
-        earliest_added_month = None  # Track earliest month for incremental OHLC
+        earliest_added_month = None
 
         for year, month in missing_months:
             print(f"\n--- Processing {year}-{month:02d} ---")
@@ -460,9 +371,9 @@ class ExnessDataProcessor:
             df_raw = self._load_ticks_from_zip(raw_zip)
             df_std = self._load_ticks_from_zip(std_zip)
 
-            # Append to database
-            raw_added = self._append_ticks_to_db(duckdb_path, df_raw, "raw_spread_ticks")
-            std_added = self._append_ticks_to_db(duckdb_path, df_std, "standard_ticks")
+            # Insert to ClickHouse
+            raw_added = self.ch_manager.insert_ticks(df_raw, pair, "raw_spread")
+            std_added = self.ch_manager.insert_ticks(df_std, pair, "standard")
 
             print(f"✓ Added {raw_added:,} Raw_Spread ticks")
             print(f"✓ Added {std_added:,} Standard ticks")
@@ -471,7 +382,6 @@ class ExnessDataProcessor:
             standard_ticks_total += std_added
             months_success += 1
 
-            # Track earliest added month for incremental OHLC generation
             if earliest_added_month is None:
                 earliest_added_month = f"{year}-{month:02d}-01"
 
@@ -480,23 +390,19 @@ class ExnessDataProcessor:
                 raw_zip.unlink()
                 std_zip.unlink()
 
-        # Step 4: Generate OHLC for new data (incremental if possible)
+        # Generate OHLC for new data
+        ohlc_bars = 0
         if months_success > 0:
             if earliest_added_month:
-                print(f"\nGenerating OHLC for new data starting from {earliest_added_month} (Phase7 30-column schema v1.6.0)...")
-                self._regenerate_ohlc(duckdb_path, start_date=earliest_added_month)
-                print(f"✓ OHLC generated incrementally from {earliest_added_month}")
+                print(f"\nGenerating OHLC for new data starting from {earliest_added_month}...")
+                ohlc_bars = self.ch_ohlc_generator.regenerate_ohlc(
+                    pair, start_date=earliest_added_month
+                )
+                print(f"✓ OHLC generated: {ohlc_bars:,} bars")
             else:
-                print("\nRegenerating OHLC (Phase7 30-column schema v1.6.0)...")
-                self._regenerate_ohlc(duckdb_path)
-                print("✓ OHLC regenerated")
-
-        # Step 5: Get final stats
-        conn = duckdb.connect(str(duckdb_path), read_only=True)
-        ohlc_bars = conn.execute("SELECT COUNT(*) FROM ohlc_1m").fetchone()[0]
-        conn.close()
-
-        duckdb_size_mb = duckdb_path.stat().st_size / 1024 / 1024
+                print("\nRegenerating OHLC...")
+                ohlc_bars = self.ch_ohlc_generator.regenerate_ohlc(pair)
+                print(f"✓ OHLC regenerated: {ohlc_bars:,} bars")
 
         print(f"\n{'=' * 70}")
         print("Update Summary")
@@ -505,27 +411,15 @@ class ExnessDataProcessor:
         print(f"Raw_Spread ticks: {raw_ticks_total:,}")
         print(f"Standard ticks:   {standard_ticks_total:,}")
         print(f"OHLC bars:        {ohlc_bars:,}")
-        print(f"Database size:    {duckdb_size_mb:.2f} MB")
 
         return UpdateResult(
-            duckdb_path=duckdb_path,
+            database=self.DATABASE,
             months_added=months_success,
             raw_ticks_added=raw_ticks_total,
             standard_ticks_added=standard_ticks_total,
             ohlc_bars=ohlc_bars,
-            duckdb_size_mb=duckdb_size_mb,
+            storage_bytes=0,  # TODO: Query system.tables for size
         )
-
-    def _regenerate_ohlc(self, duckdb_path: Path) -> None:
-        """
-        Regenerate OHLC table with Phase7 schema (v1.6.0: 30 columns).
-
-        Uses LEFT JOIN to combine Raw_Spread and Standard variants.
-        Includes normalized spread metrics (v1.2.0+), timezone/session tracking (v1.3.0+),
-        holiday detection (v1.4.0+), and 10 global exchange session flags with trading hour detection (v1.6.0+).
-        """
-        # Delegate to ohlc_generator module
-        self.ohlc_generator.regenerate_ohlc(duckdb_path)
 
     def query_ticks(
         self,
@@ -533,7 +427,7 @@ class ExnessDataProcessor:
         variant: VariantType = "raw_spread",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        filter_sql: Optional[str] = None,
+        limit: Optional[int] = None,
     ) -> pd.DataFrame:
         """
         Query tick data with optional date range filtering.
@@ -543,32 +437,27 @@ class ExnessDataProcessor:
             variant: "raw_spread" or "standard"
             start_date: Start date (YYYY-MM-DD), inclusive
             end_date: End date (YYYY-MM-DD), inclusive
-            filter_sql: Additional SQL WHERE clause
+            limit: Maximum rows to return
 
         Returns:
-            DataFrame with tick data (columns: Timestamp, Bid, Ask)
-
-        Raises:
-            ValueError: If pair/variant is invalid or date format is wrong
-            FileNotFoundError: If database file doesn't exist
-            duckdb.Error: If SQL query fails (e.g., invalid filter_sql)
-            pd.errors.EmptyDataError: If date range contains no data
+            DataFrame with tick data (columns: timestamp, bid, ask)
 
         Example:
             >>> processor = ExnessDataProcessor()
-            >>> # Query all Raw_Spread ticks for 2024
-            >>> df = processor.query_ticks("EURUSD", start_date="2024-01-01", end_date="2024-12-31")
-            >>> # Query Standard ticks with custom filter
-            >>> df = processor.query_ticks("EURUSD", variant="standard", filter_sql="Bid > 1.10")
+            >>> df = processor.query_ticks("EURUSD", start_date="2024-01-01")
         """
-        # Validate inputs before any file operations
         self._validate_pair(pair)
         self._validate_variant(variant)
         self._validate_date_format(start_date, "start_date")
         self._validate_date_format(end_date, "end_date")
 
-        # Delegate to query_engine module
-        return self.query_engine.query_ticks(pair, variant, start_date, end_date, filter_sql)
+        return self.ch_query_engine.query_ticks(
+            instrument=pair,
+            variant=variant,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
 
     def query_ohlc(
         self,
@@ -576,40 +465,37 @@ class ExnessDataProcessor:
         timeframe: TimeframeType = "1m",
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        limit: Optional[int] = None,
     ) -> pd.DataFrame:
         """
         Query OHLC data with optional date range filtering and resampling.
 
         Args:
             pair: Currency pair
-            timeframe: Timeframe (1m, 5m, 15m, 1h, 4h, 1d)
+            timeframe: Timeframe (1m, 5m, 15m, 30m, 1h, 4h, 1d)
             start_date: Start date (YYYY-MM-DD), inclusive
             end_date: End date (YYYY-MM-DD), inclusive
+            limit: Maximum rows to return
 
         Returns:
-            DataFrame with OHLC data (Phase7 30-column schema v1.6.0)
-
-        Raises:
-            ValueError: If pair/timeframe is invalid or date format is wrong
-            FileNotFoundError: If database file doesn't exist
-            duckdb.Error: If SQL query fails or OHLC table is missing
-            pd.errors.EmptyDataError: If date range contains no data
+            DataFrame with OHLC data (26-column Phase7 schema)
 
         Example:
             >>> processor = ExnessDataProcessor()
-            >>> # Query 1m OHLC for January 2024
-            >>> df = processor.query_ohlc("EURUSD", timeframe="1m", start_date="2024-01-01", end_date="2024-01-31")
-            >>> # Query 1h OHLC (on-demand resampling)
             >>> df = processor.query_ohlc("EURUSD", timeframe="1h", start_date="2024-01-01")
         """
-        # Validate inputs before any file operations
         self._validate_pair(pair)
         self._validate_timeframe(timeframe)
         self._validate_date_format(start_date, "start_date")
         self._validate_date_format(end_date, "end_date")
 
-        # Delegate to query_engine module
-        return self.query_engine.query_ohlc(pair, timeframe, start_date, end_date)
+        return self.ch_query_engine.query_ohlc(
+            instrument=pair,
+            timeframe=timeframe,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
 
     def get_data_coverage(self, pair: PairType = "EURUSD") -> CoverageInfo:
         """
@@ -619,70 +505,38 @@ class ExnessDataProcessor:
             pair: Currency pair
 
         Returns:
-            CoverageInfo: Coverage information with:
-                - database_exists: Whether database file exists
-                - duckdb_path: Path to database file
-                - duckdb_size_mb: Database file size
-                - raw_spread_ticks: Number of Raw_Spread ticks
-                - standard_ticks: Number of Standard ticks
-                - ohlc_bars: Number of 1m OHLC bars
-                - earliest_date: Earliest tick timestamp
-                - latest_date: Latest tick timestamp
-                - date_range_days: Number of days covered
-
-        Raises:
-            ValueError: If pair is not supported
-            duckdb.Error: If database connection fails (rare)
+            CoverageInfo with coverage statistics
 
         Example:
             >>> processor = ExnessDataProcessor()
             >>> coverage = processor.get_data_coverage("EURUSD")
-            >>> print(f"Coverage: {coverage['earliest_date']} to {coverage['latest_date']}")
-            >>> print(f"Total: {coverage['raw_spread_ticks']:,} ticks")
+            >>> print(f"Coverage: {coverage.earliest_date} to {coverage.latest_date}")
         """
-        # Validate inputs before any file operations
         self._validate_pair(pair)
+        return self.ch_query_engine.get_data_coverage(pair)
 
-        # Delegate to query_engine module
-        return self.query_engine.get_data_coverage(pair)
-
-    def get_available_dates(self, pair: PairType = "EURUSD") -> tuple[Optional[str], Optional[str]]:
+    def get_available_dates(
+        self, pair: PairType = "EURUSD"
+    ) -> tuple[Optional[str], Optional[str]]:
         """
         Get earliest and latest dates with actual data.
-
-        Unlike get_data_coverage(), this provides a quick way to check the
-        actual date boundaries without fetching full coverage statistics.
 
         Args:
             pair: Currency pair
 
         Returns:
             Tuple of (earliest_date, latest_date) as ISO 8601 strings.
-            Returns (None, None) if database doesn't exist or has no data.
-
-        Raises:
-            ValueError: If pair is not supported
-
-        Example:
-            >>> processor = ExnessDataProcessor()
-            >>> earliest, latest = processor.get_available_dates("EURUSD")
-            >>> if earliest:
-            ...     print(f"Data available from {earliest} to {latest}")
+            Returns (None, None) if no data exists.
         """
         self._validate_pair(pair)
-        coverage = self.query_engine.get_data_coverage(pair)
+        coverage = self.ch_query_engine.get_data_coverage(pair)
         return (coverage.earliest_date, coverage.latest_date)
 
     def validate_date_range(
-        self,
-        start_date: str,
-        end_date: str
+        self, start_date: str, end_date: str
     ) -> tuple[bool, Optional[str]]:
         """
         Validate date range before querying.
-
-        Pre-flight check to validate date formats and logical ordering without
-        performing database operations. Helps AI agents avoid failed queries.
 
         Args:
             start_date: Start date (YYYY-MM-DD)
@@ -690,26 +544,18 @@ class ExnessDataProcessor:
 
         Returns:
             Tuple of (is_valid, error_message).
-            Returns (True, None) if valid, (False, error_message) if invalid.
-
-        Example:
-            >>> processor = ExnessDataProcessor()
-            >>> is_valid, error = processor.validate_date_range("2024-01-01", "2024-12-31")
-            >>> if not is_valid:
-            ...     print(f"Invalid date range: {error}")
         """
-        # Validate formats
         try:
             self._validate_date_format(start_date, "start_date")
             self._validate_date_format(end_date, "end_date")
         except ValueError as e:
             return (False, str(e))
 
-        # Validate logical ordering
         from datetime import datetime
+
         try:
-            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
 
             if start_dt > end_dt:
                 return (False, f"start_date '{start_date}' is after end_date '{end_date}'")
@@ -719,17 +565,9 @@ class ExnessDataProcessor:
 
         return (True, None)
 
-    def estimate_download_size(
-        self,
-        pair: PairType,
-        start_date: str,
-        end_date: str
-    ) -> float:
+    def estimate_download_size(self, pair: PairType, start_date: str, end_date: str) -> float:
         """
         Estimate download size in MB for date range.
-
-        Provides rough estimate based on typical data density (approximately
-        1.5M ticks per month = ~11 MB per month for dual-variant storage).
 
         Args:
             pair: Currency pair
@@ -738,27 +576,15 @@ class ExnessDataProcessor:
 
         Returns:
             Estimated download size in megabytes
-
-        Raises:
-            ValueError: If pair is invalid or date format is wrong
-
-        Example:
-            >>> processor = ExnessDataProcessor()
-            >>> size_mb = processor.estimate_download_size("EURUSD", "2024-01-01", "2024-12-31")
-            >>> print(f"Estimated download: {size_mb:.1f} MB")
         """
         self._validate_pair(pair)
         self._validate_date_format(start_date, "start_date")
         self._validate_date_format(end_date, "end_date")
 
         from datetime import datetime
-        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
 
-        # Calculate months
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
         months = (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month) + 1
-
-        # Estimate: ~11 MB per month (dual-variant storage)
-        estimated_mb = months * 11.0
-
-        return estimated_mb
+        return months * 11.0

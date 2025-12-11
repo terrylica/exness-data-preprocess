@@ -1,4 +1,13 @@
-"""Basic tests to ensure package can be imported and has correct metadata."""
+"""Basic tests to ensure package can be imported and has correct metadata.
+
+ADR: 2025-12-11-duckdb-removal-clickhouse
+
+Note: test_processor_instantiation requires ClickHouse running on localhost:8123.
+"""
+
+import socket
+
+import pytest
 
 import exness_data_preprocess as edp
 
@@ -20,12 +29,29 @@ def test_processor_class_exists():
     assert callable(edp.ExnessDataProcessor)
 
 
-def test_processor_instantiation():
-    """Test that ExnessDataProcessor can be instantiated."""
-    import tempfile
-    from pathlib import Path
+def clickhouse_available() -> bool:
+    """Check if ClickHouse is running on localhost:8123."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(("localhost", 8123))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        processor = edp.ExnessDataProcessor(base_dir=Path(tmpdir))
-        assert processor is not None
-        assert processor.base_dir == Path(tmpdir)
+
+@pytest.mark.skipif(
+    not clickhouse_available(),
+    reason="ClickHouse not running on localhost:8123",
+)
+def test_processor_instantiation():
+    """Test that ExnessDataProcessor can be instantiated.
+
+    Requires ClickHouse running on localhost:8123.
+    """
+    processor = edp.ExnessDataProcessor()
+    assert processor is not None
+    # v2.0.0: ClickHouse-only backend, no base_dir
+    assert processor.DATABASE == "exness"
+    processor.close()

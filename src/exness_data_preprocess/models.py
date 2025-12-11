@@ -1,6 +1,14 @@
 """
 Pydantic models for exness-data-preprocess API.
 
+ADR: 2025-12-11-duckdb-removal-clickhouse
+
+BREAKING CHANGES (v2.0.0):
+- Renamed: duckdb_path → database (str, ClickHouse database name)
+- Renamed: duckdb_size_mb → storage_bytes (int, bytes not MB)
+- Removed: database_exists field (ClickHouse is always available)
+- Backend: ClickHouse is now the only supported backend
+
 This module defines the data models used throughout the package, following the
 industry-standard three-layer pattern:
 
@@ -9,7 +17,7 @@ Layer 2: Pydantic models (data structures with validation)
 Layer 3: Methods (behavior, defined in processor.py)
 
 All models support both attribute access (result.months_added) and dict access
-(result['months_added']) for backward compatibility with v2.0.0.
+(result['months_added']) for backward compatibility.
 
 Discovery Methods for AI Agents:
     >>> import exness_data_preprocess as edp
@@ -28,19 +36,18 @@ Example:
     >>> pair: PairType = "EURUSD"  # ✓ Type checker knows this is valid
     >>> # UpdateResult usage
     >>> result = UpdateResult(
-    ...     duckdb_path=Path("eurusd.duckdb"),
+    ...     database="exness",
     ...     months_added=12,
     ...     raw_ticks_added=1000000,
     ...     standard_ticks_added=1000000,
     ...     ohlc_bars=50000,
-    ...     duckdb_size_mb=150.5
+    ...     storage_bytes=2181038080
     ... )
     >>> # Both access patterns work
     >>> print(result.months_added)       # ✓ Attribute access (new)
     >>> print(result['months_added'])    # ✓ Dict access (backward compat)
 """
 
-from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
@@ -119,28 +126,27 @@ class UpdateResult(BaseModel):
     """
     Result from update_data() operation.
 
-    Returned when downloading and updating an instrument's database with latest
-    data from Exness repository.
+    Returned when downloading and updating an instrument's data in ClickHouse.
 
     Attributes:
-        duckdb_path: Absolute path to the DuckDB database file
+        database: ClickHouse database name (e.g., 'exness')
         months_added: Number of months successfully downloaded (0 if up to date)
         raw_ticks_added: Number of Raw_Spread ticks inserted
         standard_ticks_added: Number of Standard ticks inserted
         ohlc_bars: Total number of 1-minute OHLC bars after update
-        duckdb_size_mb: Database file size in megabytes
+        storage_bytes: Total storage in bytes (from system.tables)
 
     Example:
         >>> processor = ExnessDataProcessor()
         >>> result = processor.update_data("EURUSD", start_date="2022-01-01")
         >>> print(f"Added {result.months_added} months")
-        >>> print(f"Database: {result.duckdb_size_mb:.2f} MB")
+        >>> print(f"Storage: {result.storage_bytes / 1024 / 1024:.2f} MB")
         >>> # Backward compatible dict access also works
         >>> print(result['months_added'])
     """
 
-    duckdb_path: Path = Field(
-        description="Absolute path to the DuckDB database file (e.g., ~/eon/exness-data/eurusd.duckdb)"
+    database: str = Field(
+        description="ClickHouse database name (e.g., 'exness')"
     )
     months_added: int = Field(
         ge=0,
@@ -148,19 +154,20 @@ class UpdateResult(BaseModel):
     )
     raw_ticks_added: int = Field(
         ge=0,
-        description="Number of Raw_Spread ticks inserted into raw_spread_ticks table. May be less than expected if duplicates prevented by PRIMARY KEY.",
+        description="Number of Raw_Spread ticks inserted into ticks table. May be less than expected if duplicates deduplicated by ReplacingMergeTree.",
     )
     standard_ticks_added: int = Field(
         ge=0,
-        description="Number of Standard ticks inserted into standard_ticks table. May be less than expected if duplicates prevented by PRIMARY KEY.",
+        description="Number of Standard ticks inserted into ticks table. May be less than expected if duplicates deduplicated by ReplacingMergeTree.",
     )
     ohlc_bars: int = Field(
         ge=0,
         description="Total number of 1-minute OHLC bars in ohlc_1m table after update (not just new bars, but total count).",
     )
-    duckdb_size_mb: float = Field(
+    storage_bytes: int = Field(
+        default=0,
         ge=0,
-        description="Total database file size in megabytes after update. Typical size: ~135 MB/year.",
+        description="Total storage in bytes from system.tables (sum of data_compressed_bytes).",
     )
 
     @computed_field  # type: ignore[misc]
@@ -199,18 +206,19 @@ class UpdateResult(BaseModel):
         total_ticks = self.raw_ticks_added + self.standard_ticks_added
         if total_ticks == 0:
             return 0.0
-        return (self.duckdb_size_mb / total_ticks) * 1_000_000
+        storage_mb = self.storage_bytes / (1024 * 1024)
+        return (storage_mb / total_ticks) * 1_000_000
 
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "duckdb_path": "/Users/user/eon/exness-data/eurusd.duckdb",
+                    "database": "exness",
                     "months_added": 12,
                     "raw_ticks_added": 18600000,
                     "standard_ticks_added": 19600000,
                     "ohlc_bars": 413000,
-                    "duckdb_size_mb": 2080.5,
+                    "storage_bytes": 2181038080,
                 }
             ]
         }
@@ -221,12 +229,12 @@ class CoverageInfo(BaseModel):
     """
     Database coverage information for an instrument.
 
-    Returned when querying data availability and statistics for an instrument.
+    Returned when querying data availability and statistics for an instrument
+    from ClickHouse.
 
     Attributes:
-        database_exists: Whether the DuckDB file exists
-        duckdb_path: Path to the database file (may not exist)
-        duckdb_size_mb: Database file size in MB (0 if not exists)
+        database: ClickHouse database name (e.g., 'exness')
+        storage_bytes: Total storage in bytes (from system.tables)
         raw_spread_ticks: Total number of Raw_Spread ticks
         standard_ticks: Total number of Standard ticks
         ohlc_bars: Total number of 1-minute OHLC bars
@@ -237,41 +245,41 @@ class CoverageInfo(BaseModel):
     Example:
         >>> processor = ExnessDataProcessor()
         >>> coverage = processor.get_data_coverage("EURUSD")
-        >>> if coverage.database_exists:
-        ...     print(f"Coverage: {coverage.earliest_date} to {coverage.latest_date}")
-        ...     print(f"Total: {coverage.raw_spread_ticks:,} ticks")
+        >>> print(f"Coverage: {coverage.earliest_date} to {coverage.latest_date}")
+        >>> print(f"Total: {coverage.raw_spread_ticks:,} ticks")
         >>> # Backward compatible dict access also works
-        >>> print(coverage['database_exists'])
+        >>> print(coverage['database'])
     """
 
-    database_exists: bool = Field(description="Whether the DuckDB database file exists on disk")
-    duckdb_path: str = Field(
-        description="Absolute path to the database file (string representation, may not exist)"
+    database: str = Field(
+        description="ClickHouse database name (e.g., 'exness')"
     )
-    duckdb_size_mb: float = Field(
-        ge=0, description="Database file size in megabytes (0 if file doesn't exist)"
+    storage_bytes: int = Field(
+        default=0,
+        ge=0,
+        description="Total storage in bytes from system.tables (0 if no data)",
     )
     raw_spread_ticks: int = Field(
         ge=0,
-        description="Total number of ticks in raw_spread_ticks table (0 if database doesn't exist or is empty)",
+        description="Total number of raw_spread ticks in ticks table (0 if empty)",
     )
     standard_ticks: int = Field(
         ge=0,
-        description="Total number of ticks in standard_ticks table (0 if database doesn't exist or is empty)",
+        description="Total number of standard ticks in ticks table (0 if empty)",
     )
     ohlc_bars: int = Field(
         ge=0,
-        description="Total number of 1-minute bars in ohlc_1m table (0 if database doesn't exist or is empty)",
+        description="Total number of 1-minute bars in ohlc_1m table (0 if empty)",
     )
     earliest_date: Optional[str] = Field(
         default=None,
         pattern=r'^\d{4}-\d{2}-\d{2}',
-        description="ISO 8601 timestamp of earliest tick in raw_spread_ticks (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
+        description="ISO 8601 timestamp of earliest tick (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
     )
     latest_date: Optional[str] = Field(
         default=None,
         pattern=r'^\d{4}-\d{2}-\d{2}',
-        description="ISO 8601 timestamp of latest tick in raw_spread_ticks (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
+        description="ISO 8601 timestamp of latest tick (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
     )
     date_range_days: int = Field(
         ge=0,
@@ -340,15 +348,15 @@ class CoverageInfo(BaseModel):
         total = self.total_ticks
         if total == 0:
             return 0.0
-        return (self.duckdb_size_mb / total) * 1_000_000
+        storage_mb = self.storage_bytes / (1024 * 1024)
+        return (storage_mb / total) * 1_000_000
 
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "database_exists": True,
-                    "duckdb_path": "/Users/user/eon/exness-data/eurusd.duckdb",
-                    "duckdb_size_mb": 2080.5,
+                    "database": "exness",
+                    "storage_bytes": 2181038080,
                     "raw_spread_ticks": 18600000,
                     "standard_ticks": 19600000,
                     "ohlc_bars": 413000,

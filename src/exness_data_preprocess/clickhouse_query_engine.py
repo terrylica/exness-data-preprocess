@@ -365,9 +365,8 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             date_range_days = 0
 
         return CoverageInfo(
-            database_exists=True,  # ClickHouse is always "exists" if connection works
-            duckdb_path="",  # Not applicable for ClickHouse
-            duckdb_size_mb=0,  # Not applicable for ClickHouse
+            database=self.DATABASE,  # v2.0.0: ClickHouse database name
+            storage_bytes=0,  # TODO: Query system.tables for actual size
             raw_spread_ticks=raw_count,
             standard_ticks=std_count,
             ohlc_bars=ohlc_count,

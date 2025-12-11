@@ -1,7 +1,9 @@
 """
 Pytest configuration and fixtures for exness-data-preprocess tests.
 
-End-to-end testing with real Exness-format data - no mocking.
+ADR: 2025-12-11-duckdb-removal-clickhouse
+
+End-to-end testing with ClickHouse backend - no mocking.
 """
 
 import shutil
@@ -32,52 +34,46 @@ def fixtures_dir():
 
 
 @pytest.fixture
-def processor_with_temp_dir(temp_dir):
-    """Create ExnessDataProcessor with temporary directory.
+def processor_with_clickhouse():
+    """Create ExnessDataProcessor with ClickHouse backend.
 
     SLO-MA-1: Fixture reusable across test files.
+    Requires: ClickHouse running on localhost:8123
     """
+    import socket
+
+    # Check if ClickHouse is available
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(("localhost", 8123))
+        sock.close()
+        if result != 0:
+            pytest.skip("ClickHouse not running on localhost:8123")
+    except Exception:
+        pytest.skip("ClickHouse not available")
+
     from exness_data_preprocess.processor import ExnessDataProcessor
 
-    return ExnessDataProcessor(base_dir=temp_dir)
+    processor = ExnessDataProcessor()
+    yield processor
+    processor.close()
+
+
+# Legacy fixture aliases for backward compatibility during migration
+@pytest.fixture
+def processor_with_temp_dir(processor_with_clickhouse):
+    """Legacy fixture - now uses ClickHouse backend.
+
+    Kept for backward compatibility with existing tests.
+    """
+    return processor_with_clickhouse
 
 
 @pytest.fixture
-def processor_with_real_data(temp_dir):
-    """Create ExnessDataProcessor with true end-to-end data download.
+def processor_with_real_data(processor_with_clickhouse):
+    """Legacy fixture - now uses ClickHouse backend.
 
-    End-to-end: Downloads real data from https://ticks.ex2archive.com/
-    No mocking - downloads actual Exness data and processes it.
-
-    SLO-MA-4: True end-to-end testing from online source.
+    Kept for backward compatibility with existing tests.
     """
-    from exness_data_preprocess.processor import ExnessDataProcessor
-
-    processor = ExnessDataProcessor(base_dir=temp_dir)
-    processor.temp_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download real data from Exness online source
-    # Using August 2024 data (more likely to have both variants available)
-    try:
-        raw_spread_zip = processor.download_exness_zip(
-            pair="EURUSD", variant="Raw_Spread", year=2024, month=8
-        )
-        if raw_spread_zip is None or not raw_spread_zip.exists():
-            pytest.skip("Could not download Exness Raw_Spread data: download returned None")
-
-        # Try to download Standard variant, but don't fail if not available
-        standard_zip = processor.download_exness_zip(
-            pair="EURUSD",
-            variant="",  # Empty string for Standard variant
-            year=2024,
-            month=8,
-        )
-        # Check if download actually succeeded
-        if standard_zip is not None and standard_zip.exists():
-            processor.has_standard_data = True
-        else:
-            processor.has_standard_data = False
-    except Exception as e:
-        pytest.skip(f"Could not download Exness Raw_Spread data: {e}")
-
-    return processor
+    return processor_with_clickhouse

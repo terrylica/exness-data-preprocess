@@ -7,19 +7,23 @@
 [![Downloads](https://img.shields.io/pypi/dm/exness-data-preprocess.svg)](https://pypi.org/project/exness-data-preprocess/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-Professional forex tick data preprocessing with unified single-file DuckDB storage. Provides incremental updates, dual-variant storage (Raw_Spread + Standard), and Phase7 30-column OHLC schema (v1.6.0) with 10 global exchange sessions (trading hour detection) and sub-15ms query performance.
+Professional forex tick data preprocessing with ClickHouse backend. Provides efficient storage with lossless precision, incremental updates, dual-variant storage (Raw_Spread + Standard), and 26-column OHLC schema with 10 global exchange sessions.
 
 ## Features
 
-- **Unified Single-File Architecture**: One DuckDB file per instrument (eurusd.duckdb)
+- **ClickHouse Backend**: High-performance columnar storage with ReplacingMergeTree deduplication
 - **Incremental Updates**: Automatic gap detection and download only missing months
 - **Dual-Variant Storage**: Raw_Spread (primary) + Standard (reference) in same database
-- **Phase7 OHLC Schema**: 30-column bars (v1.6.0) with dual spreads, tick counts, normalized metrics, and 10 global exchange sessions with trading hour detection
-- **High Performance**: Incremental OHLC generation (7.3x speedup), vectorized session detection (2.2x speedup), SQL gap detection with complete coverage
-- **Fast Queries**: Date range queries with sub-15ms performance
-- **On-Demand Resampling**: Any timeframe (5m, 1h, 1d) resampled in <15ms
-- **PRIMARY KEY Constraints**: Prevents duplicate data during incremental updates
+- **26-Column OHLC Schema**: BID-based bars with dual spreads, tick counts, timezone tracking, and 10 global exchange sessions
+- **High Performance**: Vectorized session detection, SQL gap detection with complete coverage
+- **Fast Queries**: Sub-15ms query performance with date range filtering
+- **On-Demand Resampling**: Any timeframe (5m, 1h, 1d) resampled efficiently
 - **Simple API**: Clean Python API for all operations
+
+## Requirements
+
+- **Python**: 3.11+
+- **ClickHouse**: Running on localhost:8123 (local) or cloud instance
 
 ## Installation
 
@@ -43,8 +47,8 @@ uv pip install exness-data-preprocess
 ```python
 import exness_data_preprocess as edp
 
-# Initialize processor
-processor = edp.ExnessDataProcessor(base_dir="~/eon/exness-data")
+# Initialize processor (requires ClickHouse on localhost:8123)
+processor = edp.ExnessDataProcessor()
 
 # Download 3 years of EURUSD data (automatic gap detection)
 result = processor.update_data(
@@ -53,11 +57,11 @@ result = processor.update_data(
     delete_zip=True,
 )
 
-print(f"Months added:  {result['months_added']}")
-print(f"Raw ticks:     {result['raw_ticks_added']:,}")
-print(f"Standard ticks: {result['standard_ticks_added']:,}")
-print(f"OHLC bars:     {result['ohlc_bars']:,}")
-print(f"Database size: {result['duckdb_size_mb']:.2f} MB")
+print(f"Months added:  {result.months_added}")
+print(f"Raw ticks:     {result.raw_ticks_added:,}")
+print(f"Standard ticks: {result.standard_ticks_added:,}")
+print(f"OHLC bars:     {result.ohlc_bars:,}")
+print(f"Storage:       {result.storage_bytes:,} bytes")
 
 # Query 1-minute OHLC bars for January 2024
 df_1m = processor.query_ohlc(
@@ -76,6 +80,9 @@ df_ticks = processor.query_ticks(
     end_date="2024-09-30",
 )
 print(f"Ticks: {len(df_ticks):,}")
+
+# Clean up
+processor.close()
 ```
 
 ## Architecture v2.0.0
@@ -89,50 +96,60 @@ Exness Public Repository (monthly ZIPs, both variants)
            ↓
 Download Only Missing Months (Raw_Spread + Standard)
            ↓
-DuckDB Single-File Storage (PRIMARY KEY prevents duplicates)
+ClickHouse Storage (ReplacingMergeTree deduplication)
            ↓
-Phase7 30-Column OHLC Generation (v1.6.0 - dual spreads, tick counts, normalized metrics, 10 global exchange sessions with trading hour detection)
+26-Column OHLC Generation (dual spreads, tick counts, 10 global exchange sessions)
            ↓
 Query Interface (date ranges, SQL filters, on-demand resampling)
 ```
 
 ### Storage Format
 
-**Single File Per Instrument**: `~/eon/exness-data/eurusd.duckdb`
+**ClickHouse Database**: `exness` (single database for all instruments)
 
 **Schema**:
 
-- `raw_spread_ticks` table: Timestamp (PK), Bid, Ask
-- `standard_ticks` table: Timestamp (PK), Bid, Ask
-- `ohlc_1m` table: Phase7 30-column schema (v1.6.0)
-- `metadata` table: Coverage tracking
+- `raw_spread_ticks` table: instrument, timestamp, bid, ask (ReplacingMergeTree)
+- `standard_ticks` table: instrument, timestamp, bid, ask (ReplacingMergeTree)
+- `ohlc_1m` table: 26-column schema with instrument column (ReplacingMergeTree)
 
-**Phase7 30-Column OHLC (v1.6.0)**:
+**26-Column OHLC Schema**:
 
-- **Column Definitions**: See [`schema.py`](src/exness_data_preprocess/schema.py) - Single source of truth
-- **Comprehensive Reference**: See [`DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) - Query examples and usage patterns
-- **Key Features**: BID-only OHLC with dual spreads (Raw_Spread + Standard), normalized spread metrics, and 10 global exchange sessions with trading hour detection (XNYS, XLON, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
+- **Core OHLC**: instrument, timestamp, open, high, low, close (BID-based)
+- **Spreads**: raw_spread_avg, standard_spread_avg
+- **Tick Counts**: tick_count_raw_spread, tick_count_standard
+- **Timezone**: ny_hour, london_hour, ny_session, london_session
+- **Holidays**: is_us_holiday, is_uk_holiday, is_major_holiday
+- **Exchange Sessions**: 10 global exchanges (NYSE, LSE, XSWX, XFRA, XTSE, XNZE, XTKS, XASX, XHKG, XSES)
 
-### Directory Structure
+### ClickHouse Configuration
 
-**Default Location**: `~/eon/exness-data/` (outside project workspace)
+**Local Mode** (default):
 
+```bash
+# Start ClickHouse server
+clickhouse-server
+
+# Default connection: localhost:8123
 ```
-~/eon/exness-data/
-├── eurusd.duckdb      # Single file for all EURUSD data
-├── gbpusd.duckdb      # Single file for all GBPUSD data
-├── xauusd.duckdb      # Single file for all XAUUSD data
-└── temp/
-    └── (temporary ZIP files)
+
+**Cloud Mode** (via environment variables):
+
+```bash
+export CLICKHOUSE_MODE=cloud
+export CLICKHOUSE_HOST=your-instance.clickhouse.cloud
+export CLICKHOUSE_PORT=8443
+export CLICKHOUSE_USER=default
+export CLICKHOUSE_PASSWORD=your-password
 ```
 
-**Why Single-File Per Instrument?**
+**Why ClickHouse?**
 
-- **Unified Storage**: All years in one database
-- **Incremental Updates**: Automatic gap detection and download only missing months
-- **No Duplicates**: PRIMARY KEY constraints prevent duplicate data
-- **Fast Queries**: Date range queries with sub-15ms performance
-- **Scalability**: Multi-year data in ~2 GB per instrument (3 years)
+- **Columnar Storage**: Optimized for analytical queries on time-series data
+- **ReplacingMergeTree**: Automatic deduplication at merge time
+- **Fast Queries**: Sub-15ms performance for date range queries
+- **Scalability**: Handles billions of ticks efficiently
+- **Cloud Ready**: Same API for local and cloud deployments
 
 ## Usage Examples
 
@@ -155,7 +172,9 @@ result = processor.update_data(
     pair="EURUSD",
     start_date="2022-01-01",
 )
-print(f"Months added: {result['months_added']} (0 if up to date)")
+print(f"Months added: {result.months_added} (0 if up to date)")
+
+processor.close()
 ```
 
 ### Example 2: Check Data Coverage
@@ -163,13 +182,13 @@ print(f"Months added: {result['months_added']} (0 if up to date)")
 ```python
 coverage = processor.get_data_coverage("EURUSD")
 
-print(f"Database exists: {coverage['database_exists']}")
-print(f"Raw_Spread ticks: {coverage['raw_spread_ticks']:,}")
-print(f"Standard ticks:  {coverage['standard_ticks']:,}")
-print(f"OHLC bars:       {coverage['ohlc_bars']:,}")
-print(f"Date range:      {coverage['earliest_date']} to {coverage['latest_date']}")
-print(f"Days covered:    {coverage['date_range_days']}")
-print(f"Database size:   {coverage['duckdb_size_mb']:.2f} MB")
+print(f"Database:        {coverage.database}")
+print(f"Raw_Spread ticks: {coverage.raw_spread_ticks:,}")
+print(f"Standard ticks:  {coverage.standard_ticks:,}")
+print(f"OHLC bars:       {coverage.ohlc_bars:,}")
+print(f"Date range:      {coverage.earliest_date} to {coverage.latest_date}")
+print(f"Days covered:    {coverage.date_range_days}")
+print(f"Storage:         {coverage.storage_bytes:,} bytes")
 ```
 
 ### Example 3: Query OHLC with Date Ranges
@@ -263,8 +282,10 @@ for pair in pairs:
         start_date="2023-01-01",
         delete_zip=True,
     )
-    print(f"  Months added: {result['months_added']}")
-    print(f"  Database size: {result['duckdb_size_mb']:.2f} MB")
+    print(f"  Months added: {result.months_added}")
+    print(f"  Storage: {result.storage_bytes:,} bytes")
+
+processor.close()
 ```
 
 ### Example 7: Parallel Processing
@@ -274,7 +295,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def process_instrument(pair, start_date):
     processor = edp.ExnessDataProcessor()
-    return processor.update_data(pair=pair, start_date=start_date, delete_zip=True)
+    result = processor.update_data(pair=pair, start_date=start_date, delete_zip=True)
+    processor.close()
+    return result
 
 instruments = [
     ("EURUSD", "2023-01-01"),
@@ -292,7 +315,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
     for future in as_completed(futures):
         pair = futures[future]
         result = future.result()
-        print(f"{pair}: {result['months_added']} months added")
+        print(f"{pair}: {result.months_added} months added")
 ```
 
 ## Development
@@ -351,7 +374,7 @@ uv tool install --editable .
 
 Data is sourced from Exness's public tick data repository:
 
-- **URL**: https://ticks.ex2archive.com/
+- **URL**: <https://ticks.ex2archive.com/>
 - **Format**: Monthly ZIP files with CSV tick data
 - **Variants**: Raw_Spread (zero-spreads) + Standard (market spreads)
 - **Content**: Timestamp, Bid, Ask prices for major forex pairs
@@ -380,16 +403,17 @@ Data is sourced from Exness's public tick data repository:
 
 ### Architecture Benefits
 
-| Feature                    | Benefit                                            |
-| -------------------------- | -------------------------------------------------- |
-| Single file per instrument | Unified storage, no file fragmentation             |
-| PRIMARY KEY constraints    | Prevents duplicates during incremental updates     |
-| Automatic gap detection    | Download only missing months                       |
-| Dual-variant storage       | Raw_Spread + Standard in same database             |
-| Phase7 OHLC schema         | Dual spreads + dual tick counts                    |
-| Date range queries         | Efficient filtering without loading entire dataset |
-| On-demand resampling       | Any timeframe in <15ms                             |
-| SQL filter support         | Direct SQL WHERE clauses on ticks                  |
+| Feature                 | Benefit                                            |
+| ----------------------- | -------------------------------------------------- |
+| ClickHouse backend      | Columnar storage optimized for time-series         |
+| ReplacingMergeTree      | Automatic deduplication at merge time              |
+| Automatic gap detection | Download only missing months                       |
+| Dual-variant storage    | Raw_Spread + Standard in same database             |
+| 26-column OHLC schema   | Dual spreads + dual tick counts + sessions         |
+| Date range queries      | Efficient filtering without loading entire dataset |
+| On-demand resampling    | Any timeframe in <15ms                             |
+| SQL filter support      | Direct SQL WHERE clauses on ticks                  |
+| Cloud ready             | Same API for local and cloud ClickHouse            |
 
 ### Performance Optimizations (v0.5.0)
 
@@ -423,15 +447,16 @@ Data is sourced from Exness's public tick data repository:
 ### ExnessDataProcessor
 
 ```python
-processor = edp.ExnessDataProcessor(base_dir="~/eon/exness-data")
+processor = edp.ExnessDataProcessor()  # Requires ClickHouse on localhost:8123
 ```
 
 **Methods**:
 
-- `update_data(pair, start_date, force_redownload=False, delete_zip=True)` - Update database with latest data
-- `query_ohlc(pair, timeframe, start_date=None, end_date=None)` - Query OHLC bars
-- `query_ticks(pair, variant, start_date=None, end_date=None, filter_sql=None)` - Query tick data
-- `get_data_coverage(pair)` - Get coverage information
+- `update_data(pair, start_date, force_redownload=False, delete_zip=True)` - Update database with latest data, returns `UpdateResult`
+- `query_ohlc(pair, timeframe, start_date=None, end_date=None)` - Query OHLC bars, returns DataFrame
+- `query_ticks(pair, variant, start_date=None, end_date=None, filter_sql=None)` - Query tick data, returns DataFrame
+- `get_data_coverage(pair)` - Get coverage information, returns `CoverageInfo`
+- `close()` - Close ClickHouse connection
 
 **Parameters**:
 
@@ -440,27 +465,59 @@ processor = edp.ExnessDataProcessor(base_dir="~/eon/exness-data")
 - `variant` (str): Tick variant ("raw_spread" or "standard")
 - `start_date` (str): Start date in "YYYY-MM-DD" format
 - `end_date` (str): End date in "YYYY-MM-DD" format
-- `filter_sql` (str): SQL WHERE clause (e.g., "Bid > 1.11 AND Ask < 1.12")
+- `filter_sql` (str): SQL WHERE clause (e.g., "bid > 1.11 AND ask < 1.12")
 
-## Migration from v1.0.0
+### Return Models (Pydantic)
 
-**v1.0.0 (Legacy)**:
+**UpdateResult**:
 
-- Monthly DuckDB files: `eurusd_ohlc_2024_08.duckdb`
-- Parquet tick storage: `eurusd_ticks_2024_08.parquet`
-- Functions: `process_month()`, `process_date_range()`, `analyze_ticks()`
+- `database` (str): ClickHouse database name
+- `months_added` (int): Number of months downloaded
+- `raw_ticks_added` (int): Number of raw spread ticks added
+- `standard_ticks_added` (int): Number of standard ticks added
+- `ohlc_bars` (int): Number of OHLC bars generated
+- `storage_bytes` (int): Total storage in bytes
 
-**v2.0.0 (Current)**:
+**CoverageInfo**:
 
-- Single DuckDB file: `eurusd.duckdb`
-- No Parquet files (everything in DuckDB)
-- Unified API: `processor.update_data()`, `processor.query_ohlc()`, `processor.query_ticks()`
+- `database` (str): ClickHouse database name
+- `raw_spread_ticks` (int): Total raw spread tick count
+- `standard_ticks` (int): Total standard tick count
+- `ohlc_bars` (int): Total OHLC bar count
+- `earliest_date` (str | None): Earliest data timestamp
+- `latest_date` (str | None): Latest data timestamp
+- `date_range_days` (int): Days of data coverage
+- `storage_bytes` (int): Total storage in bytes
+
+## Migration from v1.x
+
+**v1.x (Legacy DuckDB)**:
+
+- Single DuckDB file per instrument: `eurusd.duckdb`
+- Fields: `duckdb_path`, `duckdb_size_mb`, `database_exists`
+- Constructor: `ExnessDataProcessor(base_dir=...)`
+
+**v2.0.0 (ClickHouse-only)**:
+
+- ClickHouse database: `exness` (all instruments)
+- Fields: `database`, `storage_bytes` (renamed)
+- Constructor: `ExnessDataProcessor()` (no base_dir)
+- **Requires**: ClickHouse running on localhost:8123
+
+**BREAKING CHANGES**:
+
+- `duckdb_path` → `database` (str, ClickHouse database name)
+- `duckdb_size_mb` → `storage_bytes` (int, bytes not MB)
+- `database_exists` → removed (ClickHouse always exists if connection works)
+- `base_dir` parameter → removed (ClickHouse manages storage)
 
 **Migration Steps**:
 
-1. Run `processor.update_data(pair, start_date)` to create new unified database
-2. Delete old monthly files: `rm eurusd_ohlc_2024_*.duckdb eurusd_ticks_2024_*.parquet`
-3. Update code to use new API methods
+1. Install and start ClickHouse: `brew install clickhouse && clickhouse-server`
+2. Update code to use new field names (`database`, `storage_bytes`)
+3. Remove `base_dir` parameter from `ExnessDataProcessor()`
+4. Run `processor.update_data(pair, start_date)` to populate ClickHouse
+5. Delete old DuckDB files if no longer needed
 
 ## License
 
@@ -478,7 +535,7 @@ Contributions are welcome! Please see CONTRIBUTING.md for guidelines.
 ## Acknowledgments
 
 - Exness for providing high-quality public tick data
-- DuckDB for embedded OLAP capabilities with sub-15ms query performance
+- ClickHouse for high-performance columnar storage with sub-15ms query performance
 
 ## Additional Documentation
 

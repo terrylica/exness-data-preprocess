@@ -1,17 +1,23 @@
 """
-Exness Data Preprocessing (v2.2.0)
+Exness Data Preprocessing (v2.0.0)
 
-Professional forex tick data preprocessing with DuckDB (local) and ClickHouse (cloud) backends.
+Professional forex tick data preprocessing with ClickHouse backend.
 
-ADR: /docs/adr/2025-12-09-exness-clickhouse-migration.md
+ADR: /docs/adr/2025-12-11-duckdb-removal-clickhouse.md
 
-Architecture (v2.0.0+):
-- DuckDB backend: One file per instrument (eurusd.duckdb) for local development
-- ClickHouse backend: Single-table design with instrument column for cloud deployment
-- Dual-variant storage (Raw_Spread + Standard) for Phase7 compliance
+BREAKING CHANGES (v2.0.0):
+- Renamed: duckdb_path → database (str, ClickHouse database name)
+- Renamed: duckdb_size_mb → storage_bytes (int, bytes not MB)
+- Removed: database_exists field (ClickHouse is always available)
+- Backend: ClickHouse is now the only supported backend (DuckDB removed)
+
+Architecture (v2.0.0):
+- ClickHouse backend: Single-table design with instrument column
+- Dual-variant storage (Raw_Spread + Standard)
 - Incremental updates with automatic gap detection
-- Phase7 30-column OHLC schema (v1.6.0) with dual spreads, tick counts, normalized metrics, timezone/session tracking, holiday tracking, and 10 global exchange sessions with trading hour detection
-- Self-documenting database schema with embedded COMMENT ON statements
+- 26-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
+  holiday tracking, and 10 global exchange sessions with trading hour detection
+- Self-documenting database schema with embedded COMMENT statements
 - Pydantic models for validated API responses
 
 Features:
@@ -24,13 +30,13 @@ Features:
 Quick Start:
     >>> import exness_data_preprocess as edp
     >>>
-    >>> # Initialize processor
+    >>> # Initialize processor (requires ClickHouse running)
     >>> processor = edp.ExnessDataProcessor()
     >>>
     >>> # Initial 3-year download
     >>> result = processor.update_data("EURUSD", start_date="2022-01-01")
     >>> print(f"Downloaded {result.months_added} months")  # Attribute access
-    >>> print(f"Database: {result['duckdb_size_mb']:.2f} MB")  # Dict access (backward compat)
+    >>> print(f"Storage: {result.storage_bytes / 1024 / 1024:.2f} MB")
     >>>
     >>> # Incremental update (only new months)
     >>> result = processor.update_data("EURUSD")
@@ -61,7 +67,7 @@ __version__ = "1.2.1"
 __author__ = "Terry Li <terry@eonlabs.com>"
 __license__ = "MIT"
 
-# ClickHouse backend exports (v2.2.0)
+# ClickHouse exports (v2.0.0 - sole backend)
 from exness_data_preprocess.clickhouse_client import (
     ClickHouseConnectionError,
     ClickHouseQueryError,
@@ -88,7 +94,7 @@ from exness_data_preprocess.models import (
 from exness_data_preprocess.processor import ExnessDataProcessor
 
 __all__ = [
-    # Main class (DuckDB backend)
+    # Main class (ClickHouse backend)
     "ExnessDataProcessor",
     # Pydantic models
     "UpdateResult",
@@ -103,7 +109,7 @@ __all__ = [
     "supported_pairs",
     "supported_timeframes",
     "supported_variants",
-    # ClickHouse backend (v2.2.0)
+    # ClickHouse modules
     "ClickHouseManager",
     "ClickHouseGapDetector",
     "ClickHouseQueryEngine",

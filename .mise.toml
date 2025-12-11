@@ -35,8 +35,9 @@ python = "3.11"
 
 [tasks.validate]
 description = "Run full E2E validation pipeline"
-# ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
+# ADR: /docs/adr/2025-12-11-duckdb-removal-clickhouse.md
 depends = [
+    "clickhouse:ensure",        # Fail fast if ClickHouse not running
     "validate:imports",
     "validate:lint",
     "validate:typecheck",
@@ -44,24 +45,36 @@ depends = [
     "validate:build",
     "validate:install",
     "validate:mixin",
+    "validate:clickhouse",      # ClickHouse E2E validation
 ]
 run = '''
 echo ""
 echo "=============================================="
 echo "✅ ALL VALIDATIONS PASSED"
 echo "=============================================="
-echo ""
-echo "💡 To run ClickHouse validation (requires ClickHouse running):"
-echo "   mise run clickhouse:start"
-echo "   mise run validate:clickhouse"
 '''
 
 # -----------------------------------------------------------------------------
 # Individual Validation Tasks
 # -----------------------------------------------------------------------------
 
+[tasks."clickhouse:ensure"]
+description = "Ensure ClickHouse is running (fail fast)"
+# ADR: /docs/adr/2025-12-11-duckdb-removal-clickhouse.md
+run = '''
+#!/usr/bin/env bash
+set -e
+if ! nc -z localhost 8123 2>/dev/null; then
+    echo "ERROR: ClickHouse not running on port 8123" >&2
+    echo "Start with: mise run clickhouse:start" >&2
+    exit 1
+fi
+echo "✅ ClickHouse connection verified"
+'''
+
 [tasks."validate:imports"]
 description = "Validate all module imports (catch circular imports, missing deps)"
+# ADR: /docs/adr/2025-12-11-duckdb-removal-clickhouse.md - DuckDB modules removed
 run = '''
 #!/usr/bin/env bash
 set -e
@@ -95,7 +108,7 @@ from exness_data_preprocess import (
 print('✅ All public exports importable')
 " || { echo "❌ Public exports import failed"; exit 1; }
 
-# Test all internal modules
+# Test all internal modules (ClickHouse-only, DuckDB modules removed)
 uv run python -c "
 modules = [
     'exness_data_preprocess.clickhouse_base',
@@ -105,15 +118,10 @@ modules = [
     'exness_data_preprocess.clickhouse_ohlc_generator',
     'exness_data_preprocess.clickhouse_query_engine',
     'exness_data_preprocess.config',
-    'exness_data_preprocess.database_manager',
     'exness_data_preprocess.downloader',
     'exness_data_preprocess.exchanges',
-    'exness_data_preprocess.gap_detector',
     'exness_data_preprocess.models',
-    'exness_data_preprocess.ohlc_generator',
     'exness_data_preprocess.processor',
-    'exness_data_preprocess.query_engine',
-    'exness_data_preprocess.schema',
     'exness_data_preprocess.session_detector',
     'exness_data_preprocess.tick_loader',
 ]
@@ -121,7 +129,7 @@ import importlib
 for mod in modules:
     importlib.import_module(mod)
     print(f'  ✓ {mod}')
-print('✅ All 18 modules importable')
+print('✅ All 13 modules importable')
 "
 echo "✅ Import validation passed"
 '''

@@ -13,7 +13,7 @@ Handles:
 - Database and table creation with proper codecs
 - Self-documenting COMMENT statements (20-27% AI accuracy improvement)
 - Tick data insertion with batch optimization
-- Phase7 30-column OHLC schema
+- 26-column OHLC schema (ADR: 2025-12-11-duckdb-removal-clickhouse)
 
 Codec Selection (research-validated):
 - DateTime64: DoubleDelta + LZ4 (1.76x faster decompression)
@@ -41,7 +41,7 @@ class ClickHouseManager(ClickHouseClientMixin):
     - Create database and tables with proper schema
     - Add self-documenting COMMENT statements
     - Insert tick data with batch optimization
-    - Ensure Phase7 30-column OHLC schema
+    - Ensure 26-column OHLC schema
 
     Example:
         >>> manager = ClickHouseManager()
@@ -69,7 +69,7 @@ class ClickHouseManager(ClickHouseClientMixin):
         - exness database
         - raw_spread_ticks table (ReplacingMergeTree)
         - standard_ticks table (ReplacingMergeTree)
-        - ohlc_1m table (ReplacingMergeTree, 30 columns)
+        - ohlc_1m table (ReplacingMergeTree, 26 columns)
         - exchange_sessions table (MergeTree)
         - holidays table (MergeTree)
 
@@ -141,9 +141,10 @@ class ClickHouseManager(ClickHouseClientMixin):
         )
 
     def _create_ohlc_table(self) -> None:
-        """Create ohlc_1m table with Phase7 30-column schema.
+        """Create ohlc_1m table with 26-column schema.
 
-        Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
+        ADR: 2025-12-11-duckdb-removal-clickhouse
+        Note: 4 normalized metric columns removed (range_per_*, body_per_*) - can't aggregate correctly.
         Full schema documentation: /docs/DATABASE_SCHEMA.md
         """
         execute_command(
@@ -160,10 +161,6 @@ class ClickHouseManager(ClickHouseClientMixin):
                 standard_spread_avg Nullable(Float64) CODEC(Gorilla, ZSTD),
                 tick_count_raw_spread Nullable(UInt32) CODEC(T64, ZSTD),
                 tick_count_standard Nullable(UInt32) CODEC(T64, ZSTD),
-                range_per_spread Nullable(Float32) CODEC(Gorilla, ZSTD),
-                range_per_tick Nullable(Float32) CODEC(Gorilla, ZSTD),
-                body_per_spread Nullable(Float32) CODEC(Gorilla, ZSTD),
-                body_per_tick Nullable(Float32) CODEC(Gorilla, ZSTD),
                 ny_hour UInt8 CODEC(T64, ZSTD),
                 london_hour UInt8 CODEC(T64, ZSTD),
                 ny_session LowCardinality(String),
@@ -184,7 +181,7 @@ class ClickHouseManager(ClickHouseClientMixin):
             ) ENGINE = ReplacingMergeTree()
             PARTITION BY toYYYYMM(timestamp)
             ORDER BY (instrument, timestamp)
-            COMMENT 'Phase7 30-column OHLC bars at 1-minute resolution. BID-only prices from raw_spread_ticks. Supports on-demand resampling to 5m/1h/1d. See /docs/DATABASE_SCHEMA.md for column details.'
+            COMMENT '26-column OHLC bars at 1-minute resolution. BID-only prices from raw_spread_ticks. Supports on-demand resampling to 5m/1h/1d. See /docs/DATABASE_SCHEMA.md for column details.'
             """,
         )
 

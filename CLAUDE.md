@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Package**: `exness-data-preprocess` — Forex tick data preprocessing with DuckDB (local) and ClickHouse (cloud) backends
+**Package**: `exness-data-preprocess` — Forex tick data preprocessing with ClickHouse backend
 
 **Version**: See [`pyproject.toml`](pyproject.toml) line 3 (SSoT via semantic-release)
 
@@ -14,69 +14,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Essential Links
 
-| Topic            | SSoT Document                                                      | Purpose                               |
-| ---------------- | ------------------------------------------------------------------ | ------------------------------------- |
-| **User Guide**   | [`README.md`](README.md)                                           | Installation, API, examples           |
-| **Architecture** | [`docs/UNIFIED_DUCKDB_PLAN_v2.md`](docs/UNIFIED_DUCKDB_PLAN_v2.md) | Unified single-file DuckDB design     |
-| **Schema**       | [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)               | Phase7 30-column OHLC specification   |
-| **Modules**      | [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)       | 19 modules with SLOs                  |
-| **Data Sources** | [`docs/EXNESS_DATA_SOURCES.md`](docs/EXNESS_DATA_SOURCES.md)       | Exness tick data variants             |
-| **Research**     | [`docs/RESEARCH_PATTERNS.md`](docs/RESEARCH_PATTERNS.md)           | Hybrid materialization lifecycle      |
-| **Tasks**        | [`.mise.toml`](.mise.toml)                                         | Validation, ClickHouse, DBeaver tasks |
-| **Contributing** | [`CONTRIBUTING.md`](CONTRIBUTING.md)                               | Development guidelines                |
+| Topic            | SSoT Document                                                                                          | Purpose                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| **User Guide**   | [`README.md`](README.md)                                                                               | Installation, API, examples  |
+| **Architecture** | [`docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](docs/adr/2025-12-11-duckdb-removal-clickhouse.md) | ClickHouse-only decision     |
+| **Schema**       | [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)                                                   | 26-column OHLC specification |
+| **Modules**      | [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)                                           | 13 modules with SLOs         |
+| **Data Sources** | [`docs/EXNESS_DATA_SOURCES.md`](docs/EXNESS_DATA_SOURCES.md)                                           | Exness tick data variants    |
+| **Tasks**        | [`.mise.toml`](.mise.toml)                                                                             | Validation, ClickHouse tasks |
+| **Contributing** | [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                                   | Development guidelines       |
 
 ### Deep Dives (On-Demand)
 
-| Topic              | Location                               | When to Read                     |
-| ------------------ | -------------------------------------- | -------------------------------- |
-| ADRs               | [`docs/adr/`](docs/adr/)               | Architecture decisions           |
-| Design Specs       | [`docs/design/`](docs/design/)         | Implementation blueprints        |
-| Optimization Plans | [`docs/phases/`](docs/phases/)         | Phase 2/3 SSoT YAML plans        |
-| Validation Results | [`docs/validation/`](docs/validation/) | Spike test proofs                |
-| Research Analysis  | [`docs/research/`](docs/research/)     | Zero-spread, compression studies |
+| Topic              | Location                               | When to Read              |
+| ------------------ | -------------------------------------- | ------------------------- |
+| ADRs               | [`docs/adr/`](docs/adr/)               | Architecture decisions    |
+| Design Specs       | [`docs/design/`](docs/design/)         | Implementation blueprints |
+| Validation Results | [`docs/validation/`](docs/validation/) | Spike test proofs         |
 
 ---
 
-## Architecture Overview
+## Architecture Overview (v2.0.0)
 
-### Dual Backend Design
+### ClickHouse-Only Backend
 
-| Backend        | Storage                                   | Use Case          | Entry Point           |
-| -------------- | ----------------------------------------- | ----------------- | --------------------- |
-| **DuckDB**     | One file per instrument (`eurusd.duckdb`) | Local development | `ExnessDataProcessor` |
-| **ClickHouse** | Single table with instrument column       | Cloud deployment  | `ClickHouseManager`   |
+**ADR**: [`docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](docs/adr/2025-12-11-duckdb-removal-clickhouse.md)
 
-### Module Structure (19 Modules)
+| Feature         | Description                                      |
+| --------------- | ------------------------------------------------ |
+| **Database**    | `exness` (single database for all instruments)   |
+| **Tables**      | `raw_spread_ticks`, `standard_ticks`, `ohlc_1m`  |
+| **Engine**      | ReplacingMergeTree (deduplication at merge time) |
+| **Connection**  | localhost:8123 (local) or cloud via env vars     |
+| **Entry Point** | `ExnessDataProcessor`                            |
 
-**DuckDB Backend (8 modules)**:
-
-- `processor.py` — Thin orchestrator facade
-- `downloader.py` — HTTP download operations
-- `tick_loader.py` — CSV parsing
-- `database_manager.py` — Database operations
-- `session_detector.py` — Holiday/session detection (vectorized)
-- `gap_detector.py` — Incremental update logic (SQL-based)
-- `ohlc_generator.py` — Phase7 OHLC generation
-- `query_engine.py` — Query operations
+### Module Structure (13 Modules)
 
 **ClickHouse Backend (7 modules)**:
 
+- `processor.py` — Main orchestrator with ClickHouse backend
 - `clickhouse_manager.py` — Schema management, data loading
-- `clickhouse_gap_detector.py` — Gap detection for ClickHouse
+- `clickhouse_gap_detector.py` — Gap detection for incremental updates
 - `clickhouse_query_engine.py` — Query with pagination
 - `clickhouse_ohlc_generator.py` — OHLC generation
 - `clickhouse_client.py` — Connection factory with error handling
 - `clickhouse_base.py` — Shared mixin for client lifecycle
-- `clickhouse_cloud.py` — Cloud-specific configuration
 
-**Shared (4 modules)**:
+**Shared (6 modules)**:
 
+- `downloader.py` — HTTP download operations
+- `tick_loader.py` — CSV parsing
+- `session_detector.py` — Holiday/session detection (vectorized)
 - `config.py` — Configuration management
 - `models.py` — Pydantic models (UpdateResult, CoverageInfo, etc.)
-- `schema.py` — SQL schema definitions
 - `exchanges.py` — Exchange calendar integration
 
-**Complete Details**: [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)
+**Deleted in v2.0.0**:
+
+- ~~`database_manager.py`~~ — DuckDB database operations
+- ~~`gap_detector.py`~~ — DuckDB gap detection
+- ~~`ohlc_generator.py`~~ — DuckDB OHLC generation
+- ~~`query_engine.py`~~ — DuckDB query operations
+- ~~`schema.py`~~ — DuckDB SQL schema definitions
 
 ---
 
@@ -88,63 +87,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Setup
 uv sync --dev
 
-# Testing (48 tests)
+# Testing (45 tests)
 uv run pytest                          # All tests
-mise run validate                      # Full E2E validation
+mise run validate                      # Full E2E validation (requires ClickHouse)
 
 # Linting
 uv run ruff check --fix src/ tests/
 
-# ClickHouse
+# ClickHouse (required for full validation)
 mise run clickhouse:start              # Start local server
 mise run clickhouse:status             # Check connection
-mise run validate:clickhouse           # E2E ClickHouse tests
+mise run clickhouse:ensure             # Fail fast if not running
 
 # Build & Publish
 uv build
-mise run db-client-generate            # Generate DBeaver config
 ```
 
 ### mise Tasks
 
 All validation and tooling tasks are defined in [`.mise.toml`](.mise.toml):
 
-| Task                           | Description                                                               |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `mise run validate`            | Full E2E pipeline (imports, lint, typecheck, test, build, install, mixin) |
-| `mise run validate:clickhouse` | ClickHouse E2E tests (requires running server)                            |
-| `mise run clickhouse:start`    | Start mise-installed ClickHouse                                           |
-| `mise run db-client-generate`  | Generate DBeaver config from Pydantic model                               |
-| `mise run ci`                  | Simulate CI pipeline locally                                              |
+| Task                           | Description                             |
+| ------------------------------ | --------------------------------------- |
+| `mise run validate`            | Full E2E pipeline (requires ClickHouse) |
+| `mise run clickhouse:ensure`   | Fail fast if ClickHouse not running     |
+| `mise run clickhouse:start`    | Start mise-installed ClickHouse         |
+| `mise run validate:clickhouse` | ClickHouse E2E tests                    |
 
 ---
 
-## Key Patterns
+## Key Changes in v2.0.0
 
-### Performance Optimizations (~16x total speedup)
+### Breaking Changes
 
-| Phase | Optimization          | Speedup           | SSoT                                                                                                                 |
-| ----- | --------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1     | Incremental OHLC      | 7.3x              | [`docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md) |
-| 2     | Session Vectorization | 2.2x              | [`docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)           |
-| 3     | SQL Gap Detection     | 46% LOC reduction | [`docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                   |
+| v1.x (DuckDB)     | v2.0.0 (ClickHouse)             |
+| ----------------- | ------------------------------- |
+| `duckdb_path`     | `database` (str)                |
+| `duckdb_size_mb`  | `storage_bytes` (int)           |
+| `database_exists` | removed                         |
+| `base_dir` param  | removed (ClickHouse manages)    |
+| 30-column OHLC    | 26-column OHLC (4 cols removed) |
 
-### Research Lifecycle
+### Removed Files
 
 ```
-Explore (pandas/Polars) → Validate → Graduate (DuckDB) → Query (SQL)
+src/exness_data_preprocess/database_manager.py   (209 lines)
+src/exness_data_preprocess/gap_detector.py       (134 lines)
+src/exness_data_preprocess/ohlc_generator.py     (266 lines)
+src/exness_data_preprocess/query_engine.py       (291 lines)
+src/exness_data_preprocess/schema.py             (324 lines)
 ```
 
-**SSoT**: [`docs/RESEARCH_PATTERNS.md`](docs/RESEARCH_PATTERNS.md)
+**Total: ~1,224 lines deleted**
 
 ---
 
 ## References
 
 - **Exness Data**: <https://ticks.ex2archive.com/>
-- **DuckDB**: <https://duckdb.org/>
 - **ClickHouse**: <https://clickhouse.com/>
 
 ---
 
-**Last Updated**: 2025-12-10
+**Last Updated**: 2025-12-11
