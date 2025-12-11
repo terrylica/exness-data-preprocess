@@ -2,8 +2,8 @@
 # E2E validation workflow for codebase pruning verification
 
 [env]
-# Python version for validation
-PYTHON_VERSION = "3.14"
+# Python version for validation (pinned for alpha-forge compatibility)
+PYTHON_VERSION = "3.11"
 # Package name
 PACKAGE_NAME = "exness_data_preprocess"
 # Validation temp directory
@@ -26,7 +26,8 @@ DBEAVER_CONFIG_PATH = ".dbeaver/data-sources.json"
 # CLICKHOUSE_PASSWORD_READONLY - set in .env
 
 [tools]
-python = "3.14"
+# Pin Python 3.11 for alpha-forge compatibility (numpy requirements)
+python = "3.11"
 
 # =============================================================================
 # Validation Tasks - E2E Testing Pipeline
