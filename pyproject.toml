@@ -1,6 +1,6 @@
 [project]
 name = "exness-data-preprocess"
-version = "1.2.0"
+version = "1.2.1"
 description = "Professional Exness forex tick data preprocessing with optimal compression (Parquet Zstd-22) and DuckDB OHLC generation. Provides efficient storage (9% smaller than ZIP) with lossless precision and direct queryability."
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [

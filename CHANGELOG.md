@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/terrylica/exness-data-preprocess/compare/v1.2.0...v1.2.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* **clickhouse:** bootstrap database creation without existing database context ([0fdfef1](https://github.com/terrylica/exness-data-preprocess/commit/0fdfef17cf797d64a66b3b163037a01c1e8245a7))
+
 # [1.2.0](https://github.com/terrylica/exness-data-preprocess/compare/v1.1.0...v1.2.0) (2025-12-10)
 
 
