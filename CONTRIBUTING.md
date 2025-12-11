@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Exness Data Preprocess! This docu
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.11 or higher (see `pyproject.toml` requires-python)
 - uv package manager (recommended) or pip
 - Git
 
@@ -114,6 +114,7 @@ When reporting issues, please include:
    ```
 
 7. **Push to your fork** and submit a pull request:
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -143,31 +144,24 @@ test: add integration tests for DuckDB operations
 
 ### Project Structure
 
-```
-exness-data-preprocess/
-├── src/exness_data_preprocess/
-│   ├── __init__.py          # Package entry point
-│   ├── processor.py         # Core processor class
-│   ├── api.py              # Simple API functions
-│   └── cli.py              # Command-line interface
-├── tests/
-│   ├── conftest.py         # Pytest fixtures
-│   ├── test_processor.py   # Processor tests
-│   ├── test_api.py         # API tests
-│   └── test_cli.py         # CLI tests
-├── docs/                   # Documentation
-├── pyproject.toml         # Package configuration
-└── README.md             # Main documentation
-```
+**See [`CLAUDE.md`](CLAUDE.md) for complete module structure (19 modules).**
+
+Key directories:
+
+- `src/exness_data_preprocess/` — Source modules (DuckDB + ClickHouse backends)
+- `tests/` — Test suite (48 tests)
+- `docs/` — Documentation hub
+- `.mise.toml` — Validation and tooling tasks
+- `pyproject.toml` — Package configuration (SSoT for version via semantic-release)
 
 ### Adding New Features
 
 When adding new features:
 
-1. **Add implementation** in appropriate module (processor.py, api.py, or cli.py)
-2. **Add tests** in corresponding test file
+1. **Add implementation** in appropriate module (see CLAUDE.md Module Structure)
+2. **Add tests** in corresponding test file under `tests/`
 3. **Update API exports** in `__init__.py` if needed
-4. **Update README.md** with usage examples
+4. **Update CLAUDE.md** with module links if adding new modules
 5. **Add docstrings** following Google style
 
 Example docstring:
