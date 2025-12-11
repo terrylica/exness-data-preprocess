@@ -78,8 +78,15 @@ class ClickHouseManager(ClickHouseClientMixin):
         Raises:
             ClickHouseQueryError: If schema creation fails
         """
-        # Create database
-        execute_command(self.client, f"CREATE DATABASE IF NOT EXISTS {self.DATABASE}")
+        # Create database using a client without database context
+        # (database may not exist yet, so we can't connect to it)
+        from exness_data_preprocess.clickhouse_client import get_client as get_client_fn
+
+        bootstrap_client = get_client_fn(database="")  # Empty string = no database
+        try:
+            execute_command(bootstrap_client, f"CREATE DATABASE IF NOT EXISTS {self.DATABASE}")
+        finally:
+            bootstrap_client.close()
 
         # Create tick tables
         self._create_raw_spread_ticks_table()
