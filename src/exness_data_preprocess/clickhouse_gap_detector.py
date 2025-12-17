@@ -54,9 +54,7 @@ class ClickHouseGapDetector(ClickHouseClientMixin):
         """
         self._init_client(client)
 
-    def discover_missing_months(
-        self, instrument: str, start_date: str
-    ) -> list[tuple[int, int]]:
+    def discover_missing_months(self, instrument: str, start_date: str) -> list[tuple[int, int]]:
         """
         Discover which months need to be downloaded.
 
@@ -194,9 +192,7 @@ class ClickHouseGapDetector(ClickHouseClientMixin):
 
         return months
 
-    def get_coverage_range(
-        self, instrument: str
-    ) -> tuple[datetime | None, datetime | None]:
+    def get_coverage_range(self, instrument: str) -> tuple[datetime | None, datetime | None]:
         """
         Get the earliest and latest timestamps for an instrument.
 

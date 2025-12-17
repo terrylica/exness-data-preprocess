@@ -16,7 +16,6 @@ Handles:
 - Parameterized queries for safe, efficient access
 """
 
-
 from collections.abc import Iterator
 
 import pandas as pd
@@ -274,7 +273,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         result = execute_query(self.client, query, parameters=params)
 
         # Convert to DataFrame using column names from result
-        columns = result.column_names if hasattr(result, 'column_names') else None
+        columns = result.column_names if hasattr(result, "column_names") else None
         return pd.DataFrame(result.result_rows, columns=columns)
 
     def get_data_coverage(self, instrument: PairType = "EURUSD") -> CoverageInfo:

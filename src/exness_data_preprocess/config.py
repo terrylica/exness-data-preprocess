@@ -44,19 +44,16 @@ class ConfigModel(BaseModel):
     """
 
     base_dir: Optional[Path] = Field(
-        default=None,
-        description="Default base directory for data storage (supports ~ expansion)"
+        default=None, description="Default base directory for data storage (supports ~ expansion)"
     )
     default_pair: Optional[PairType] = Field(
-        default=None,
-        description="Default currency pair for CLI commands"
+        default=None, description="Default currency pair for CLI commands"
     )
     default_timeframe: Optional[TimeframeType] = Field(
-        default=None,
-        description="Default OHLC timeframe for queries"
+        default=None, description="Default OHLC timeframe for queries"
     )
 
-    @field_validator('base_dir', mode='before')
+    @field_validator("base_dir", mode="before")
     @classmethod
     def expand_base_dir(cls, v: Optional[str]) -> Optional[Path]:
         """Expand ~ and convert to absolute Path."""
@@ -70,7 +67,7 @@ class ConfigModel(BaseModel):
                 {
                     "base_dir": "~/eon/exness-data",
                     "default_pair": "EURUSD",
-                    "default_timeframe": "1h"
+                    "default_timeframe": "1h",
                 }
             ]
         }
@@ -119,7 +116,7 @@ def load_config(path: Optional[Path] = None) -> Optional[ConfigModel]:
         return None
 
     # Load YAML file
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     # Validate with Pydantic (raises ValidationError if invalid)

@@ -266,7 +266,9 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
             return
 
         # Convert to DataFrame for session_detector
-        columns = [col[0] for col in result.column_names] if hasattr(result, 'column_names') else None
+        columns = (
+            [col[0] for col in result.column_names] if hasattr(result, "column_names") else None
+        )
         df = pd.DataFrame(result.result_rows, columns=columns)
 
         if len(df) == 0:
@@ -303,14 +305,32 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
 
         # Prepare data for insertion
         # Map session_detector column names back to schema
-        insert_df = df[[
-            "instrument", "timestamp", "open", "high", "low", "close",
-            "raw_spread_avg", "standard_spread_avg",
-            "tick_count_raw_spread", "tick_count_standard",
-            "range_per_spread", "range_per_tick", "body_per_spread", "body_per_tick",
-            "ny_hour", "london_hour", "ny_session", "london_session",
-            "is_us_holiday", "is_uk_holiday", "is_major_holiday",
-        ] + [f"is_{name}_session" for name in EXCHANGES.keys()]].copy()
+        insert_df = df[
+            [
+                "instrument",
+                "timestamp",
+                "open",
+                "high",
+                "low",
+                "close",
+                "raw_spread_avg",
+                "standard_spread_avg",
+                "tick_count_raw_spread",
+                "tick_count_standard",
+                "range_per_spread",
+                "range_per_tick",
+                "body_per_spread",
+                "body_per_tick",
+                "ny_hour",
+                "london_hour",
+                "ny_session",
+                "london_session",
+                "is_us_holiday",
+                "is_uk_holiday",
+                "is_major_holiday",
+            ]
+            + [f"is_{name}_session" for name in EXCHANGES.keys()]
+        ].copy()
 
         # Convert types for ClickHouse
         insert_df["timestamp"] = pd.to_datetime(insert_df["timestamp"])

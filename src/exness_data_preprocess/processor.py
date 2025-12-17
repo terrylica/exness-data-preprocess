@@ -187,9 +187,7 @@ class ExnessDataProcessor:
         """Validate currency pair input."""
         valid_pairs = supported_pairs()
         if pair not in valid_pairs:
-            raise ValueError(
-                f"Invalid pair '{pair}'. Must be one of: {', '.join(valid_pairs)}"
-            )
+            raise ValueError(f"Invalid pair '{pair}'. Must be one of: {', '.join(valid_pairs)}")
 
     @staticmethod
     def _validate_variant(variant: str) -> None:
@@ -218,9 +216,7 @@ class ExnessDataProcessor:
         import re
 
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-            raise ValueError(
-                f"Invalid {param_name} '{date_str}'. Must be in YYYY-MM-DD format"
-            )
+            raise ValueError(f"Invalid {param_name} '{date_str}'. Must be in YYYY-MM-DD format")
 
         try:
             from datetime import datetime
@@ -515,9 +511,7 @@ class ExnessDataProcessor:
         self._validate_pair(pair)
         return self.ch_query_engine.get_data_coverage(pair)
 
-    def get_available_dates(
-        self, pair: PairType = "EURUSD"
-    ) -> tuple[Optional[str], Optional[str]]:
+    def get_available_dates(self, pair: PairType = "EURUSD") -> tuple[Optional[str], Optional[str]]:
         """
         Get earliest and latest dates with actual data.
 
@@ -532,9 +526,7 @@ class ExnessDataProcessor:
         coverage = self.ch_query_engine.get_data_coverage(pair)
         return (coverage.earliest_date, coverage.latest_date)
 
-    def validate_date_range(
-        self, start_date: str, end_date: str
-    ) -> tuple[bool, Optional[str]]:
+    def validate_date_range(self, start_date: str, end_date: str) -> tuple[bool, Optional[str]]:
         """
         Validate date range before querying.
 

@@ -80,7 +80,11 @@ def get_client(
     resolved_user = user or os.environ.get("CLICKHOUSE_USER", DEFAULT_USER)
     resolved_password = password or os.environ.get("CLICKHOUSE_PASSWORD", DEFAULT_PASSWORD)
     # Database can be None for initial schema creation (CREATE DATABASE needs no database context)
-    resolved_database = database if database is not None else os.environ.get("CLICKHOUSE_DATABASE", DEFAULT_DATABASE)
+    resolved_database = (
+        database
+        if database is not None
+        else os.environ.get("CLICKHOUSE_DATABASE", DEFAULT_DATABASE)
+    )
 
     # Mode-based SSL detection (ADR: 2025-12-10-clickhouse-pydantic-config)
     # CLICKHOUSE_MODE takes precedence over CLICKHOUSE_SECURE for clarity

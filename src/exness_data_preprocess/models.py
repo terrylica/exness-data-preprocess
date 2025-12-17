@@ -145,9 +145,7 @@ class UpdateResult(BaseModel):
         >>> print(result['months_added'])
     """
 
-    database: str = Field(
-        description="ClickHouse database name (e.g., 'exness')"
-    )
+    database: str = Field(description="ClickHouse database name (e.g., 'exness')")
     months_added: int = Field(
         ge=0,
         description="Number of months successfully downloaded and added to database. Returns 0 if database is up to date.",
@@ -251,9 +249,7 @@ class CoverageInfo(BaseModel):
         >>> print(coverage['database'])
     """
 
-    database: str = Field(
-        description="ClickHouse database name (e.g., 'exness')"
-    )
+    database: str = Field(description="ClickHouse database name (e.g., 'exness')")
     storage_bytes: int = Field(
         default=0,
         ge=0,
@@ -273,12 +269,12 @@ class CoverageInfo(BaseModel):
     )
     earliest_date: Optional[str] = Field(
         default=None,
-        pattern=r'^\d{4}-\d{2}-\d{2}',
+        pattern=r"^\d{4}-\d{2}-\d{2}",
         description="ISO 8601 timestamp of earliest tick (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
     )
     latest_date: Optional[str] = Field(
         default=None,
-        pattern=r'^\d{4}-\d{2}-\d{2}',
+        pattern=r"^\d{4}-\d{2}-\d{2}",
         description="ISO 8601 timestamp of latest tick (None if no data). Format: YYYY-MM-DD HH:MM:SS+TZ",
     )
     date_range_days: int = Field(
@@ -396,16 +392,10 @@ class CursorResult(BaseModel):
         description="DataFrame containing the current page of results (pd.DataFrame)"
     )
     next_cursor: Optional[str] = Field(
-        default=None,
-        description="ISO 8601 timestamp to pass for next page (None if no more data)"
+        default=None, description="ISO 8601 timestamp to pass for next page (None if no more data)"
     )
-    has_more: bool = Field(
-        description="Whether more data is available after this page"
-    )
-    page_size: int = Field(
-        ge=1,
-        description="Number of rows requested per page"
-    )
+    has_more: bool = Field(description="Whether more data is available after this page")
+    page_size: int = Field(ge=1, description="Number of rows requested per page")
 
     model_config = {
         "arbitrary_types_allowed": True,  # Allow pd.DataFrame
@@ -415,10 +405,10 @@ class CursorResult(BaseModel):
                     "data": "<DataFrame with 10000 rows>",
                     "next_cursor": "2024-08-01 12:30:45.123456+00:00",
                     "has_more": True,
-                    "page_size": 10000
+                    "page_size": 10000,
                 }
             ]
-        }
+        },
     }
 
 
@@ -445,24 +435,23 @@ class DryRunResult(BaseModel):
     """
 
     would_download_months: int = Field(
-        ge=0,
-        description="Number of months that would be downloaded (0 if up to date)"
+        ge=0, description="Number of months that would be downloaded (0 if up to date)"
     )
     estimated_raw_ticks: int = Field(
         ge=0,
-        description="Estimated Raw_Spread ticks based on historical average (~9.5M per month for EURUSD)"
+        description="Estimated Raw_Spread ticks based on historical average (~9.5M per month for EURUSD)",
     )
     estimated_standard_ticks: int = Field(
         ge=0,
-        description="Estimated Standard ticks based on historical average (~9.5M per month for EURUSD)"
+        description="Estimated Standard ticks based on historical average (~9.5M per month for EURUSD)",
     )
     estimated_size_mb: float = Field(
         ge=0,
-        description="Estimated database size increase in megabytes (~11 MB per month for EURUSD)"
+        description="Estimated database size increase in megabytes (~11 MB per month for EURUSD)",
     )
     gap_months: list[str] = Field(
         default_factory=list,
-        description="List of YYYY-MM month strings that would be downloaded, in chronological order"
+        description="List of YYYY-MM month strings that would be downloaded, in chronological order",
     )
 
     @computed_field  # type: ignore[misc]
@@ -505,7 +494,7 @@ class DryRunResult(BaseModel):
                     "estimated_raw_ticks": 28500000,
                     "estimated_standard_ticks": 28500000,
                     "estimated_size_mb": 33.0,
-                    "gap_months": ["2024-01", "2024-02", "2024-03"]
+                    "gap_months": ["2024-01", "2024-02", "2024-03"],
                 }
             ]
         }

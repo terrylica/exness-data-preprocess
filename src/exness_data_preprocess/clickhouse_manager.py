@@ -225,9 +225,7 @@ class ClickHouseManager(ClickHouseClientMixin):
             """,
         )
 
-    def insert_ticks(
-        self, df: pd.DataFrame, instrument: str, variant: str = "raw_spread"
-    ) -> int:
+    def insert_ticks(self, df: pd.DataFrame, instrument: str, variant: str = "raw_spread") -> int:
         """
         Insert ticks into ClickHouse.
 
