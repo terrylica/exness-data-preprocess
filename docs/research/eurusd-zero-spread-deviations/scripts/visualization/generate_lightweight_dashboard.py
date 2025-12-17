@@ -201,6 +201,7 @@ def generate_lightweight_dashboard(year: str, month: str) -> Path:
                         subset["rolling_enrichment"],
                         subset["rolling_cv"],
                         subset["rolling_burst_pct"],
+                        strict=False,
                     )
                 ],
                 hoverinfo="text",

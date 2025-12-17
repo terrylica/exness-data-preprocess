@@ -247,7 +247,7 @@ def main():
     results = []
     failed_count = 0
 
-    for std_file, raw_file in zip(std_files, raw_files):
+    for std_file, raw_file in zip(std_files, raw_files, strict=False):
         try:
             result = analyze_file_pair(std_file, raw_file)
             results.append(result)

@@ -158,6 +158,7 @@ def add_deviation_markers(
                         dev_subset["price"],
                         dev_subset["deviation"],
                         dev_subset["position_ratio"],
+                        strict=False,
                     )
                 ],
                 hoverinfo="text",

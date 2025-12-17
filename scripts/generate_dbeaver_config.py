@@ -111,12 +111,8 @@ class ClickHouseConnection(BaseModel):
             config["configuration"]["password"] = ""
         elif self.mode == ConnectionMode.CLOUD:
             # Cloud: read from environment (gitignored output)
-            config["configuration"]["user"] = os.environ.get(
-                "CLICKHOUSE_USER_READONLY", "default"
-            )
-            config["configuration"]["password"] = os.environ.get(
-                "CLICKHOUSE_PASSWORD_READONLY", ""
-            )
+            config["configuration"]["user"] = os.environ.get("CLICKHOUSE_USER_READONLY", "default")
+            config["configuration"]["password"] = os.environ.get("CLICKHOUSE_PASSWORD_READONLY", "")
 
         return config
 

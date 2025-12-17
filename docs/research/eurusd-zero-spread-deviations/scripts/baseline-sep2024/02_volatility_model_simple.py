@@ -264,7 +264,7 @@ for horizon in FUTURE_HORIZONS:
     print(f"   Multi-factor R²: {r2:.4f}")
     print(f"   MAE: {mae:.2f} bps")
     print("\n   Feature Coefficients (standardized):")
-    for feat, coef in zip(feature_cols, coefs):
+    for feat, coef in zip(feature_cols, coefs, strict=False):
         print(f"      {feat}: {coef:+.4f}")
 
     print("\n   Individual Correlations:")

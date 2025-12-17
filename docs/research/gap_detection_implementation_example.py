@@ -172,14 +172,14 @@ if __name__ == "__main__":
     # Categorize gaps
     existing = {(2024, 1), (2024, 2), (2024, 3), (2024, 5), (2024, 8), (2024, 9)}
     within_range = [
-        (y, m) for y, m in missing if datetime(2024, 1, 1) <= datetime(y, m, 1) <= datetime(2024, 9, 30)
+        (y, m)
+        for y, m in missing
+        if datetime(2024, 1, 1) <= datetime(y, m, 1) <= datetime(2024, 9, 30)
     ]
-    after_latest = [
-        (y, m) for y, m in missing if datetime(y, m, 1) > datetime(2024, 9, 30)
-    ]
+    after_latest = [(y, m) for y, m in missing if datetime(y, m, 1) > datetime(2024, 9, 30)]
 
     print(f"\nGaps within coverage range: {within_range}")
-    print(f"Expected: [(2024, 4), (2024, 6), (2024, 7)]")
+    print("Expected: [(2024, 4), (2024, 6), (2024, 7)]")
     print(f"Match: {within_range == [(2024, 4), (2024, 6), (2024, 7)]}")
 
     print(f"\nGaps after latest (Oct 2024 to current): {len(after_latest)} months")
