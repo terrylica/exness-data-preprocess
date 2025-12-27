@@ -1,3 +1,33 @@
+# [2.0.0](https://github.com/terrylica/exness-data-preprocess/compare/v1.2.1...v2.0.0) (2025-12-27)
+
+
+* feat!: migrate to ClickHouse-only backend, remove DuckDB ([7fd83bc](https://github.com/terrylica/exness-data-preprocess/commit/7fd83bc5720b2f5997a661ef8060757abd602a81))
+
+
+### BREAKING CHANGES
+
+* This release removes DuckDB and makes ClickHouse the sole storage backend.
+
+API Changes:
+- `duckdb_path` → `database` (str, ClickHouse database name)
+- `duckdb_size_mb` → `storage_bytes` (int, bytes not MB)
+- `database_exists` → removed
+- `base_dir` constructor parameter → removed
+
+Schema Changes:
+- OHLC schema reduced from 30 to 26 columns (removed 4 normalized metrics)
+
+Deleted Files (~1,219 lines):
+- database_manager.py (209 lines)
+- gap_detector.py (134 lines)
+- ohlc_generator.py (266 lines)
+- query_engine.py (291 lines)
+- schema.py (324 lines)
+
+Requires: ClickHouse running on localhost:8123
+
+ADR: docs/adr/2025-12-11-duckdb-removal-clickhouse.md
+
 ## [1.2.1](https://github.com/terrylica/exness-data-preprocess/compare/v1.2.0...v1.2.1) (2025-12-11)
 
 
