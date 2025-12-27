@@ -1,8 +1,10 @@
 # Compression Benchmarks
 
+> **⚠️ HISTORICAL DOCUMENT**: These benchmarks were conducted during the DuckDB era (v1.x). The project migrated to ClickHouse-only architecture in v2.0.0, which uses its own native compression (LZ4/ZSTD). See [DuckDB Removal ADR](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md). These benchmarks are preserved for historical reference.
+
 ## Overview
 
-This directory contains empirical benchmarks that determined the optimal compression strategy for **exness-data-preprocess**. These benchmarks were conducted on actual Exness EURUSD tick data (not synthetic data) to ensure real-world applicability.
+This directory contains empirical benchmarks that determined the optimal compression strategy for **exness-data-preprocess** v1.x (DuckDB backend). These benchmarks were conducted on actual Exness EURUSD tick data (not synthetic data) to ensure real-world applicability.
 
 ## Key Findings
 
@@ -223,12 +225,12 @@ VERDICT
 ### Compression Research
 
 1. **Zstd Algorithm** (Facebook/Meta):
-   - https://facebook.github.io/zstd/
+   - <https://facebook.github.io/zstd/>
    - "Fast real-time compression algorithm"
    - Used by ClickHouse, VictoriaMetrics, Databricks
 
 2. **Brotli Algorithm** (Google):
-   - https://github.com/google/brotli
+   - <https://github.com/google/brotli>
    - "Designed for HTTP compression (small files)"
    - NOT recommended for large datasets
 
@@ -239,10 +241,10 @@ VERDICT
 
 ### Columnar Formats
 
-1. **Apache Parquet**: https://parquet.apache.org/
-2. **Apache Arrow Feather**: https://arrow.apache.org/docs/python/feather.html
-3. **Lance**: https://github.com/lancedb/lance
-4. **ORC**: https://orc.apache.org/
+1. **Apache Parquet**: <https://parquet.apache.org/>
+2. **Apache Arrow Feather**: <https://arrow.apache.org/docs/python/feather.html>
+3. **Lance**: <https://github.com/lancedb/lance>
+4. **ORC**: <https://orc.apache.org/>
 
 ## Summary
 

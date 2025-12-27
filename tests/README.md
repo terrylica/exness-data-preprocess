@@ -1,41 +1,40 @@
-# Test Suite - v2.0.0 (To Be Rewritten)
+# Test Suite - v2.0.0 (ClickHouse Backend)
 
 ## Status
 
-The test suite needs to be completely rewritten for the v2.0.0 architecture.
+The test suite covers the v2.0.0 ClickHouse-only architecture.
 
-**Previous test files (removed)**:
+**Architecture**: ClickHouse Cloud backend (ReplacingMergeTree for deduplication)
 
-- `test_processor.py` - Tested v1.0.0 Parquet-based storage and monthly DuckDB files
-- `test_api.py` - Tested v1.0.0 API functions (process_month, analyze_ticks, etc.)
-- `test_cli.py` - Tested v1.0.0 CLI commands
+**ADR**: [DuckDB Removal - ClickHouse Migration](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md)
 
-## v2.0.0 Architecture Changes
-
-The v2.0.0 refactoring introduced significant changes that require new tests:
+## v2.0.0 Architecture
 
 ### Storage Architecture
 
-- **Old**: Monthly DuckDB files (eurusd_ohlc_2024_08.duckdb) + Parquet tick storage
-- **New**: Single DuckDB file per instrument (eurusd.duckdb) with all years
+- **Database**: `exness` (single database for all instruments)
+- **Tables**: `raw_spread_ticks`, `standard_ticks`, `ohlc_1m`
+- **Engine**: ReplacingMergeTree (deduplication at merge time)
+- **Connection**: localhost:8123 (local) or ClickHouse Cloud via env vars
 
-### API Changes
+### API
 
-- **Old**: `process_month(year, month)`, `query_ohlc(year, month)`, `analyze_ticks(year, month)`
-- **New**: `update_data(pair, start_date)`, `query_ohlc(pair, timeframe, start_date, end_date)`, `query_ticks(pair, variant, start_date, end_date)`
+- `update_data(pair, start_date)` — Download and store tick data
+- `query_ohlc(pair, timeframe, start_date, end_date)` — Query OHLC data
+- `query_ticks(pair, variant, start_date, end_date)` — Query raw ticks
 
-### Schema Changes
+### Schema
 
-- **Old**: 7-column OHLC (Timestamp, Open, High, Low, Close, spread_avg, tick_count)
-- **New**: Phase7 13-column (v1.2.0) OHLC - See [`../src/exness_data_preprocess/schema.py`](/src/exness_data_preprocess/schema.py)
+- **OHLC**: 26-column schema — See [`/docs/DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)
+- **Ticks**: `timestamp_ms`, `bid`, `ask`, `symbol`, `variant`
 
-## Required Test Coverage
+## Test Coverage
 
 ### Unit Tests (test_processor.py)
 
 1. **Initialization**
-   - `test_processor_initialization()` - Test base_dir setup
-   - `test_get_or_create_db()` - Test database creation with schema
+   - `test_processor_initialization()` - Test ClickHouse connection setup
+   - `test_get_or_create_tables()` - Test table creation with schema
 
 2. **Data Download**
    - `test_download_exness_zip()` - Test ZIP download for both variants
@@ -43,10 +42,10 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
 
 3. **Data Loading**
    - `test_load_ticks_from_zip()` - Test CSV parsing and DataFrame creation
-   - `test_append_ticks_to_db()` - Test PRIMARY KEY constraint enforcement
+   - `test_append_ticks_to_db()` - Test ReplacingMergeTree deduplication
 
 4. **OHLC Generation**
-   - `test_regenerate_ohlc()` - Test Phase7 13-column (v1.2.0) OHLC generation
+   - `test_regenerate_ohlc()` - Test 26-column OHLC generation
    - `test_ohlc_dual_variant_join()` - Test LEFT JOIN between Raw_Spread and Standard
 
 5. **Query Methods**
@@ -61,7 +60,7 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
 
 7. **Incremental Updates**
    - `test_update_data_initial()` - Test initial download
-   - `test_update_data_incremental()` - Test incremental updates (should add 0 months when up to date)
+   - `test_update_data_incremental()` - Test incremental updates
    - `test_update_data_gap_filling()` - Test filling gaps in coverage
 
 ### Integration Tests (test_integration.py)
@@ -72,19 +71,9 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
    - `test_incremental_update_workflow()` - Initial → Incremental → Validate
 
 2. **Data Quality**
-   - `test_no_duplicates()` - Verify PRIMARY KEY constraints work
-   - `test_phase7_schema()` - Verify 13-column (v1.2.0) OHLC schema
+   - `test_no_duplicates()` - Verify ReplacingMergeTree deduplication
+   - `test_schema_columns()` - Verify 26-column OHLC schema
    - `test_date_range_accuracy()` - Verify date range filtering accuracy
-
-### API Tests (test_api.py)
-
-1. **Convenience Functions**
-   - Test wrapper functions if any exist in v2.0.0
-
-### CLI Tests (test_cli.py)
-
-1. **CLI Commands**
-   - Tests will depend on CLI implementation for v2.0.0
 
 ## Test Data
 
@@ -95,18 +84,13 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
    - Include various timestamps to test resampling
    - Include zero-spread and non-zero-spread ticks
 
-2. **Sample Database**
-   - Create fixture with pre-populated eurusd.duckdb for query tests
-   - Include multiple months of data to test date range queries
+2. **ClickHouse Test Instance**
+   - Use local ClickHouse server for integration tests
+   - Create isolated test database to avoid polluting production data
 
 ### Fixtures (conftest.py)
 
 ```python
-@pytest.fixture
-def temp_dir():
-    """Temporary directory for test data."""
-    ...
-
 @pytest.fixture
 def sample_raw_spread_ticks():
     """Sample Raw_Spread tick data."""
@@ -118,19 +102,22 @@ def sample_standard_ticks():
     ...
 
 @pytest.fixture
-def sample_unified_database(temp_dir):
-    """Pre-populated eurusd.duckdb for testing."""
+def clickhouse_test_db():
+    """Isolated ClickHouse test database."""
     ...
 
 @pytest.fixture
-def processor_with_temp_dir(temp_dir):
-    """ExnessDataProcessor instance with temporary directory."""
+def processor_with_clickhouse(clickhouse_test_db):
+    """ExnessDataProcessor instance with test ClickHouse."""
     ...
 ```
 
 ## Running Tests
 
 ```bash
+# Ensure ClickHouse is running
+mise run clickhouse:ensure
+
 # Run all tests
 uv run pytest
 
@@ -142,6 +129,24 @@ uv run pytest tests/test_processor.py -v
 
 # Run integration tests only
 uv run pytest tests/test_integration.py -v
+
+# Full E2E validation (requires ClickHouse)
+mise run validate
+```
+
+## ClickHouse Requirements
+
+Tests require a ClickHouse instance:
+
+```bash
+# Start local ClickHouse (mise-installed)
+mise run clickhouse:start
+
+# Or use Docker
+docker run -d -p 8123:8123 -p 9000:9000 clickhouse/clickhouse-server
+
+# Verify connection
+mise run clickhouse:status
 ```
 
 ## Contributing
@@ -150,13 +155,13 @@ When writing new tests:
 
 1. Follow pytest conventions
 2. Use descriptive test names
-3. Mock external dependencies (network calls, file I/O when appropriate)
+3. Mock external dependencies (network calls)
 4. Test both success and failure cases
 5. Include docstrings explaining what is being tested
+6. Ensure tests work with local ClickHouse instance
 
 ## Reference
 
-**Validation Test**: `/tmp/exness-duckdb-test/test_refactored_processor.py` - Real data validation test
-**Query Test**: `/tmp/exness-duckdb-test/test_queries_only.py` - Query method validation
-
-These tests can serve as reference implementations for the new test suite.
+- **Schema**: [`/docs/DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md) - 26-column OHLC specification
+- **Architecture**: [`/docs/MODULE_ARCHITECTURE.md`](/docs/MODULE_ARCHITECTURE.md) - 13 modules with SLOs
+- **ADR**: [`/docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md) - Migration decision

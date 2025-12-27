@@ -1,9 +1,11 @@
 # Hybrid Approach for Session/Holiday Detection - Research Analysis
 
+> **⚠️ HISTORICAL DOCUMENT**: This research was conducted during the DuckDB era (v1.x). The project migrated to ClickHouse-only architecture in v2.0.0. See [DuckDB Removal ADR](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md). The session detection logic remains valid; only the database backend changed.
+
 **Date**: 2025-10-17
 **Version**: 1.0.0
 **Context**: Option C evaluation for optimizing session and holiday detection in OHLC database
-**Current Implementation**: v1.6.0 (30-column Phase7 OHLC schema)
+**Historical Implementation**: v1.6.0 (DuckDB-based, superseded by ClickHouse in v2.0.0)
 
 ---
 
@@ -230,11 +232,12 @@ calendar.is_open_on_minute(ts)  # Handles hours, lunch, holidays, DST automatica
 4. **Memory Inefficiency**: Loading 400K rows into Python, modifying, then writing back
 
 **Performance Comparison** (estimated for 400K OHLC bars):
-| Approach | Time | Notes |
-|----------|------|-------|
-| Pure Python (row-by-row UPDATE) | ~300-600s | 400K × 10 exchanges × 1-2ms/update |
-| Hybrid (Python enrich + SQL UPDATE) | ~30-60s | 500 dates × Python + 1 bulk UPDATE |
-| Pure SQL (manual calendar logic) | ~5-10s | Fast but unmaintainable |
+
+| Approach                            | Time      | Notes                              |
+| ----------------------------------- | --------- | ---------------------------------- |
+| Pure Python (row-by-row UPDATE)     | ~300-600s | 400K × 10 exchanges × 1-2ms/update |
+| Hybrid (Python enrich + SQL UPDATE) | ~30-60s   | 500 dates × Python + 1 bulk UPDATE |
+| Pure SQL (manual calendar logic)    | ~5-10s    | Fast but unmaintainable            |
 
 **Verdict**: Pure Python sacrifices performance for no architectural benefit.
 
@@ -725,11 +728,12 @@ for _, row in ohlc_df.iterrows():
 - ⚠️ **No Vectorization**: `exchange_calendars` has no batch API
 
 **Performance Breakdown** (1 year, 400K OHLC bars):
-| Step | Time | Optimizable? |
-|------|------|--------------|
-| INSERT OHLC (SQL) | ~500-1000ms | ✅ Already optimized |
-| Detect sessions (Python) | ~30-60s | ⚠️ Bottleneck (pandas.apply) |
-| UPDATE OHLC (SQL) | ~50-100ms | ✅ Already optimized |
+
+| Step                     | Time        | Optimizable?                 |
+| ------------------------ | ----------- | ---------------------------- |
+| INSERT OHLC (SQL)        | ~500-1000ms | ✅ Already optimized         |
+| Detect sessions (Python) | ~30-60s     | ⚠️ Bottleneck (pandas.apply) |
+| UPDATE OHLC (SQL)        | ~50-100ms   | ✅ Already optimized         |
 
 **Verdict**: ✅ **Recommended** - Best balance of correctness, maintainability, and performance.
 
@@ -868,12 +872,13 @@ with Pool(processes=10) as pool:
 5. ✅ **Already Implemented**: Current v1.6.0 implementation uses recommended pattern
 
 **Performance Characteristics**:
+
 | Dataset Size | OHLC Bars | Dates | Detection Time | UPDATE Time | Total Time |
-|--------------|-----------|-------|----------------|-------------|------------|
-| 1 month | 32K | 30 | ~3-5s | ~10ms | ~3-5s |
-| 3 months | 96K | 90 | ~10-15s | ~20ms | ~10-15s |
-| 1 year | 400K | 500 | ~30-60s | ~50ms | ~30-60s |
-| 3 years | 1.2M | 1500 | ~90-180s | ~150ms | ~90-180s |
+| ------------ | --------- | ----- | -------------- | ----------- | ---------- |
+| 1 month      | 32K       | 30    | ~3-5s          | ~10ms       | ~3-5s      |
+| 3 months     | 96K       | 90    | ~10-15s        | ~20ms       | ~10-15s    |
+| 1 year       | 400K      | 500   | ~30-60s        | ~50ms       | ~30-60s    |
+| 3 years      | 1.2M      | 1500  | ~90-180s       | ~150ms      | ~90-180s   |
 
 **Bottleneck**: Python `pandas.apply()` for session detection (non-vectorized).
 
