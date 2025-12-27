@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Package**: `exness-data-preprocess` — Forex tick data preprocessing with ClickHouse backend
 
-**Version**: See [`pyproject.toml`](pyproject.toml) line 3 (SSoT via semantic-release)
+**Version**: See [`pyproject.toml`](/pyproject.toml) line 3 (SSoT via semantic-release)
 
-**Quick Start**: [`README.md`](README.md) — Installation, API reference, usage examples
+**Quick Start**: [`README.md`](/README.md) — Installation, API reference, usage examples
 
 ---
 
@@ -16,21 +16,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Topic            | SSoT Document                                                                                          | Purpose                      |
 | ---------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------- |
-| **User Guide**   | [`README.md`](README.md)                                                                               | Installation, API, examples  |
-| **Architecture** | [`docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](docs/adr/2025-12-11-duckdb-removal-clickhouse.md) | ClickHouse-only decision     |
-| **Schema**       | [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)                                                   | 26-column OHLC specification |
-| **Modules**      | [`docs/MODULE_ARCHITECTURE.md`](docs/MODULE_ARCHITECTURE.md)                                           | 13 modules with SLOs         |
-| **Data Sources** | [`docs/EXNESS_DATA_SOURCES.md`](docs/EXNESS_DATA_SOURCES.md)                                           | Exness tick data variants    |
-| **Tasks**        | [`.mise.toml`](.mise.toml)                                                                             | Validation, ClickHouse tasks |
-| **Contributing** | [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                                   | Development guidelines       |
+| **User Guide**   | [`README.md`](/README.md)                                                                               | Installation, API, examples  |
+| **Architecture** | [`docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md) | ClickHouse-only decision     |
+| **Schema**       | [`docs/DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)                                                   | 26-column OHLC specification |
+| **Modules**      | [`docs/MODULE_ARCHITECTURE.md`](/docs/MODULE_ARCHITECTURE.md)                                           | 13 modules with SLOs         |
+| **Data Sources** | [`docs/EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)                                           | Exness tick data variants    |
+| **Tasks**        | [`.mise.toml`](/.mise.toml)                                                                             | Validation, ClickHouse tasks |
+| **Contributing** | [`CONTRIBUTING.md`](/CONTRIBUTING.md)                                                                   | Development guidelines       |
 
 ### Deep Dives (On-Demand)
 
 | Topic              | Location                               | When to Read              |
 | ------------------ | -------------------------------------- | ------------------------- |
-| ADRs               | [`docs/adr/`](docs/adr/)               | Architecture decisions    |
-| Design Specs       | [`docs/design/`](docs/design/)         | Implementation blueprints |
-| Validation Results | [`docs/validation/`](docs/validation/) | Spike test proofs         |
+| ADRs               | [`docs/adr/`](/docs/adr/)               | Architecture decisions    |
+| Design Specs       | [`docs/design/`](/docs/design/)         | Implementation blueprints |
+| Validation Results | [`docs/validation/`](/docs/validation/) | Spike test proofs         |
 
 ---
 
@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### ClickHouse-Only Backend
 
-**ADR**: [`docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](docs/adr/2025-12-11-duckdb-removal-clickhouse.md)
+**ADR**: [`docs/adr/2025-12-11-duckdb-removal-clickhouse.md`](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md)
 
 | Feature         | Description                                      |
 | --------------- | ------------------------------------------------ |
@@ -105,7 +105,7 @@ uv build
 
 ### mise Tasks
 
-All validation and tooling tasks are defined in [`.mise.toml`](.mise.toml):
+All validation and tooling tasks are defined in [`.mise.toml`](/.mise.toml):
 
 | Task                           | Description                             |
 | ------------------------------ | --------------------------------------- |

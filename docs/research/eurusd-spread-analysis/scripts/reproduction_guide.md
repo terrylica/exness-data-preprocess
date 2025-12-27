@@ -423,6 +423,6 @@ When using this analysis methodology:
 
 For questions about this analysis:
 
-- Review [README.md](../README.md) for overview
-- Check [01-methodology.md](../01-methodology.md) for statistical framework
-- See [05-final-recommendations.md](../05-final-recommendations.md) for ML guidance
+- Review [README.md](/docs/research/eurusd-spread-analysis/README.md) for overview
+- Check [01-methodology.md](/docs/research/eurusd-spread-analysis/01-methodology.md) for statistical framework
+- See [05-final-recommendations.md](/docs/research/eurusd-spread-analysis/05-final-recommendations.md) for ML guidance

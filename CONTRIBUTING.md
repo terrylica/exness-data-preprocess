@@ -144,7 +144,7 @@ test: add integration tests for DuckDB operations
 
 ### Project Structure
 
-**See [`CLAUDE.md`](CLAUDE.md) for complete module structure (19 modules).**
+**See [`CLAUDE.md`](/CLAUDE.md) for complete module structure (19 modules).**
 
 Key directories:
 

@@ -54,31 +54,31 @@ Where:
 
 ### Core Analysis
 
-1. **[01-methodology.md](01-methodology.md)** - Statistical Framework
+1. **[01-methodology.md](/docs/research/eurusd-spread-analysis/01-methodology.md)** - Statistical Framework
    - Mode-truncated analysis theory
    - Hurdle model decomposition
    - Signal quality metrics
    - Mathematical formulations
 
-2. **[02-mode-truncated-analysis.md](02-mode-truncated-analysis.md)** - Standard/Mini/Cent Results
+2. **[02-mode-truncated-analysis.md](/docs/research/eurusd-spread-analysis/02-mode-truncated-analysis.md)** - Standard/Mini/Cent Results
    - Modal concentration analysis
    - Non-modal variance estimation
    - Comparative signal quality scores
    - Distribution characteristics
 
-3. **[03-hurdle-model-analysis.md](03-hurdle-model-analysis.md)** - Raw_Spread Zero-Inflated Analysis
+3. **[03-hurdle-model-analysis.md](/docs/research/eurusd-spread-analysis/03-hurdle-model-analysis.md)** - Raw_Spread Zero-Inflated Analysis
    - Hurdle component (zero vs non-zero)
    - Positive tail analysis
    - Mode-truncated CV of conditional distribution
    - Comparison vs Standard
 
-4. **[04-temporal-patterns.md](04-temporal-patterns.md)** - Hourly/Weekly Patterns
+4. **[04-temporal-patterns.md](/docs/research/eurusd-spread-analysis/04-temporal-patterns.md)** - Hourly/Weekly Patterns
    - Hourly spread patterns (24-hour UTC)
    - Weekly statistics (W27-W40)
    - Peak activity analysis
    - Temporal regime shifts
 
-5. **[05-final-recommendations.md](05-final-recommendations.md)** - ML Engineering Guidance
+5. **[05-final-recommendations.md](/docs/research/eurusd-spread-analysis/05-final-recommendations.md)** - ML Engineering Guidance
    - Variant selection criteria
    - Use cases and justification
    - Feature engineering implications
@@ -144,6 +144,6 @@ Generated: 2025-10-04
 
 ## Related Documentation
 
-- [MODULE_ARCHITECTURE.md](../../MODULE_ARCHITECTURE.md) - Module architecture
-- [DATABASE_SCHEMA.md](../../DATABASE_SCHEMA.md) - Database schema reference
-- [README.md](../../README.md) - Documentation hub
+- [MODULE_ARCHITECTURE.md](/docs/MODULE_ARCHITECTURE.md) - Module architecture
+- [DATABASE_SCHEMA.md](/docs/DATABASE_SCHEMA.md) - Database schema reference
+- [README.md](/docs/README.md) - Documentation hub

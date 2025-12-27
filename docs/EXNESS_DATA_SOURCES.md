@@ -307,7 +307,7 @@ tick_count_raw_spread   BIGINT                    -- COUNT(*) from Raw_Spread
 tick_count_standard     BIGINT                    -- COUNT(*) from Standard
 ```
 
-**Full Specification**: [`docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
+**Full Specification**: [`docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](/docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
 
 ---
 
@@ -383,12 +383,12 @@ tick_count_standard     BIGINT                    -- COUNT(*) from Standard
 
 - **Unified DuckDB Validation**: [`/tmp/exness-duckdb-test/FINDINGS.md`](/tmp/exness-duckdb-test/FINDINGS.md)
 - **Variant Analysis**: [`/tmp/exness-duckdb-test/EXNESS_VARIANTS.md`](/tmp/exness-duckdb-test/EXNESS_VARIANTS.md)
-- **Phase7 Methodology**: [`docs/research/eurusd-zero-spread-deviations/01-methodology.md`](research/eurusd-zero-spread-deviations/01-methodology.md)
-- **Zero-Spread Research**: [`docs/research/eurusd-zero-spread-deviations/README.md`](research/eurusd-zero-spread-deviations/README.md)
+- **Phase7 Methodology**: [`docs/research/eurusd-zero-spread-deviations/01-methodology.md`](/docs/research/eurusd-zero-spread-deviations/01-methodology.md)
+- **Zero-Spread Research**: [`docs/research/eurusd-zero-spread-deviations/README.md`](/docs/research/eurusd-zero-spread-deviations/README.md)
 
 ### Implementation
 
-- **Current Processor**: [`src/exness_data_preprocess/processor.py`](../src/exness_data_preprocess/processor.py) (needs refactoring)
+- **Current Processor**: [`src/exness_data_preprocess/processor.py`](/src/exness_data_preprocess/processor.py) (needs refactoring)
 - **Test Script**: [`/tmp/exness-duckdb-test/test_real_unified.py`](/tmp/exness-duckdb-test/test_real_unified.py)
 - **Download Helper**: [`/tmp/exness-duckdb-test/download_exness_variants.sh`](/tmp/exness-duckdb-test/download_exness_variants.sh)
 

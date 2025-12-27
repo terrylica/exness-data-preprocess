@@ -638,5 +638,5 @@ Based on real data validation:
 **References**:
 
 - **Validation Report**: [`/tmp/exness-duckdb-test/FINDINGS.md`](/tmp/exness-duckdb-test/FINDINGS.md)
-- **Phase7 Spec**: [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
-- **Data Sources**: [`EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)
+- **Phase7 Spec**: [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](/docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
+- **Data Sources**: [`EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)

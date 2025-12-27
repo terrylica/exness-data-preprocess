@@ -422,7 +422,7 @@ Data is sourced from Exness's public tick data repository:
 - Full regeneration: 8.05s (303K bars, 7 months)
 - Incremental update: 1.10s (43K new bars, 1 month)
 - Implementation: Optional date-range parameters for partial regeneration
-- Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)
+- Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)
 
 **Vectorized Session Detection** - 2.2x speedup for trading hour detection:
 
@@ -430,17 +430,17 @@ Data is sourced from Exness's public tick data repository:
 - Vectorized approach: 2.69s (302K bars, 10 exchanges)
 - Combined Phase 1+2: ~16x total speedup (8.05s → 0.50s)
 - Implementation: Pre-compute trading minutes, vectorized `.isin()` lookup
-- SSoT: [`docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
-- Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
+- SSoT: [`docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](/docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)
+- Validation: [`docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)
 
 **SQL Gap Detection** - Complete coverage with 46% code reduction:
 
 - Bug fix: Python approach missed internal gaps (41 detected vs 42 actual)
 - SQL EXCEPT operator detects ALL gaps (before + within + after existing data)
 - Code reduced from 62 lines to 34 lines (46% reduction)
-- SSoT: [`docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
+- SSoT: [`docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](/docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)
 
-**Release Notes**: See [`CHANGELOG.md`](CHANGELOG.md) for complete v0.5.0 details
+**Release Notes**: See [`CHANGELOG.md`](/CHANGELOG.md) for complete v0.5.0 details
 
 ## API Reference
 
@@ -539,7 +539,7 @@ Contributions are welcome! Please see CONTRIBUTING.md for guidelines.
 
 ## Additional Documentation
 
-**[📚 Complete Documentation Hub](docs/README.md)** - Organized guide from beginner to advanced (72+ documents)
+**[📚 Complete Documentation Hub](/docs/README.md)** - Organized guide from beginner to advanced (72+ documents)
 
 - **Basic Usage Examples**: See `examples/basic_usage.py`
 - **Batch Processing**: See `examples/batch_processing.py`

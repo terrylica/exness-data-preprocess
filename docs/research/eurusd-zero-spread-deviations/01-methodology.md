@@ -321,5 +321,5 @@ python3 scripts/multiperiod-validation/phase3_volatility_model.py
 ## References
 
 - **Data source**: https://ticks.ex2archive.com/
-- **Related research**: [EURUSD Spread Analysis](../eurusd-spread-analysis/)
-- **Implementation plan**: [data/plan/multiperiod_validation_plan_v1.0.9.md](data/plan/multiperiod_validation_plan_v1.0.9.md)
+- **Related research**: [EURUSD Spread Analysis](/docs/research/eurusd-spread-analysis/)
+- **Implementation plan**: [data/plan/multiperiod_validation_plan_v1.0.9.md](/docs/research/eurusd-zero-spread-deviations/data/plan/multiperiod_validation_plan_v1.0.9.md)

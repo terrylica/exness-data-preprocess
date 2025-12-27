@@ -399,8 +399,8 @@ for chunk in pd.read_csv(filepath, chunksize=100000):
 
 **Data source**: Exness tick data - https://ticks.ex2archive.com/
 **Download tool**: `~/.claude/tools/exness-data/download_eurusd_multiperiod.sh`
-**Full documentation**: [../README.md](../README.md)
-**Methodology**: [../01-methodology.md](../01-methodology.md)
+**Full documentation**: [../README.md](/docs/research/eurusd-zero-spread-deviations/README.md)
+**Methodology**: [../01-methodology.md](/docs/research/eurusd-zero-spread-deviations/01-methodology.md)
 
 ---
 
@@ -408,7 +408,7 @@ for chunk in pd.read_csv(filepath, chunksize=100000):
 
 For issues or questions:
 
-1. Check [04-discoveries-and-plan-evolution.md](../04-discoveries-and-plan-evolution.md) for known issues
+1. Check [04-discoveries-and-plan-evolution.md](/docs/research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md) for known issues
 2. Verify data files downloaded correctly
 3. Confirm environment setup (Python 3.9+, pandas 2.0+)
-4. Review [01-methodology.md](../01-methodology.md) for formulas and assumptions
+4. Review [01-methodology.md](/docs/research/eurusd-zero-spread-deviations/01-methodology.md) for formulas and assumptions

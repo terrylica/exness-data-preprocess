@@ -340,8 +340,8 @@ If zero-spread modeling needed (e.g., maker-taker fee analysis):
 
 ## Related Documents
 
-- [01-methodology.md](01-methodology.md) - Statistical framework
-- [02-mode-truncated-analysis.md](02-mode-truncated-analysis.md) - Detailed Standard analysis
-- [03-hurdle-model-analysis.md](03-hurdle-model-analysis.md) - Raw_Spread rejection reasoning
-- [04-temporal-patterns.md](04-temporal-patterns.md) - Hourly/weekly patterns
-- [README.md](README.md) - Executive summary
+- [01-methodology.md](/docs/research/eurusd-spread-analysis/01-methodology.md) - Statistical framework
+- [02-mode-truncated-analysis.md](/docs/research/eurusd-spread-analysis/02-mode-truncated-analysis.md) - Detailed Standard analysis
+- [03-hurdle-model-analysis.md](/docs/research/eurusd-spread-analysis/03-hurdle-model-analysis.md) - Raw_Spread rejection reasoning
+- [04-temporal-patterns.md](/docs/research/eurusd-spread-analysis/04-temporal-patterns.md) - Hourly/weekly patterns
+- [README.md](/docs/research/eurusd-spread-analysis/README.md) - Executive summary

@@ -89,28 +89,28 @@ position_ratio = (raw_mid - std_bid) / (std_ask - std_bid)
 
 ## Document Navigation
 
-1. **[Methodology](01-methodology.md)** - Data sources, formulas, SLOs, statistical frameworks
-2. **[Baseline: Sep 2024](02-baseline-sep2024.md)** - Original single-month analysis
-3. **[Multi-Period Validation](03-multiperiod-validation.md)** - 16-month temporal stability testing
-4. **[Discoveries & Plan Evolution](04-discoveries-and-plan-evolution.md)** - Version-tracked findings during implementation
+1. **[Methodology](/docs/research/eurusd-zero-spread-deviations/01-methodology.md)** - Data sources, formulas, SLOs, statistical frameworks
+2. **[Baseline: Sep 2024](/docs/research/eurusd-zero-spread-deviations/02-baseline-sep2024.md)** - Original single-month analysis
+3. **[Multi-Period Validation](/docs/research/eurusd-zero-spread-deviations/03-multiperiod-validation.md)** - 16-month temporal stability testing
+4. **[Discoveries & Plan Evolution](/docs/research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md)** - Version-tracked findings during implementation
 5. **Trading Implications** - Risk management strategies (pending Phase 4-5 validation)
 
 ### Data & Scripts
 
-- **[data/](data/)** - CSV results organized by analysis
-  - [baseline-sep2024/](data/baseline-sep2024/) - Sep 2024 results (4 analyses)
-  - [multiperiod-validation/](data/multiperiod-validation/) - 16-month validation results
-  - [plan/](data/plan/) - Master implementation plan with version history
+- **[data/](/docs/research/eurusd-zero-spread-deviations/data/)** - CSV results organized by analysis
+  - [baseline-sep2024/](/docs/research/eurusd-zero-spread-deviations/data/baseline-sep2024/) - Sep 2024 results (4 analyses)
+  - [multiperiod-validation/](/docs/research/eurusd-zero-spread-deviations/data/multiperiod-validation/) - 16-month validation results
+  - [plan/](/docs/research/eurusd-zero-spread-deviations/data/plan/) - Master implementation plan with version history
 
-- **[scripts/](scripts/)** - Python analysis code
-  - [baseline-sep2024/](scripts/baseline-sep2024/) - Sep 2024 analysis scripts
-  - [multiperiod-validation/](scripts/multiperiod-validation/) - Multi-period validation scripts
-  - [reproduction_guide.md](scripts/reproduction_guide.md) - How to reproduce analyses
+- **[scripts/](/docs/research/eurusd-zero-spread-deviations/scripts/)** - Python analysis code
+  - [baseline-sep2024/](/docs/research/eurusd-zero-spread-deviations/scripts/baseline-sep2024/) - Sep 2024 analysis scripts
+  - [multiperiod-validation/](/docs/research/eurusd-zero-spread-deviations/scripts/multiperiod-validation/) - Multi-period validation scripts
+  - [reproduction_guide.md](/docs/research/eurusd-zero-spread-deviations/scripts/reproduction_guide.md) - How to reproduce analyses
 
-- **[findings/](findings/)** - Generated reports
-  - [baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md)
-  - [phase2-mean-reversion-report.md](findings/phase2-mean-reversion-report.md)
-  - [phase3-volatility-model-report.md](findings/phase3-volatility-model-report.md)
+- **[findings/](/docs/research/eurusd-zero-spread-deviations/findings/)** - Generated reports
+  - [baseline-sep2024-comprehensive-summary.md](/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md)
+  - [phase2-mean-reversion-report.md](/docs/research/eurusd-zero-spread-deviations/findings/phase2-mean-reversion-report.md)
+  - [phase3-volatility-model-report.md](/docs/research/eurusd-zero-spread-deviations/findings/phase3-volatility-model-report.md)
 
 ---
 
@@ -140,6 +140,6 @@ Generated: 2025-10-05
 
 ## Related Research
 
-- **[EURUSD Spread Analysis](../eurusd-spread-analysis/)** - Modal-band-excluded variance estimation
+- **[EURUSD Spread Analysis](/docs/research/eurusd-spread-analysis/)** - Modal-band-excluded variance estimation
 - **Exness Data Guide**: `~/.claude/tools/exness-data/README.md`
 - **Project Documentation**: `CLAUDE.md` (Forex Data Sources section)

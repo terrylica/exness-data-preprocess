@@ -27,7 +27,7 @@ The v2.0.0 refactoring introduced significant changes that require new tests:
 ### Schema Changes
 
 - **Old**: 7-column OHLC (Timestamp, Open, High, Low, Close, spread_avg, tick_count)
-- **New**: Phase7 13-column (v1.2.0) OHLC - See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py)
+- **New**: Phase7 13-column (v1.2.0) OHLC - See [`../src/exness_data_preprocess/schema.py`](/src/exness_data_preprocess/schema.py)
 
 ## Required Test Coverage
 

@@ -241,7 +241,7 @@ ORDER BY hour;
 
 ### Schema (Phase7 30-Column - v1.6.0)
 
-**Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
+**Column Definitions**: See [`../src/exness_data_preprocess/schema.py`](/src/exness_data_preprocess/schema.py) for complete column definitions with types and descriptions.
 
 **Quick Summary**: 30 columns comprising:
 
@@ -255,7 +255,7 @@ ORDER BY hour;
 
 **Schema Version**: v1.6.0
 
-**Architecture**: Exchange Registry Pattern (v1.6.0) - Session columns dynamically generated from centralized EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
+**Architecture**: Exchange Registry Pattern (v1.6.0) - Session columns dynamically generated from centralized EXCHANGES dict in [`exchanges.py`](/src/exness_data_preprocess/exchanges.py)
 
 ### Indexes
 
@@ -397,7 +397,7 @@ ORDER BY Timestamp;
 
 **Architecture**: Exchange Registry Pattern
 
-- Session columns dynamically generated from EXCHANGES dict in [`exchanges.py`](../src/exness_data_preprocess/exchanges.py)
+- Session columns dynamically generated from EXCHANGES dict in [`exchanges.py`](/src/exness_data_preprocess/exchanges.py)
 - Adding new exchange requires only 1-line change to registry
 - Automatic DST handling via IANA timezone database
 
@@ -941,12 +941,12 @@ print(f"Months added: {result['months_added']}")
 
 ## Related Documentation
 
-- **Schema Definition**: [`../src/exness_data_preprocess/schema.py`](../src/exness_data_preprocess/schema.py) - Single source of truth for all schema definitions
-- **Architecture Plan**: [`UNIFIED_DUCKDB_PLAN_v2.md`](UNIFIED_DUCKDB_PLAN_v2.md)
-- **Phase7 OHLC Spec**: [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
-- **Data Sources**: [`EXNESS_DATA_SOURCES.md`](EXNESS_DATA_SOURCES.md)
-- **API Reference**: [`../README.md`](../README.md)
-- **Examples**: [`../examples/basic_usage.py`](../examples/basic_usage.py)
+- **Schema Definition**: [`../src/exness_data_preprocess/schema.py`](/src/exness_data_preprocess/schema.py) - Single source of truth for all schema definitions
+- **Architecture Plan**: [`UNIFIED_DUCKDB_PLAN_v2.md`](/docs/UNIFIED_DUCKDB_PLAN_v2.md)
+- **Phase7 OHLC Spec**: [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](/docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md)
+- **Data Sources**: [`EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)
+- **API Reference**: [`../README.md`](/README.md)
+- **Examples**: [`../examples/basic_usage.py`](/examples/basic_usage.py)
 
 ---
 

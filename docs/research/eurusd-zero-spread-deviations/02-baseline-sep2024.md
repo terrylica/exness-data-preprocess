@@ -21,7 +21,7 @@ Sep 2024 baseline established initial findings for zero-spread deviation pattern
 
 ## Analysis 1: Mean Reversion
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-3a-mean-reversion-analysis)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#priority-3a-mean-reversion-analysis)
 
 ### Key Findings
 
@@ -54,7 +54,7 @@ Deviations exhibit strong short-term mean reversion:
 
 ## Analysis 2: Volatility Prediction Model
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-2-enhanced-volatility-modeling)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#priority-2-enhanced-volatility-modeling)
 
 ### Multi-Factor Model (4 Features)
 
@@ -89,7 +89,7 @@ Deviations exhibit strong short-term mean reversion:
 
 ## Analysis 3: Flash Crash Prediction
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-3c-liquidity-crisis-detection)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#priority-3c-liquidity-crisis-detection)
 
 ### Extreme vs Normal Deviations
 
@@ -119,7 +119,7 @@ Extreme deviations significantly predict flash crashes:
 
 ## Analysis 4: Regime Detection (Clustering)
 
-**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](findings/baseline-sep2024-comprehensive-summary.md#priority-3b-regime-detection-analysis)
+**Full report**: [findings/baseline-sep2024-comprehensive-summary.md](/docs/research/eurusd-zero-spread-deviations/findings/baseline-sep2024-comprehensive-summary.md#priority-3b-regime-detection-analysis)
 
 ### K-Means Clusters (k=3)
 
