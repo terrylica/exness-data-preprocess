@@ -112,3 +112,7 @@ node_modules/
 # ADR: /docs/adr/2025-12-10-clickhouse-pydantic-config.md
 .dbeaver/
 .dbeaver-workspace/
+
+# Claude Code local files
+.claude/
+.lint-relative-paths-results.txt
