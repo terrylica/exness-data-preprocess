@@ -100,12 +100,20 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         """
         instrument = instrument.upper()
 
+        # Build parameters dict early (used for delete and insert)
+        params: dict = {"instrument": instrument}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+
         # Delete existing OHLC data based on mode
         if start_date is None and end_date is None:
             # Mode 1: Full regeneration - delete all data for instrument
             execute_command(
                 self.client,
                 f"ALTER TABLE {self.DATABASE}.ohlc_1m DELETE WHERE instrument = {{instrument:String}}",
+                parameters={"instrument": instrument},
             )
             # Wait for mutation to complete
             self._wait_for_mutations()
@@ -119,27 +127,25 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                   AND timestamp >= {{start_date:DateTime64}}
                   AND timestamp < addMonths(toDate({{end_date:String}}), 1)
                 """,
+                parameters=params,
             )
             self._wait_for_mutations()
         # Mode 2: Incremental append - no delete, ReplacingMergeTree handles deduplication
 
         # Build WHERE clause for date filtering
         where_parts = ["r.instrument = {instrument:String}"]
-        params: dict = {"instrument": instrument}
 
         if start_date:
             where_parts.append("r.timestamp >= {start_date:DateTime64}")
-            params["start_date"] = start_date
         if end_date:
             where_parts.append("r.timestamp < addMonths(toDate({end_date:String}), 1)")
-            params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)
 
         # Generate session column initializations from exchange registry
         session_columns = ", ".join([f"0 AS is_{name}_session" for name in EXCHANGES.keys()])
 
-        # Generate Phase7 OHLC with normalized metrics
+        # Generate OHLC with 27-column schema (matches DATABASE_SCHEMA.md)
         # Note: ClickHouse ASOF JOIN matches closest preceding timestamp from standard_ticks
         insert_sql = f"""
             INSERT INTO {self.DATABASE}.ohlc_1m
@@ -154,19 +160,6 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 avg(s.ask - s.bid) AS standard_spread_avg,
                 toUInt32(count(r.timestamp)) AS tick_count_raw_spread,
                 toUInt32(countIf(s.timestamp IS NOT NULL)) AS tick_count_standard,
-                -- Normalized spread metrics (NULL-safe)
-                if(avg(s.ask - s.bid) > 0,
-                   toFloat32((max(r.bid) - min(r.bid)) / avg(s.ask - s.bid)),
-                   NULL) AS range_per_spread,
-                if(countIf(s.timestamp IS NOT NULL) > 0,
-                   toFloat32((max(r.bid) - min(r.bid)) / countIf(s.timestamp IS NOT NULL)),
-                   NULL) AS range_per_tick,
-                if(avg(s.ask - s.bid) > 0,
-                   toFloat32(abs(argMax(r.bid, r.timestamp) - argMin(r.bid, r.timestamp)) / avg(s.ask - s.bid)),
-                   NULL) AS body_per_spread,
-                if(countIf(s.timestamp IS NOT NULL) > 0,
-                   toFloat32(abs(argMax(r.bid, r.timestamp) - argMin(r.bid, r.timestamp)) / countIf(s.timestamp IS NOT NULL)),
-                   NULL) AS body_per_tick,
                 -- Timezone-aware session columns
                 toUInt8(toHour(toTimezone(toStartOfMinute(r.timestamp), 'America/New_York'))) AS ny_hour,
                 toUInt8(toHour(toTimezone(toStartOfMinute(r.timestamp), 'Europe/London'))) AS london_hour,
@@ -266,9 +259,7 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
             return
 
         # Convert to DataFrame for session_detector
-        columns = (
-            [col[0] for col in result.column_names] if hasattr(result, "column_names") else None
-        )
+        columns = list(result.column_names) if hasattr(result, "column_names") else None
         df = pd.DataFrame(result.result_rows, columns=columns)
 
         if len(df) == 0:
@@ -303,8 +294,7 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         )
         self._wait_for_mutations()
 
-        # Prepare data for insertion
-        # Map session_detector column names back to schema
+        # Prepare data for insertion (27-column schema)
         insert_df = df[
             [
                 "instrument",
@@ -317,10 +307,6 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 "standard_spread_avg",
                 "tick_count_raw_spread",
                 "tick_count_standard",
-                "range_per_spread",
-                "range_per_tick",
-                "body_per_spread",
-                "body_per_tick",
                 "ny_hour",
                 "london_hour",
                 "ny_session",
