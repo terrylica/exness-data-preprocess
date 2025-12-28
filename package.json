@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "release": "semantic-release --no-ci",
+    "release:dry": "semantic-release --no-ci --dry-run"
+  },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^7.1.0",
