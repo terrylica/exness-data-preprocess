@@ -1,3 +1,16 @@
+# [2.1.0](https://github.com/terrylica/exness-data-preprocess/compare/v2.0.0...v2.1.0) (2025-12-28)
+
+
+### Bug Fixes
+
+* **clickhouse:** add parameters support to execute_command and fix OHLC generator ([391b939](https://github.com/terrylica/exness-data-preprocess/commit/391b939bd2f7e6baad8945d98fc63e8843799682))
+* **docs:** fix 22 broken links identified by lychee link checker ([a85862e](https://github.com/terrylica/exness-data-preprocess/commit/a85862e7af58bdd9e28eef59f364f56e0df37c24))
+
+
+### Features
+
+* **scripts:** add DuckDB to ClickHouse migration scripts ([1920903](https://github.com/terrylica/exness-data-preprocess/commit/1920903df113bea810cc3607273d6f2ececd3f4b))
+
 # [2.0.0](https://github.com/terrylica/exness-data-preprocess/compare/v1.2.1...v2.0.0) (2025-12-27)
 
 
