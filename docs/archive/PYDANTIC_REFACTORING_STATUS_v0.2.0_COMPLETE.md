@@ -49,7 +49,7 @@
 **Duration**: 4 hours
 **Completed**: 2025-10-12 21:15
 
-**Test Strategy**: [`tests/PYDANTIC_TEST_STRATEGY.md`](/Users/terryli/eon/exness-data-preprocess/tests/PYDANTIC_TEST_STRATEGY.md)
+**Test Strategy**: See `tests/README.md` for current test documentation
 
 #### Phase 4A: Model Validation Tests ✅ COMPLETE
 
@@ -78,7 +78,7 @@
 
 #### Phase 4E: True End-to-End Testing with Online Downloads ✅ COMPLETE
 
-- ✅ **TRUE End-to-End Testing**: Downloads from https://ticks.ex2archive.com/
+- ✅ **TRUE End-to-End Testing**: Downloads from <https://ticks.ex2archive.com/>
 - ✅ Updated conftest.py to download real data using `processor.download_exness_zip()`
 - ✅ **Fixed variant parameter**: Standard variant uses `variant=""` (not `"Standard"`)
 - ✅ Test data: EURUSD August 2024 (815,775 Raw_Spread ticks + 876,964 Standard ticks)
@@ -182,10 +182,9 @@ print(edp.supported_pairs())  # ('EURUSD', 'GBPUSD', 'XAUUSD', ...)
 
 ## Reference Documents
 
-- **Implementation Plan (ARCHIVED)**: `/Users/terryli/eon/exness-data-preprocess/PYDANTIC_REFACTORING_PLAN.md`
-- **Test Strategy (ACTIVE)**: `/Users/terryli/eon/exness-data-preprocess/tests/PYDANTIC_TEST_STRATEGY.md`
-- **Test Reference**: `/tmp/exness-duckdb-test/test_refactored_processor.py`
-- **Pydantic Standard**: `/Users/terryli/.claude/specifications/pydantic-api-documentation-standard.yaml`
+**Note**: This is an archived document. Some references may no longer exist.
+
+- **Tests**: See `tests/README.md` for current test documentation
 
 ---
 
@@ -218,5 +217,5 @@ print(edp.supported_pairs())  # ('EURUSD', 'GBPUSD', 'XAUUSD', ...)
 **Status**: ✅ COMPLETE - All Phases Including True E2E Testing With Both Variants
 **Test Results**: 48 tests total, **48 passing, 0 skipping, 0 failures**
 **Coverage**: models.py 100%, **init**.py 100%, processor.py 45% (critical paths covered, +6% from fix)
-**Achievement**: True end-to-end testing with dual-variant downloads (Raw_Spread + Standard) from https://ticks.ex2archive.com/
+**Achievement**: True end-to-end testing with dual-variant downloads (Raw_Spread + Standard) from <https://ticks.ex2archive.com/>
 **Resolution**: Fixed Standard variant parameter (`variant=""` not `"Standard"`) per EXNESS_DATA_SOURCES.md

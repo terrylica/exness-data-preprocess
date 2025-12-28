@@ -23,7 +23,7 @@ This research examined best practices for implementing trading hours detection a
 
 ### 1.1 exchange_calendars (Quantopian → Community Maintained)
 
-**Repository**: https://github.com/gerrymanoim/exchange_calendars
+**Repository**: <https://github.com/gerrymanoim/exchange_calendars>
 **PyPI**: exchange_calendars
 **Exchanges**: 50+ global exchanges (NYSE, LSE, XTKS, etc.)
 
@@ -74,16 +74,21 @@ is_trading = xnys.is_trading_minute("2022-01-10 14:30")
 #### API Design Lessons
 
 - **Pandas Integration**: Leverages DataFrames for schedules
+
   ```python
   schedule.loc["2021-12-29":"2022-01-04"]  # Familiar slicing
   ```
+
 - **Boolean + Navigation Methods**: Both checking and traversal
+
   ```python
   is_session()  # Boolean check
   previous_session()  # Navigation
   next_market_open()  # Navigation
   ```
+
 - **Batch Operations**: Avoids N+1 query patterns
+
   ```python
   sessions_in_range()  # Not: [is_session(d) for d in dates]
   session_minutes()    # Not: [is_trading_minute(m) for m in minutes]
@@ -93,7 +98,7 @@ is_trading = xnys.is_trading_minute("2022-01-10 14:30")
 
 ### 1.2 pandas_market_calendars
 
-**Repository**: https://github.com/rsheftel/pandas_market_calendars
+**Repository**: <https://github.com/rsheftel/pandas_market_calendars>
 **PyPI**: pandas_market_calendars
 **Notable**: Mirrors exchange_calendars calendars + adds customization
 
@@ -139,8 +144,8 @@ is_trading = xnys.is_trading_minute("2022-01-10 14:30")
 
 ### 1.3 zipline (Quantopian Backtesting Engine)
 
-**Repository**: https://github.com/quantopian/zipline
-**Docs**: https://zipline-trader.readthedocs.io/en/latest/trading-calendars.html
+**Repository**: <https://github.com/quantopian/zipline>
+**Docs**: <https://zipline-trader.readthedocs.io/en/latest/trading-calendars.html>
 
 #### Session Model
 
@@ -179,7 +184,7 @@ class CustomCalendar(TradingCalendar):
 
 ### 1.4 backtrader
 
-**Docs**: https://www.backtrader.com/docu/tradingcalendar/tradingcalendar/
+**Docs**: <https://www.backtrader.com/docu/tradingcalendar/tradingcalendar/>
 
 #### Timezone Architecture
 
@@ -208,7 +213,7 @@ class CustomCalendar(TradingCalendar):
 
 ### 1.5 QuantConnect
 
-**Docs**: https://www.quantconnect.com/docs/v2/writing-algorithms/securities/market-hours
+**Docs**: <https://www.quantconnect.com/docs/v2/writing-algorithms/securities/market-hours>
 
 #### SecurityExchangeHours Architecture
 
@@ -249,8 +254,8 @@ QuantConnect's design reflects **professional system requirements**:
 
 ### 2.1 TradingHours.com
 
-**Service**: https://www.tradinghours.com
-**API**: https://github.com/tradinghours/tradinghours-python
+**Service**: <https://www.tradinghours.com>
+**API**: <https://github.com/tradinghours/tradinghours-python>
 
 #### Coverage
 
@@ -307,9 +312,9 @@ QuantConnect's design reflects **professional system requirements**:
 
 **Sources**:
 
-- https://towardsdatascience.com/my-first-billion-of-rows-in-duckdb-11873e5edbb5
-- https://www.vantage.sh/blog/querying-aws-cost-data-duckdb
-- https://github.com/terrylica/exness-data-preprocess (this project)
+- <https://towardsdatascience.com/my-first-billion-of-rows-in-duckdb-11873e5edbb5>
+- <https://www.vantage.sh/blog/querying-aws-cost-data-duckdb>
+- <https://github.com/terrylica/exness-data-preprocess> (this project)
 
 #### Performance Metrics
 
@@ -356,7 +361,7 @@ QuantConnect's design reflects **professional system requirements**:
 
 ### 3.2 ClickHouse Materialized Views
 
-**Source**: https://clickhouse.com/blog/using-materialized-views-in-clickhouse
+**Source**: <https://clickhouse.com/blog/using-materialized-views-in-clickhouse>
 
 #### Two Types
 
@@ -387,7 +392,7 @@ QuantConnect's design reflects **professional system requirements**:
 
 ### 3.3 Arctic TimeSeries Database
 
-**Repository**: https://github.com/man-group/arctic
+**Repository**: <https://github.com/man-group/arctic>
 **Maintainer**: Man AHL (quantitative hedge fund)
 
 #### TickStore Design
@@ -420,7 +425,7 @@ ticks = library.read('EURUSD', date_range=DateRange(start, end))
 
 ### 3.4 InfluxDB Time-Series Database
 
-**Docs**: https://docs.influxdata.com/influxdb/
+**Docs**: <https://docs.influxdata.com/influxdb/>
 
 #### Schema Best Practices for Financial Data
 
@@ -466,7 +471,7 @@ END
 
 ### 3.5 QuestDB (Specialized for Financial Tick Data)
 
-**Website**: https://questdb.com
+**Website**: <https://questdb.com>
 
 #### Features for Trading Applications
 
@@ -491,8 +496,7 @@ END
 
 **Sources**:
 
-- https://fxglobe.com/daylight-saving-times-dts-2024-changes-to-trading-hours/
-- https://medium.com/@OFPFunding/how-does-daylight-saving-time-impact-forex-trading-a00864eb02fa
+- <https://fxglobe.com/daylight-saving-times-dts-2024-changes-to-trading-hours/>
 
 #### Critical Edge Cases
 
@@ -545,7 +549,7 @@ local_time = utc_time.astimezone(ZoneInfo("America/New_York"))
 
 **Example**: Tokyo Stock Exchange (Nov 5, 2024)
 
-**Source**: https://asia.nikkei.com/business/markets/tokyo-stock-exchange-moves-to-extend-trading-by-half-hour-in-2024
+**Source**: <https://asia.nikkei.com/business/markets/tokyo-stock-exchange-moves-to-extend-trading-by-half-hour-in-2024>
 
 #### Change Details
 
@@ -578,7 +582,7 @@ class XTKS(ExchangeCalendar):
 
 ### 4.3 Forex Trading Hours Edge Cases
 
-**Source**: https://www.earnforex.com/guides/making-sense-of-forex-trading-sessions-and-time-zones/
+**Source**: <https://www.earnforex.com/guides/making-sense-of-forex-trading-sessions-and-time-zones/>
 
 #### Forex-Specific Challenges
 
@@ -779,7 +783,7 @@ df.to_parquet("ticks_with_flags.parquet")
 
 **Pattern**: Pre-compute common flags, query-time for custom
 
-**Source**: https://www.hopsworks.ai/dictionary/on-demand-features
+**Source**: <https://www.hopsworks.ai/dictionary/on-demand-features>
 
 ```python
 # Pre-compute standard session flags
@@ -807,7 +811,7 @@ df['custom_session'] = df['timestamp'].apply(custom_calendar.is_trading_minute)
 
 ### 5.3 Lazy vs Eager Evaluation
 
-**Source**: https://www.progress.com/blogs/lazy-vs-eager-evaluation
+**Source**: <https://www.progress.com/blogs/lazy-vs-eager-evaluation>
 
 #### Lazy Evaluation (DuckDB, Polars)
 
@@ -1461,6 +1465,7 @@ class VersionedCalendar:
 #### Phase 3: Query API Enhancement (Week 3)
 
 - [ ] Add session filtering to query API
+
   ```python
   processor.query(
       symbol="EURUSD",
@@ -1469,6 +1474,7 @@ class VersionedCalendar:
       sessions=["FOREX_LONDON", "FOREX_NEWYORK"]
   )
   ```
+
 - [ ] Support session overlap queries
 - [ ] Add session metadata to output DataFrame
 
@@ -1615,31 +1621,31 @@ high_liquidity = df_overlaps[df_overlaps['london_ny_overlap']]
 
 ### Libraries
 
-- **exchange_calendars**: https://github.com/gerrymanoim/exchange_calendars
-- **pandas_market_calendars**: https://github.com/rsheftel/pandas_market_calendars
-- **zipline**: https://github.com/quantopian/zipline
-- **backtrader**: https://www.backtrader.com
-- **QuantConnect**: https://www.quantconnect.com/docs/v2/writing-algorithms/securities/market-hours
+- **exchange_calendars**: <https://github.com/gerrymanoim/exchange_calendars>
+- **pandas_market_calendars**: <https://github.com/rsheftel/pandas_market_calendars>
+- **zipline**: <https://github.com/quantopian/zipline>
+- **backtrader**: <https://www.backtrader.com>
+- **QuantConnect**: <https://www.quantconnect.com/docs/v2/writing-algorithms/securities/market-hours>
 
 ### Data Platforms
 
-- **TradingHours.com**: https://www.tradinghours.com
-- **Bloomberg**: https://www.bloomberg.com/professional/products/data/
-- **QuantConnect**: https://www.quantconnect.com
+- **TradingHours.com**: <https://www.tradinghours.com>
+- **Bloomberg**: <https://www.bloomberg.com/professional/products/data/>
+- **QuantConnect**: <https://www.quantconnect.com>
 
 ### Databases
 
-- **DuckDB**: https://duckdb.org
-- **ClickHouse**: https://clickhouse.com
-- **Arctic**: https://github.com/man-group/arctic
-- **InfluxDB**: https://www.influxdata.com
-- **QuestDB**: https://questdb.com
+- **DuckDB**: <https://duckdb.org>
+- **ClickHouse**: <https://clickhouse.com>
+- **Arctic**: <https://github.com/man-group/arctic>
+- **InfluxDB**: <https://www.influxdata.com>
+- **QuestDB**: <https://questdb.com>
 
 ### Articles
 
-- "My First Billion (of Rows) in DuckDB": https://towardsdatascience.com/my-first-billion-of-rows-in-duckdb-11873e5edbb5
-- "DST Trading Hours Changes": https://fxglobe.com/daylight-saving-times-dts-2024-changes-to-trading-hours/
-- "Tokyo Exchange Extends Hours": https://asia.nikkei.com/business/markets/tokyo-stock-exchange-moves-to-extend-trading-by-half-hour-in-2024
+- "My First Billion (of Rows) in DuckDB": <https://towardsdatascience.com/my-first-billion-of-rows-in-duckdb-11873e5edbb5>
+- "DST Trading Hours Changes": <https://fxglobe.com/daylight-saving-times-dts-2024-changes-to-trading-hours/>
+- "Tokyo Exchange Extends Hours": <https://asia.nikkei.com/business/markets/tokyo-stock-exchange-moves-to-extend-trading-by-half-hour-in-2024>
 
 ---
 

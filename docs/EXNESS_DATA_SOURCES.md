@@ -1,8 +1,7 @@
 # Exness Data Sources - Complete Guide
 
-**Source**: https://ticks.ex2archive.com/
-**Last Updated**: 2025-10-12
-**Related**: [`/tmp/exness-duckdb-test/EXNESS_VARIANTS.md`](/tmp/exness-duckdb-test/EXNESS_VARIANTS.md) (test artifacts)
+**Source**: <https://ticks.ex2archive.com/>
+**Last Updated**: 2025-12-28
 
 ---
 
@@ -182,26 +181,6 @@ curl -s "https://ticks.ex2archive.com/ticks/EURUSD/2024/" | jq
 
 ## Download Scripts
 
-### Helper Script
-
-Located at: [`/tmp/exness-duckdb-test/download_exness_variants.sh`](/tmp/exness-duckdb-test/download_exness_variants.sh)
-
-**Usage**:
-
-```bash
-# Download standard variant
-./download_exness_variants.sh EURUSD 2024 09
-
-# Download Raw_Spread variant
-./download_exness_variants.sh EURUSD 2024 09 Raw_Spread
-
-# Download Standart_Plus variant
-./download_exness_variants.sh EURUSD 2024 09 Standart_Plus
-
-# Download Zero_Spread variant
-./download_exness_variants.sh EURUSD 2024 09 Zero_Spread
-```
-
 ### Batch Download (All Variants)
 
 ```bash
@@ -376,23 +355,18 @@ tick_count_standard     BIGINT                    -- COUNT(*) from Standard
 
 ### Official Sources
 
-- **Exness Tick History**: https://www.exness.com/tick-history/ (Cloudflare protected)
-- **ex2archive.com**: https://ticks.ex2archive.com/ (direct access, JSON listings)
+- **Exness Tick History**: <https://www.exness.com/tick-history/> (Cloudflare protected)
+- **ex2archive.com**: <https://ticks.ex2archive.com/> (direct access, JSON listings)
 
 ### Related Documentation
 
-- **Unified DuckDB Validation**: [`/tmp/exness-duckdb-test/FINDINGS.md`](/tmp/exness-duckdb-test/FINDINGS.md)
-- **Variant Analysis**: [`/tmp/exness-duckdb-test/EXNESS_VARIANTS.md`](/tmp/exness-duckdb-test/EXNESS_VARIANTS.md)
 - **Phase7 Methodology**: [`docs/research/eurusd-zero-spread-deviations/01-methodology.md`](/docs/research/eurusd-zero-spread-deviations/01-methodology.md)
 - **Zero-Spread Research**: [`docs/research/eurusd-zero-spread-deviations/README.md`](/docs/research/eurusd-zero-spread-deviations/README.md)
 
 ### Implementation
 
-- **Current Processor**: [`src/exness_data_preprocess/processor.py`](/src/exness_data_preprocess/processor.py) (needs refactoring)
-- **Test Script**: [`/tmp/exness-duckdb-test/test_real_unified.py`](/tmp/exness-duckdb-test/test_real_unified.py)
-- **Download Helper**: [`/tmp/exness-duckdb-test/download_exness_variants.sh`](/tmp/exness-duckdb-test/download_exness_variants.sh)
+- **Processor**: [`src/exness_data_preprocess/processor.py`](/src/exness_data_preprocess/processor.py) - ClickHouse backend
 
 ---
 
-**Last Updated**: 2025-10-12
-**Next Steps**: Refactor `ExnessDataProcessor` to implement dual-variant downloads and unified DuckDB storage
+**Last Updated**: 2025-12-28

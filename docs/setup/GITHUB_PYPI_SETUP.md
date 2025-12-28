@@ -1,6 +1,6 @@
 # GitHub & PyPI Setup - Completed Steps & Next Actions
 
-**Repository URL**: https://github.com/terrylica/exness-data-preprocess
+**Repository URL**: <https://github.com/terrylica/exness-data-preprocess>
 
 ---
 
@@ -26,7 +26,7 @@
 
 ### 4. GitHub Repository Created
 
-- ✅ Repository: https://github.com/terrylica/exness-data-preprocess
+- ✅ Repository: <https://github.com/terrylica/exness-data-preprocess>
 - ✅ Public repository with description
 - ✅ Code pushed to `main` branch
 - ✅ 16 topics added (forex, duckdb, tick-data, financial-data, etc.)
@@ -71,7 +71,7 @@
 
 ### Step 1: Go to PyPI Website
 
-Open: https://pypi.org/manage/account/publishing/
+Open: <https://pypi.org/manage/account/publishing/>
 
 ### Step 2: Add Pending Publisher
 
@@ -113,7 +113,7 @@ This adds a manual approval gate before publishing to PyPI.
 
 ### Step 1: Go to Repository Settings
 
-Open: https://github.com/terrylica/exness-data-preprocess/settings/environments
+Navigate to: **Repository → Settings → Environments**
 
 ### Step 2: Create Environment
 
@@ -151,7 +151,7 @@ Protects the `main` branch from direct pushes and requires CI to pass.
 
 ### Step 1: Go to Branch Settings
 
-Open: https://github.com/terrylica/exness-data-preprocess/settings/branches
+Navigate to: **Repository → Settings → Branches**
 
 ### Step 2: Add Rule
 
@@ -218,7 +218,7 @@ gh release create v0.1.0 \
 
 ### Method 2: Using GitHub Web Interface
 
-1. Go to: https://github.com/terrylica/exness-data-preprocess/releases/new
+1. Go to: <https://github.com/terrylica/exness-data-preprocess/releases/new>
 2. Click "Choose a tag" → Type `v0.1.0` → Click "Create new tag: v0.1.0 on publish"
 3. Release title: `v0.1.0 - Initial Release`
 4. Description: Copy from CHANGELOG.md or use notes above
@@ -236,16 +236,16 @@ gh release create v0.1.0 \
    - Generates digital attestations automatically
 
 3. **If Environment Protection Enabled:**
-   - Go to: https://github.com/terrylica/exness-data-preprocess/actions
+   - Go to: <https://github.com/terrylica/exness-data-preprocess/actions>
    - Find "Publish to PyPI" run
    - Click "Review deployments" → Approve
 
 4. **Check PyPI:**
-   - Package will be live at: https://pypi.org/project/exness-data-preprocess/
+   - Package will be live at: <https://pypi.org/project/exness-data-preprocess/>
    - URLs will have green checkmarks (verified!)
 
 5. **Update Repository Website:**
-   - Go to: https://github.com/terrylica/exness-data-preprocess
+   - Go to: <https://github.com/terrylica/exness-data-preprocess>
    - Click ⚙️ (settings gear) next to "About"
    - Website: `https://pypi.org/project/exness-data-preprocess/`
    - Save
@@ -260,7 +260,7 @@ gh release create v0.1.0 \
 gh run list --limit 5
 ```
 
-Or visit: https://github.com/terrylica/exness-data-preprocess/actions
+Or visit: <https://github.com/terrylica/exness-data-preprocess/actions>
 
 ### Check Latest Release
 
@@ -268,7 +268,7 @@ Or visit: https://github.com/terrylica/exness-data-preprocess/actions
 gh release list
 ```
 
-Or visit: https://github.com/terrylica/exness-data-preprocess/releases
+Or visit: <https://github.com/terrylica/exness-data-preprocess/releases>
 
 ### Test Package Installation (After First Release)
 
@@ -327,7 +327,7 @@ doppler run --project claude-config --config dev -- \
 
 After your first successful release:
 
-- [ ] Verify package on PyPI: https://pypi.org/project/exness-data-preprocess/
+- [ ] Verify package on PyPI: <https://pypi.org/project/exness-data-preprocess/>
 - [ ] Check that GitHub URLs have green checkmarks (verified)
 - [ ] Update repository website field with PyPI URL
 - [ ] Test installation: `pip install exness-data-preprocess`
@@ -359,11 +359,11 @@ After your first successful release:
 
 ## 📚 Resources
 
-- **Repository**: https://github.com/terrylica/exness-data-preprocess
-- **Actions**: https://github.com/terrylica/exness-data-preprocess/actions
-- **PyPI Trusted Publishers**: https://pypi.org/manage/account/publishing/
-- **GitHub Environments**: https://github.com/terrylica/exness-data-preprocess/settings/environments
-- **Branch Protection**: https://github.com/terrylica/exness-data-preprocess/settings/branches
+- **Repository**: <https://github.com/terrylica/exness-data-preprocess>
+- **Actions**: <https://github.com/terrylica/exness-data-preprocess/actions>
+- **PyPI Trusted Publishers**: <https://pypi.org/manage/account/publishing/>
+- **GitHub Environments**: Repository → Settings → Environments
+- **Branch Protection**: Repository → Settings → Branches
 
 ---
 

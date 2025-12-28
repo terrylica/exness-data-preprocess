@@ -191,6 +191,6 @@ graph { flow: south; }
 ## References
 
 - [Migration Plan](/docs/design/2025-12-09-exness-clickhouse-migration/spec.md)
-- [ClickHouse Architect Skill](/Users/terryli/.claude/plugins/marketplaces/cc-skills/plugins/quality-tools/skills/clickhouse-architect/SKILL.md)
+- ClickHouse Architect Skill (cc-skills plugin)
 - [PR #45615: Delta+Gorilla fix](https://github.com/ClickHouse/ClickHouse/pull/45615)
 - [PR #45652: Safety guardrail](https://github.com/ClickHouse/ClickHouse/pull/45652)

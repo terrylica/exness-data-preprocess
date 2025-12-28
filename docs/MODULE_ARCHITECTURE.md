@@ -40,7 +40,6 @@
 - Fixed type signatures (str vs datetime, timezone-aware timestamps)
 - Clarified EXCHANGES registry location (separate exchanges.py module)
 - Documented session_detector is called BY ohlc_generator (dependency injection)
-- See [`docs/validation/ARCHITECTURE_AUDIT_2025-10-17.md`](/docs/validation/ARCHITECTURE_AUDIT_2025-10-17.md) for complete audit findings
 
 ### v1.3.0 (2025-10-16) - Facade Pattern Implementation
 
@@ -1078,8 +1077,6 @@ make test-cov  # Run with coverage report
 - **[docs/DATABASE_SCHEMA.md](/docs/DATABASE_SCHEMA.md)** - Complete database schema
 - **[docs/UNIFIED_DUCKDB_PLAN_v2.md](/docs/UNIFIED_DUCKDB_PLAN_v2.md)** - v2.0.0 architecture specification
 - **[Makefile](/Makefile)** - Module introspection commands
-
-- **[docs/validation/ARCHITECTURE_AUDIT_2025-10-17.md](/docs/validation/ARCHITECTURE_AUDIT_2025-10-17.md)** - Complete audit findings and corrections
 
 ---
 

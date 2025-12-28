@@ -49,8 +49,6 @@
 
 **Implementation Status**: ✅ Completed and validated (2025-10-12)
 
-**Legacy Plan**: [`archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md`](/docs/archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md) - Monthly-file architecture (archived)
-
 ---
 
 ### Implementation Architecture v1.7.0
@@ -166,9 +164,8 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 - [`04-discoveries-and-plan-evolution.md`](/docs/research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md) - Version-tracked findings
 - [`data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](/docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) - OHLC specification
 
-**Phase7 Schema** (30 columns, v1.6.0):
+**Phase7 Schema** (27 columns, v2.0.0):
 
-- **Definition**: [`../src/exness_data_preprocess/schema.py`](/src/exness_data_preprocess/schema.py)
 - **Comprehensive Guide**: [`DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)
 - **Architecture**: Exchange Registry Pattern with 10 global exchange sessions (trading hour detection)
 
@@ -184,39 +181,14 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 
 ---
 
-## Validation & Test Artifacts
-
-### Unified DuckDB Architecture Test
-
-**Location**: `/tmp/exness-duckdb-test/`
-
-**Key Files**:
-
-- `FINDINGS.md` - Validation report (real EURUSD Sep 2024 data)
-- `test_real_unified.py` - Test script (925K + 1.08M ticks)
-- `eurusd_real_2024_09.duckdb` - Test database (11.26 MB)
-- `real_results.json` - Benchmark results
-
-**Validation Results**:
-
-- ✅ Irregular ticks (1µs to 130.61s intervals)
-- ✅ Regular OHLC (0 unaligned bars)
-- ✅ Phase7 30-column (v1.6.0) schema with 10 global exchange sessions (trading hour detection)
-- ✅ Query performance (<15ms all timeframes)
-
-**Conclusion**: Unified DuckDB architecture validated with 13 months real data (Oct 2024 - Oct 2025)
-
----
-
 ## Quick Navigation
 
-| Topic                    | Document                                                                                                                                                                             | Type                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| Topic                    | Document                                                                                                                                                                                   | Type                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------ |
 | **Research Patterns**    | [`RESEARCH_PATTERNS.md`](/docs/RESEARCH_PATTERNS.md)                                                                                                                                       | ⭐ Architecture Decision |
 | **v2.0.0 Architecture**  | [`UNIFIED_DUCKDB_PLAN_v2.md`](/docs/UNIFIED_DUCKDB_PLAN_v2.md)                                                                                                                             | ⭐ Implementation Plan   |
 | **Database Schema**      | [`DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)                                                                                                                                           | ⭐ Schema Reference      |
 | **Module Architecture**  | [`MODULE_ARCHITECTURE.md`](/docs/MODULE_ARCHITECTURE.md)                                                                                                                                   | Implementation Details   |
-| **v1.0.0 Architecture**  | [`archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md`](/docs/archive/UNIFIED_DUCKDB_PLAN_v1.0.0_LEGACY.md)                                                                                       | Archived Plan            |
 | **Data Sources**         | [`EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)                                                                                                                                   | Guide                    |
 | **Compression**          | [`research/compression-benchmarks/README.md`](/docs/research/compression-benchmarks/README.md)                                                                                             | Research                 |
 | **Zero-Spread**          | [`research/eurusd-zero-spread-deviations/README.md`](/docs/research/eurusd-zero-spread-deviations/README.md)                                                                               | Research                 |
@@ -226,8 +198,8 @@ curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "E
 | **Phase 3 Optimization** | [`phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](/docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                             | SSoT Plan                |
 | **Spike Test Phase 1**   | [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)                                                                           | Validation               |
 | **Spike Test Phase 2**   | [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)                                                                           | Validation               |
-| **API Reference**        | [`../README.md`](/README.md)                                                                                                                                                       | Main Doc                 |
-| **Examples**             | [`../examples/`](/examples/)                                                                                                                                                       | Code Samples             |
+| **API Reference**        | [`../README.md`](/README.md)                                                                                                                                                               | Main Doc                 |
+| **Examples**             | [`../examples/`](/examples/)                                                                                                                                                               | Code Samples             |
 
 ---
 

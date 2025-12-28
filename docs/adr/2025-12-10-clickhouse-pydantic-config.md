@@ -232,6 +232,5 @@ digraph arch {
 
 ## References
 
-- [clickhouse-pydantic-config skill](/Users/terryli/eon/cc-skills/plugins/devops-tools/skills/clickhouse-pydantic-config/)
-- [mise-configuration skill](/Users/terryli/eon/cc-skills/plugins/itp/skills/mise-configuration/)
-- [ADR: mise env centralized config](/docs/adr/2025-12-08-mise-env-centralized-config.md) (if exists)
+- clickhouse-pydantic-config skill (cc-skills plugin: `devops-tools:clickhouse-pydantic-config`)
+- mise-configuration skill (cc-skills plugin: `itp:mise-configuration`)

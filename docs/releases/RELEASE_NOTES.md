@@ -18,4 +18,4 @@
 
 ---
 
-**Full Changelog**: https://github.com/Eon-Labs/rangebar/compare/v0.3.1...v0.4.0
+**Full Changelog**: See git log for complete history

@@ -228,9 +228,7 @@ graph { label: "🏗️ ClickHouse-Only Architecture (v2.0.0)"; flow: south; }
 
 </details>
 
-
 ## References
 
 - [ClickHouse Migration ADR](/docs/adr/2025-12-09-exness-clickhouse-migration.md)
 - [ClickHouse Pydantic Config ADR](/docs/adr/2025-12-10-clickhouse-pydantic-config.md)
-- [Global Plan](/Users/terryli/.claude/plans/lively-splashing-steele.md) (ephemeral)
