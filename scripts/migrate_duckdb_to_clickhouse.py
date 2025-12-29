@@ -58,6 +58,8 @@ import pandas as pd
 if TYPE_CHECKING:
     from clickhouse_connect.driver import Client
 
+    from exness_data_preprocess.clickhouse_manager import ClickHouseManager
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

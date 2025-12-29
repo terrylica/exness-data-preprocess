@@ -40,11 +40,9 @@ import argparse
 import io
 import logging
 import sys
-import tempfile
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -134,11 +132,7 @@ class ValidationResult:
         """Calculate row count difference as percentage."""
         if self.online_row_count == 0:
             return 0.0
-        return (
-            abs(self.online_row_count - self.clickhouse_row_count)
-            / self.online_row_count
-            * 100
-        )
+        return abs(self.online_row_count - self.clickhouse_row_count) / self.online_row_count * 100
 
 
 def get_clickhouse_client() -> "Client":
@@ -272,9 +266,7 @@ def filter_dataframe_by_date(df: pd.DataFrame, target_date: date) -> pd.DataFram
     mask = (df["timestamp"] >= start) & (df["timestamp"] < end)
     filtered = df[mask].copy()
 
-    logger.info(
-        f"Filtered to {len(filtered):,} ticks for date {target_date}"
-    )
+    logger.info(f"Filtered to {len(filtered):,} ticks for date {target_date}")
     return filtered
 
 
@@ -397,20 +389,24 @@ def compare_dataframes(
 
         # Store sample mismatches (first 5)
         for _, row in bid_mismatches.head(5).iterrows():
-            result.bid_mismatches.append({
-                "timestamp": row["timestamp"],
-                "online_bid": row["bid_online"],
-                "clickhouse_bid": row["bid_clickhouse"],
-                "diff": row["bid_online"] - row["bid_clickhouse"],
-            })
+            result.bid_mismatches.append(
+                {
+                    "timestamp": row["timestamp"],
+                    "online_bid": row["bid_online"],
+                    "clickhouse_bid": row["bid_clickhouse"],
+                    "diff": row["bid_online"] - row["bid_clickhouse"],
+                }
+            )
 
         for _, row in ask_mismatches.head(5).iterrows():
-            result.ask_mismatches.append({
-                "timestamp": row["timestamp"],
-                "online_ask": row["ask_online"],
-                "clickhouse_ask": row["ask_clickhouse"],
-                "diff": row["ask_online"] - row["ask_clickhouse"],
-            })
+            result.ask_mismatches.append(
+                {
+                    "timestamp": row["timestamp"],
+                    "online_ask": row["ask_online"],
+                    "clickhouse_ask": row["ask_clickhouse"],
+                    "diff": row["ask_online"] - row["ask_clickhouse"],
+                }
+            )
 
     # Log timestamp mismatches (sample)
     if len(only_online) > 0:
