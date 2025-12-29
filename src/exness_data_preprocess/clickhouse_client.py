@@ -172,9 +172,7 @@ def execute_query(client: Client, query: str, parameters: dict[str, Any] | None 
         raise ClickHouseQueryError(f"Query execution failed: {e}\nQuery: {query}") from e
 
 
-def execute_command(
-    client: Client, command: str, parameters: dict | None = None
-) -> None:
+def execute_command(client: Client, command: str, parameters: dict | None = None) -> None:
     """
     Execute a DDL command (CREATE, ALTER, DROP, INSERT SELECT, etc.).
 
