@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/commitizen-tools/commitizen
-  rev: v4.9.1
+  rev: v4.12.1
   hooks:
   - id: commitizen
     stages: [commit-msg]
@@ -8,7 +8,7 @@ repos:
     stages: [pre-push]
     args: [--rev-range, origin/main..HEAD]
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v6.0.0
   hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
@@ -17,7 +17,7 @@ repos:
   - id: check-merge-conflict
   - id: debug-statements
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.13.0
+  rev: v0.14.14
   hooks:
   - id: ruff
     args: [--fix, --unsafe-fixes]
