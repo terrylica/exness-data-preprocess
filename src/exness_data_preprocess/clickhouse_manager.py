@@ -30,7 +30,53 @@ from exness_data_preprocess.clickhouse_client import (
     ClickHouseQueryError,
     execute_command,
     execute_query,
+    get_client,
 )
+
+# Module-level constant mirrored by ClickHouseManager.DATABASE for callers
+# that need to bootstrap the database BEFORE constructing a ClickHouseManager
+# (chicken-and-egg: a default `get_client()` binds to database='exness' and
+# fails immediately with UNKNOWN_DATABASE if the DB doesn't exist yet, so
+# the schema-creator inside ClickHouseManager would never get a chance to
+# run). Keep this name + value identical to ClickHouseManager.DATABASE.
+DATABASE_NAME = "exness"
+
+
+def ensure_database_bootstrap() -> None:
+    """
+    Idempotently ensure the `exness` ClickHouse database exists.
+
+    Issues `CREATE DATABASE IF NOT EXISTS exness` against a no-database
+    connection. Callers MUST invoke this before constructing any object
+    whose constructor calls `get_client()` with the default database
+    (e.g. `ExnessDataProcessor.__init__`), otherwise the default
+    `get_client()` will fail with UNKNOWN_DATABASE before the schema
+    creator can run.
+
+    This function is idempotent (CREATE DATABASE IF NOT EXISTS) and
+    cheap (one round-trip). Safe to call on every process start.
+
+    Discovered necessary during a 2026-05-13 mql5 pueue-job kickoff
+    incident: pueue job 294 failed in 10 seconds with
+    `UNKNOWN_DATABASE: Database exness does not exist` because
+    `ExnessDataProcessor()` was the first thing the sibling-repo
+    consumer touched on a freshly-cloned bigblack — and `get_client()`
+    was called BEFORE `ClickHouseManager.ensure_schema()`. Hot-patched
+    out-of-band by invoking `ClickHouseManager().ensure_schema()`
+    manually; this function makes that bootstrap automatic.
+
+    See mql5 audit: findings/audits/2026-05-13-pillar-restoration-pueue-kickoff.md
+    (Hot-patch — Exness schema bootstrap section).
+
+    Raises:
+        ClickHouseConnectionError: If ClickHouse itself is unreachable.
+        ClickHouseQueryError: If the CREATE DATABASE statement fails.
+    """
+    bootstrap_client = get_client(database="")  # Empty string = no database context
+    try:
+        execute_command(bootstrap_client, f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
+    finally:
+        bootstrap_client.close()
 
 
 class ClickHouseManager(ClickHouseClientMixin):
@@ -78,15 +124,12 @@ class ClickHouseManager(ClickHouseClientMixin):
         Raises:
             ClickHouseQueryError: If schema creation fails
         """
-        # Create database using a client without database context
-        # (database may not exist yet, so we can't connect to it)
-        from exness_data_preprocess.clickhouse_client import get_client as get_client_fn
-
-        bootstrap_client = get_client_fn(database="")  # Empty string = no database
-        try:
-            execute_command(bootstrap_client, f"CREATE DATABASE IF NOT EXISTS {self.DATABASE}")
-        finally:
-            bootstrap_client.close()
+        # Idempotently create the `exness` database. Delegated to the
+        # module-level helper so that callers needing a pre-`get_client()`
+        # bootstrap (e.g. ExnessDataProcessor.__init__) can invoke the same
+        # logic without instantiating a ClickHouseManager (which would
+        # itself try to bind a client to the not-yet-existing database).
+        ensure_database_bootstrap()
 
         # Create tick tables
         self._create_raw_spread_ticks_table()
@@ -337,4 +380,17 @@ class ClickHouseManager(ClickHouseClientMixin):
         row = result.first_row
         if row[0] is None:
             return None, None
-        return pd.Timestamp(row[0], tz="UTC"), pd.Timestamp(row[1], tz="UTC")
+        # pd.Timestamp(...) widens to Timestamp | NaTType in stubs (NaT for
+        # invalid input). row[0] and row[1] are guaranteed non-null DateTime64
+        # values from min()/max() above — NULL would have short-circuited at
+        # the `row[0] is None` check above. The isinstance narrowing below is
+        # what both mypy (which sees the Timestamp branch directly) and ty
+        # (which uses the wider stub) accept as a return-type proof.
+        earliest = pd.Timestamp(row[0], tz="UTC")
+        latest = pd.Timestamp(row[1], tz="UTC")
+        if not isinstance(earliest, pd.Timestamp) or not isinstance(latest, pd.Timestamp):
+            # Unreachable in practice — min()/max() never return NaT when the
+            # row is non-null. The branch is defensive against future stub
+            # surprises and keeps the narrowing observable to both checkers.
+            return None, None
+        return earliest, latest

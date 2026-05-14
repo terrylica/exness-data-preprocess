@@ -25,6 +25,7 @@ BREAKING CHANGES (v2.0.0):
 - Removed: All DuckDB file path references
 """
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -32,7 +33,10 @@ import pandas as pd
 
 from exness_data_preprocess.clickhouse_client import get_client
 from exness_data_preprocess.clickhouse_gap_detector import ClickHouseGapDetector
-from exness_data_preprocess.clickhouse_manager import ClickHouseManager
+from exness_data_preprocess.clickhouse_manager import (
+    ClickHouseManager,
+    ensure_database_bootstrap,
+)
 from exness_data_preprocess.clickhouse_ohlc_generator import ClickHouseOHLCGenerator
 from exness_data_preprocess.clickhouse_query_engine import ClickHouseQueryEngine
 from exness_data_preprocess.config import ConfigModel
@@ -50,6 +54,8 @@ from exness_data_preprocess.models import (
 )
 from exness_data_preprocess.session_detector import SessionDetector
 from exness_data_preprocess.tick_loader import TickLoader
+
+logger = logging.getLogger(__name__)
 
 
 class ExnessDataProcessor:
@@ -106,6 +112,25 @@ class ExnessDataProcessor:
         self.temp_dir = Path.home() / "eon" / "exness-data" / "temp"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
+        # Bootstrap the `exness` ClickHouse database BEFORE the first
+        # default-database get_client() call. Without this, get_client()
+        # below binds to database='exness' and fails immediately with
+        # UNKNOWN_DATABASE (CH code 81) on freshly-provisioned hosts
+        # where the database does not yet exist — the schema-creator at
+        # `ch_manager.ensure_schema()` further down never gets a chance
+        # to run because the client init throws first.
+        #
+        # Discovered during 2026-05-13 pueue-job 294 incident on bigblack
+        # (UNKNOWN_DATABASE: Database exness does not exist, 10s before
+        # the loop body could run). See:
+        #   - https://github.com/terrylica/mql5/blob/main/findings/audits/2026-05-13-pillar-restoration-pueue-kickoff.md
+        #     "Hot-patch — Exness schema bootstrap" section
+        #   - https://github.com/terrylica/mql5/blob/main/findings/audits/2026-05-13-surveillance-watchdog-deployment.md
+        # The hot-patch was a one-off `ClickHouseManager().ensure_schema()`
+        # invocation; this call moves that bootstrap into the normal
+        # constructor path so the chicken-and-egg can never recur.
+        ensure_database_bootstrap()
+
         # Initialize ClickHouse client (shared across modules)
         self._ch_client = get_client()
 
@@ -150,23 +175,31 @@ class ExnessDataProcessor:
         Returns:
             False to propagate exceptions (standard behavior)
         """
-        # Close ClickHouse connection
+        # Close ClickHouse connection. Cleanup errors are logged but suppressed
+        # so that an exception raised during __exit__ does not mask the
+        # original exception (if any) flowing through the context manager.
         if hasattr(self, "_ch_client") and self._ch_client:
             try:
                 self._ch_client.close()
             except Exception:
-                pass
+                logger.debug("Suppressed exception during ClickHouse client close", exc_info=True)
 
-        # Clean up temporary files
+        # Clean up temporary files. Same rationale as above: cleanup
+        # failures must not mask user-visible exceptions, but they should
+        # be observable for debugging stuck temp dirs.
         if self.temp_dir.exists():
             try:
                 for item in self.temp_dir.glob("*.zip"):
                     try:
                         item.unlink()
                     except Exception:
-                        pass
+                        logger.debug(
+                            "Suppressed exception during temp-file unlink: %s",
+                            item,
+                            exc_info=True,
+                        )
             except Exception:
-                pass
+                logger.debug("Suppressed exception during temp-dir cleanup glob", exc_info=True)
 
         return False
 
@@ -180,7 +213,10 @@ class ExnessDataProcessor:
             try:
                 self._ch_client.close()
             except Exception:
-                pass
+                logger.debug(
+                    "Suppressed exception during explicit ClickHouse client close",
+                    exc_info=True,
+                )
 
     @staticmethod
     def _validate_pair(pair: str) -> None:
