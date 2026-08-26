@@ -296,35 +296,64 @@ echo "=============================================="
 # =============================================================================
 
 [tasks."clickhouse:start"]
-description = "Start mise-installed ClickHouse server"
+description = "Start the local ClickHouse server"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-SHIM="${HOME}/.local/share/mise/shims/clickhouse"
+# Resolve the clickhouse binary, PATH first.
+#
+# This used to hardcode "${HOME}/.local/share/mise/shims/clickhouse". mise was retired
+# machine-wide (proto is the only toolchain manager), so that path stopped existing and
+# this task failed on every invocation -- while instructing the reader to fix it with
+# `mise install clickhouse`, a command that cannot work here. The identical defect was
+# found and fixed in gapless-crypto-clickhouse on 2026-08-25, where it hard-failed 12
+# tests while ClickHouse was installed at /opt/homebrew/bin/clickhouse the whole time.
+#
+# PATH first is the tool-agnostic answer: proto shims, Homebrew and system installs all
+# feed PATH, so this needs no edit the next time the toolchain manager changes. The
+# explicit fallbacks cover a non-login shell whose PATH never went through profile
+# activation. The mise path is kept LAST only so a machine that still has one keeps
+# working; it must not be promoted back to primary.
+CH=""
+if command -v clickhouse >/dev/null 2>&1; then
+    CH="$(command -v clickhouse)"
+else
+    for c in "${HOME}/.proto/shims/clickhouse" /opt/homebrew/bin/clickhouse \
+             /usr/local/bin/clickhouse "${HOME}/.local/share/mise/shims/clickhouse"; do
+        if [[ -x "$c" ]]; then CH="$c"; break; fi
+    done
+fi
 
-# Check mise ClickHouse installation
-if [[ ! -x "${SHIM}" ]]; then
-    echo "ERROR: mise ClickHouse not found. Install: mise install clickhouse" >&2
+if [[ -z "$CH" ]]; then
+    echo "ERROR: clickhouse binary not found on PATH or at any known location." >&2
+    echo "       Install it (e.g. 'brew install clickhouse') or put it on PATH." >&2
     exit 1
 fi
 
 # Check if already running
 if nc -z localhost 8123 2>/dev/null; then
     echo "✅ ClickHouse already running on port 8123"
-    "${SHIM}" client --query "SELECT version()"
+    "${CH}" client --query "SELECT version()"
     exit 0
 fi
 
-# Start server in daemon mode
-echo "Starting ClickHouse server..."
-"${SHIM}" server --daemon
+# Start server in daemon mode, from a data dir OUTSIDE the repository.
+#
+# `clickhouse server` writes its data tree (store/, metadata/, cores/, status, uuid)
+# relative to the working directory and exposes no --path flag, so launched from a repo
+# checkout it litters the repo root with untracked server state.
+CLICKHOUSE_DATA_DIR="${CLICKHOUSE_DATA_DIR:-${XDG_DATA_HOME:-${HOME}/.local/share}/exness-data-preprocess/clickhouse}"
+mkdir -p "${CLICKHOUSE_DATA_DIR}"
+
+echo "Starting ClickHouse server (data dir: ${CLICKHOUSE_DATA_DIR})..."
+( cd "${CLICKHOUSE_DATA_DIR}" && "${CH}" server --daemon )
 
 # Wait for server to be ready
 for i in $(seq 1 10); do
     if nc -z localhost 8123 2>/dev/null; then
         echo "✅ ClickHouse server started"
-        "${SHIM}" client --query "SELECT version()"
+        "${CH}" client --query "SELECT version()"
         exit 0
     fi
     sleep 1
