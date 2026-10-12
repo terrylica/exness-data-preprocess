@@ -6,7 +6,7 @@
 #   moon run repo:clickhouse-start      start the local ClickHouse server (localhost:8123)
 #   moon run repo:clickhouse-stop       stop it (by this repo's pidfile)
 #   moon run repo:validate-clickhouse   end-to-end checks against the running server
-#   moon run repo:validate              full local gate: check + build + validate-clickhouse
+#   moon run repo:validate              full local gate: check + build + fresh-install smoke + validate-clickhouse
 #
 # Tests that need ClickHouse skip themselves when nothing listens on localhost:8123.
 layer: 'library'
@@ -61,7 +61,12 @@ tasks:
     deps: ['~:validate-clickhouse-data', '~:validate-clickhouse-pagination', '~:validate-clickhouse-ohlc']
     script: "echo 'repo:validate-clickhouse passed'"
     options: { cache: false, runInCI: false }
+  smoke-install:
+    script: 'bash scripts/smoke_install.sh'
+    deps: ['~:build']
+    options: { cache: false }
+
   validate:
-    deps: ['~:check', '~:build', '~:validate-clickhouse']
+    deps: ['~:check', '~:smoke-install', '~:validate-clickhouse']
     script: "echo 'repo:validate passed'"
     options: { cache: false, runInCI: false }
