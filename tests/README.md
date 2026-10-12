@@ -116,7 +116,7 @@ def processor_with_clickhouse(clickhouse_test_db):
 
 ```bash
 # Ensure ClickHouse is running
-mise run clickhouse:ensure
+uv run python scripts/validate_clickhouse.py status
 
 # Run all tests
 uv run pytest
@@ -131,7 +131,7 @@ uv run pytest tests/test_processor.py -v
 uv run pytest tests/test_integration.py -v
 
 # Full E2E validation (requires ClickHouse)
-mise run validate
+moon run repo:validate
 ```
 
 ## ClickHouse Requirements
@@ -139,14 +139,14 @@ mise run validate
 Tests require a ClickHouse instance:
 
 ```bash
-# Start local ClickHouse (mise-installed)
-mise run clickhouse:start
+# Start local ClickHouse (binary on PATH)
+moon run repo:clickhouse-start
 
 # Or use Docker
 docker run -d -p 8123:8123 -p 9000:9000 clickhouse/clickhouse-server
 
 # Verify connection
-mise run clickhouse:status
+uv run python scripts/validate_clickhouse.py status
 ```
 
 ## Contributing

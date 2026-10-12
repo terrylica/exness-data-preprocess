@@ -10,7 +10,7 @@ ADR: /docs/adr/2025-12-10-clickhouse-pydantic-config.md
 
 This script uses Pydantic v2 as the Single Source of Truth (SSoT) for ClickHouse
 connection configuration. All configurable values are read from environment
-variables (mise `[env]` section) with sensible defaults.
+variables with sensible defaults.
 
 Usage:
     uv run scripts/generate_dbeaver_config.py --output .dbeaver/data-sources.json
@@ -120,8 +120,7 @@ class ClickHouseConnection(BaseModel):
     def from_env(cls, prefix: str = "CLICKHOUSE_") -> ClickHouseConnection:
         """Create connection from environment variables.
 
-        Reads from mise `[env]` section with backward-compatible defaults.
-        Works with or without mise installed.
+        Reads CLICKHOUSE_* environment variables, with defaults for local mode.
         """
         mode_str = os.environ.get(f"{prefix}MODE", "local")
         return cls(

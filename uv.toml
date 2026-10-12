@@ -1,0 +1,2 @@
+# uv uses only its own managed Python builds (version from .python-version).
+python-preference = "only-managed"

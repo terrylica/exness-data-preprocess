@@ -151,7 +151,7 @@ Key directories:
 - `src/exness_data_preprocess/` — Source modules (DuckDB + ClickHouse backends)
 - `tests/` — Test suite (48 tests)
 - `docs/` — Documentation hub
-- `.mise.toml` — Validation and tooling tasks
+- `moon.yml` — Validation and tooling tasks (`moon run repo:check`, `moon run repo:validate`)
 - `pyproject.toml` — Package configuration (SSoT for version via semantic-release)
 
 ### Adding New Features

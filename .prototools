@@ -1,0 +1,4 @@
+# proto — repo-local toolchain versions.
+# uv owns Python: the interpreter version is .python-version, and uv.toml makes uv use only its own
+# managed build. ClickHouse comes from the system PATH (e.g. Homebrew), not from proto.
+uv = "latest"

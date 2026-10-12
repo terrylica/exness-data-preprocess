@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/workspace.json
+# moon runs this repo's tasks; proto (.prototools) pins the tools.
+projects:
+  repo: '.'
+
+vcs:
+  client: 'git'
+  defaultBranch: 'main'

@@ -22,4 +22,4 @@ jobs:
 
   # NOTE: Tests removed per local-first testing standard
   # See: ~/.claude/CLAUDE.md - "NO unit testing in GitHub Actions"
-  # Run tests locally with: mise run validate
+  # Run tests locally with: moon run repo:validate

@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+# exness-data-preprocess — repo tasks.
+#
+#   moon run repo:check                 offline gate: lint + typecheck + tests
+#   moon run repo:build                 build the sdist + wheel into dist/
+#   moon run repo:clickhouse-start      start the local ClickHouse server (localhost:8123)
+#   moon run repo:clickhouse-stop       stop it (by this repo's pidfile)
+#   moon run repo:validate-clickhouse   end-to-end checks against the running server
+#   moon run repo:validate              full local gate: check + build + validate-clickhouse
+#
+# Tests that need ClickHouse skip themselves when nothing listens on localhost:8123.
+layer: 'library'
+language: 'python'
+
+tasks:
+  lint:
+    script: 'uv run ruff check src/ tests/'
+    inputs: ['src/**/*', 'tests/**/*', 'pyproject.toml']
+  typecheck:
+    script: 'uv run mypy src/exness_data_preprocess/ --ignore-missing-imports'
+    inputs: ['src/**/*', 'pyproject.toml', 'uv.lock']
+  test:
+    script: 'uv run pytest tests/ --tb=short'
+    inputs: ['src/**/*', 'tests/**/*', 'pyproject.toml', 'uv.lock']
+    options: { cache: false }
+  build:
+    script: 'rm -rf dist/ && uv build'
+    options: { cache: false }
+  check:
+    deps: ['~:lint', '~:typecheck', '~:test']
+    script: "echo 'repo:check passed'"
+    options: { cache: false }
+
+  clickhouse-start:
+    script: 'bash scripts/clickhouse-start.sh'
+    options: { cache: false, runInCI: false }
+  clickhouse-stop:
+    script: 'bash scripts/clickhouse-stop.sh'
+    options: { cache: false, runInCI: false }
+
+  validate-clickhouse-status:
+    script: 'uv run python scripts/validate_clickhouse.py status'
+    options: { cache: false, runInCI: false }
+  validate-clickhouse-schema:
+    script: 'uv run python scripts/validate_clickhouse.py schema'
+    deps: ['~:validate-clickhouse-status']
+    options: { cache: false, runInCI: false }
+  validate-clickhouse-data:
+    script: 'uv run python scripts/validate_clickhouse.py data'
+    deps: ['~:validate-clickhouse-schema']
+    options: { cache: false, runInCI: false }
+  validate-clickhouse-pagination:
+    script: 'uv run python scripts/validate_clickhouse.py pagination'
+    deps: ['~:validate-clickhouse-schema']
+    options: { cache: false, runInCI: false }
+  validate-clickhouse-ohlc:
+    script: 'uv run python scripts/validate_clickhouse.py ohlc'
+    deps: ['~:validate-clickhouse-schema']
+    options: { cache: false, runInCI: false }
+  validate-clickhouse:
+    deps: ['~:validate-clickhouse-data', '~:validate-clickhouse-pagination', '~:validate-clickhouse-ohlc']
+    script: "echo 'repo:validate-clickhouse passed'"
+    options: { cache: false, runInCI: false }
+  validate:
+    deps: ['~:check', '~:build', '~:validate-clickhouse']
+    script: "echo 'repo:validate passed'"
+    options: { cache: false, runInCI: false }

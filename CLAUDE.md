@@ -21,7 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Schema**       | [`docs/DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)                                                   | 26-column OHLC specification |
 | **Modules**      | [`docs/MODULE_ARCHITECTURE.md`](/docs/MODULE_ARCHITECTURE.md)                                           | 13 modules with SLOs         |
 | **Data Sources** | [`docs/EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)                                           | Exness tick data variants    |
-| **Tasks**        | [`.mise.toml`](/.mise.toml)                                                                             | Validation, ClickHouse tasks |
+| **Tasks**        | [`moon.yml`](/moon.yml)                                                                                 | Validation, ClickHouse tasks |
 | **Contributing** | [`CONTRIBUTING.md`](/CONTRIBUTING.md)                                                                   | Development guidelines       |
 
 ### Deep Dives (On-Demand)
@@ -89,30 +89,37 @@ uv sync --dev
 
 # Testing (45 tests)
 uv run pytest                          # All tests
-mise run validate                      # Full E2E validation (requires ClickHouse)
+moon run repo:check                    # Offline gate: lint + typecheck + tests
+moon run repo:validate                 # Full local gate: check + build + ClickHouse E2E (requires ClickHouse)
 
 # Linting
 uv run ruff check --fix src/ tests/
 
 # ClickHouse (required for full validation)
-mise run clickhouse:start              # Start local server
-mise run clickhouse:status             # Check connection
-mise run clickhouse:ensure             # Fail fast if not running
+moon run repo:clickhouse-start        # Start local server (scripts/clickhouse-start.sh)
+moon run repo:clickhouse-stop         # Stop it by pidfile (scripts/clickhouse-stop.sh)
+uv run python scripts/validate_clickhouse.py status   # Check connection
 
 # Build & Publish
 uv build
 ```
 
-### mise Tasks
+### Toolchain and tasks (proto + moon)
 
-All validation and tooling tasks are defined in [`.mise.toml`](/.mise.toml):
+proto pins `uv` (`.prototools`); uv owns Python (`.python-version` = 3.11, `uv.toml` = managed builds only). ClickHouse is the `clickhouse` binary on PATH (Homebrew on macOS). All validation and tooling tasks are defined in [`moon.yml`](/moon.yml):
 
-| Task                           | Description                             |
-| ------------------------------ | --------------------------------------- |
-| `mise run validate`            | Full E2E pipeline (requires ClickHouse) |
-| `mise run clickhouse:ensure`   | Fail fast if ClickHouse not running     |
-| `mise run clickhouse:start`    | Start mise-installed ClickHouse         |
-| `mise run validate:clickhouse` | ClickHouse E2E tests                    |
+| Task                                 | Description                                                         |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `moon run repo:check`                | Offline gate: ruff + mypy + pytest (ClickHouse tests self-skip)     |
+| `moon run repo:build`                | `uv build` into `dist/`                                             |
+| `moon run repo:clickhouse-start`     | Start the local ClickHouse server found on PATH                     |
+| `moon run repo:clickhouse-stop`      | Stop the server this repo started (pidfile, never a name match)     |
+| `moon run repo:validate-clickhouse`  | ClickHouse E2E checks (`scripts/validate_clickhouse.py`)            |
+| `moon run repo:validate`             | Full local gate: check + build + validate-clickhouse                |
+
+**Shared port**: `gapless-crypto-clickhouse` runs its own local ClickHouse server on the same `localhost:8123` with a different data directory. Only one of the two can be up at a time, and tests and checks here will talk to whichever server holds the port. `clickhouse-stop` only stops the server this repo started.
+
+**DBeaver config**: `uv run scripts/generate_dbeaver_config.py` writes `.dbeaver/data-sources.json` (add `--dry-run` to preview, `--mode cloud` for ClickHouse Cloud with `CLICKHOUSE_USER_READONLY` / `CLICKHOUSE_PASSWORD_READONLY` in the environment).
 
 ---
 

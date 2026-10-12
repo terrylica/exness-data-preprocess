@@ -19,7 +19,7 @@
 7. [Updating Data](#updating-data)
 8. [26-Column OHLC Schema](#26-column-ohlc-schema)
 9. [Direct ClickHouse SQL Patterns](#direct-clickhouse-sql-patterns)
-10. [mise Tasks for ClickHouse](#mise-tasks-for-clickhouse)
+10. [moon Tasks for ClickHouse](#moon-tasks-for-clickhouse)
 11. [Environment Configuration](#environment-configuration)
 12. [Pagination Patterns](#pagination-patterns)
 13. [Troubleshooting](#troubleshooting)
@@ -66,10 +66,10 @@ processor.close()
 
 ```bash
 # Start ClickHouse server
-mise run clickhouse:start
+moon run repo:clickhouse-start
 
 # Verify connection
-mise run clickhouse:status
+uv run python scripts/validate_clickhouse.py status
 ```
 
 Default connection: `localhost:8123` (HTTP interface)
@@ -542,53 +542,51 @@ ORDER BY instrument;
 
 ---
 
-## mise Tasks for ClickHouse
+## moon Tasks for ClickHouse
 
 ### Server Management
 
 ```bash
-# Start ClickHouse server (mise-installed)
-mise run clickhouse:start
+# Start ClickHouse server (clickhouse binary on PATH)
+moon run repo:clickhouse-start
 
-# Stop ClickHouse server
-mise run clickhouse:stop
+# Stop the server this repo started (by pidfile)
+moon run repo:clickhouse-stop
 
 # Check connection status
-mise run clickhouse:status
-
-# Fail fast if ClickHouse not running
-mise run clickhouse:ensure
+uv run python scripts/validate_clickhouse.py status
 ```
+
+The server listens on `localhost:8123`. `gapless-crypto-clickhouse` runs its own local server on the same port with a different data directory, so only one of the two can be up at a time.
 
 ### Validation Tasks
 
 ```bash
-# Run full E2E validation (requires ClickHouse)
-mise run validate
+# Run full local validation: lint + typecheck + tests + build + ClickHouse E2E (requires ClickHouse)
+moon run repo:validate
 
 # Validate ClickHouse schema
-mise run validate:clickhouse-schema
+moon run repo:validate-clickhouse-schema
 
 # Validate data queries
-mise run validate:clickhouse-data
+moon run repo:validate-clickhouse-data
 
 # Validate pagination
-mise run validate:clickhouse-pagination
+moon run repo:validate-clickhouse-pagination
 
 # Validate OHLC queries
-mise run validate:clickhouse-ohlc
+moon run repo:validate-clickhouse-ohlc
 ```
 
 ### Quick Reference
 
-| Task                           | Description                     |
-| ------------------------------ | ------------------------------- |
-| `mise run clickhouse:start`    | Start mise-installed ClickHouse |
-| `mise run clickhouse:stop`     | Stop ClickHouse server          |
-| `mise run clickhouse:status`   | Check Python client connection  |
-| `mise run clickhouse:ensure`   | Fail fast if not running        |
-| `mise run validate`            | Full E2E validation pipeline    |
-| `mise run validate:clickhouse` | All ClickHouse validations      |
+| Task                                | Description                                 |
+| ----------------------------------- | ------------------------------------------- |
+| `moon run repo:clickhouse-start`    | Start the ClickHouse server found on PATH   |
+| `moon run repo:clickhouse-stop`     | Stop the server this repo started           |
+| `moon run repo:check`               | Offline gate: lint + typecheck + tests      |
+| `moon run repo:validate`            | Full E2E validation pipeline                |
+| `moon run repo:validate-clickhouse` | All ClickHouse validations                  |
 
 ---
 
@@ -605,18 +603,7 @@ mise run validate:clickhouse-ohlc
 | `CLICKHOUSE_PASSWORD` | (empty)                        | Password           |
 | `CLICKHOUSE_DATABASE` | `exness`                       | Default database   |
 
-### mise Configuration
-
-Configuration is defined in `.mise.toml`:
-
-```toml
-[env]
-CLICKHOUSE_NAME = "exness-clickhouse-local"
-CLICKHOUSE_MODE = "local"
-CLICKHOUSE_HOST = "localhost"
-CLICKHOUSE_PORT = "8123"
-CLICKHOUSE_DATABASE = "exness"
-```
+The variables above are read with these defaults, so local mode needs no configuration.
 
 ---
 
@@ -690,7 +677,7 @@ ERROR: ClickHouse not running on port 8123
 **Solution**:
 
 ```bash
-mise run clickhouse:start
+moon run repo:clickhouse-start
 ```
 
 ### Connection Refused

@@ -1,0 +1,2 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/toolchain.json
+# No moon-managed toolchains: tasks run on the `system` platform (uv from proto on PATH).

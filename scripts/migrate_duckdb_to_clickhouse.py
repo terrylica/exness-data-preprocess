@@ -33,7 +33,7 @@ Transformations:
 
 Prerequisites:
 - Install exness-data-preprocess: cd ~/eon/exness-data-preprocess && uv pip install -e .
-- Start ClickHouse: mise run clickhouse:start
+- Start ClickHouse: moon run repo:clickhouse-start
 
 Usage (from project root):
     uv run scripts/migrate_duckdb_to_clickhouse.py
@@ -436,7 +436,7 @@ def main() -> int:
 
     except Exception as e:
         logger.error(f"Failed to connect to ClickHouse: {e}")
-        logger.error("Ensure ClickHouse is running: mise run clickhouse:start")
+        logger.error("Ensure ClickHouse is running: moon run repo:clickhouse-start")
         return 1
 
     # Check for existing data
