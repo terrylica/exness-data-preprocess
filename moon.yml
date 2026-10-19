@@ -7,8 +7,10 @@
 #   moon run repo:clickhouse-stop       stop it (by this repo's pidfile)
 #   moon run repo:validate-clickhouse   end-to-end checks against the running server
 #   moon run repo:validate              full local gate: check + build + fresh-install smoke + validate-clickhouse
+#   moon run repo:e2e                   hermetic E2E: throwaway ClickHouse + pytest + every validate check + teardown
 #
-# Tests that need ClickHouse skip themselves when nothing listens on localhost:8123.
+# Tests that need ClickHouse skip themselves (with the reason) unless an authenticated server answers on
+# CLICKHOUSE_HOST/PORT; repo:e2e requires one and starts its own.
 layer: 'library'
 language: 'python'
 
@@ -60,6 +62,9 @@ tasks:
   validate-clickhouse:
     deps: ['~:validate-clickhouse-data', '~:validate-clickhouse-pagination', '~:validate-clickhouse-ohlc']
     script: "echo 'repo:validate-clickhouse passed'"
+    options: { cache: false, runInCI: false }
+  e2e:
+    script: 'bash scripts/e2e-ephemeral.sh'
     options: { cache: false, runInCI: false }
   smoke-install:
     script: 'bash scripts/smoke_install.sh'

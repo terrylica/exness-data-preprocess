@@ -110,6 +110,7 @@ testpaths = [
 ]
 markers = [
     "integration: marks tests as integration tests (may require network access)",
+    "clickhouse: needs a reachable, authenticated ClickHouse server (CLICKHOUSE_HOST/PORT/USER/PASSWORD)",
 ]
 
 [dependency-groups]
