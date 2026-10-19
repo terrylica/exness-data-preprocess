@@ -110,10 +110,10 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         params: dict = {"instrument": symbol}
 
         if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64}")
+            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
             params["start_date"] = start_date
         if end_date:
-            where_parts.append("timestamp <= {end_date:DateTime64}")
+            where_parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
             params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)
@@ -195,10 +195,10 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         params: dict = {"instrument": symbol, "minutes": minutes}
 
         if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64}")
+            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
             params["start_date"] = start_date
         if end_date:
-            where_parts.append("timestamp <= {end_date:DateTime64}")
+            where_parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
             params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)
@@ -434,10 +434,10 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             where_parts.append("timestamp > {cursor:DateTime64}")
             params["cursor"] = cursor
         if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64}")
+            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
             params["start_date"] = start_date
         if end_date:
-            where_parts.append("timestamp <= {end_date:DateTime64}")
+            where_parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
             params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)

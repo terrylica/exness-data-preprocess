@@ -87,6 +87,8 @@ cat > "${WORK_DIR}/config.xml" <<EOF
 <clickhouse>
   <logger><level>warning</level><log>${WORK_DIR}/server.log</log><errorlog>${WORK_DIR}/server.err.log</errorlog></logger>
   <listen_host>127.0.0.1</listen_host>
+  <!-- Deliberately not UTC: catches any query that parses a naive timestamp in the server zone. -->
+  <timezone>America/New_York</timezone>
   <http_port>${HTTP_PORT}</http_port>
   <tcp_port>${TCP_PORT}</tcp_port>
   <path>${WORK_DIR}/data/</path>

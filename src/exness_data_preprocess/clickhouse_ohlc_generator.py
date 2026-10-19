@@ -124,8 +124,8 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 f"""
                 ALTER TABLE {self.DATABASE}.ohlc_1m DELETE
                 WHERE instrument = {{instrument:String}}
-                  AND timestamp >= {{start_date:DateTime64}}
-                  AND timestamp < addMonths(toDate({{end_date:String}}), 1)
+                  AND timestamp >= {{start_date:DateTime64(6, 'UTC')}}
+                  AND timestamp < addMonths(toDateTime64(toDate({{end_date:String}}), 6, 'UTC'), 1)
                 """,
                 parameters=params,
             )
@@ -136,9 +136,11 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         where_parts = ["r.instrument = {instrument:String}"]
 
         if start_date:
-            where_parts.append("r.timestamp >= {start_date:DateTime64}")
+            where_parts.append("r.timestamp >= {start_date:DateTime64(6, 'UTC')}")
         if end_date:
-            where_parts.append("r.timestamp < addMonths(toDate({end_date:String}), 1)")
+            where_parts.append(
+                "r.timestamp < addMonths(toDateTime64(toDate({end_date:String}), 6, 'UTC'), 1)"
+            )
 
         where_sql = " AND ".join(where_parts)
 
@@ -198,9 +200,11 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         # Get count of generated OHLC bars
         count_where = ["instrument = {instrument:String}"]
         if start_date:
-            count_where.append("timestamp >= {start_date:DateTime64}")
+            count_where.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
         if end_date:
-            count_where.append("timestamp < addMonths(toDate({end_date:String}), 1)")
+            count_where.append(
+                "timestamp < addMonths(toDateTime64(toDate({end_date:String}), 6, 'UTC'), 1)"
+            )
 
         count_result = execute_query(
             self.client,
@@ -240,10 +244,12 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         params: dict = {"instrument": instrument}
 
         if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64}")
+            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
             params["start_date"] = start_date
         if end_date:
-            where_parts.append("timestamp < addMonths(toDate({end_date:String}), 1)")
+            where_parts.append(
+                "timestamp < addMonths(toDateTime64(toDate({end_date:String}), 6, 'UTC'), 1)"
+            )
             params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)
