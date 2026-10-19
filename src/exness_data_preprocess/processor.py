@@ -26,6 +26,7 @@ BREAKING CHANGES (v2.0.0):
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -105,11 +106,15 @@ class ExnessDataProcessor:
             - CLICKHOUSE_PORT: port (default: 8123 local, 8443 cloud)
             - CLICKHOUSE_USER: username (default: default)
             - CLICKHOUSE_PASSWORD: password (default: empty)
+            - EXNESS_DOWNLOAD_DIR: where month ZIPs are downloaded (default: ~/eon/exness-data/temp)
         """
         self.config = config
 
-        # Temp dir for downloads only
-        self.temp_dir = Path.home() / "eon" / "exness-data" / "temp"
+        # Temp dir for downloads only (ZIPs are deleted after insert unless delete_zip=False).
+        # EXNESS_DOWNLOAD_DIR overrides the default, e.g. to keep a test run self-contained.
+        self.temp_dir = Path(
+            os.environ.get("EXNESS_DOWNLOAD_DIR") or Path.home() / "eon" / "exness-data" / "temp"
+        ).expanduser()
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
         # Bootstrap the `exness` ClickHouse database BEFORE the first

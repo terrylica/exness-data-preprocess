@@ -3,7 +3,8 @@
 Usage:
     uv run python examples/basic_usage.py [PAIR ...] [--start YYYY-MM-DD]
 
-Defaults: EURUSD, starting at the first day of last month (one or two months of downloads).
+Defaults: EURUSD, starting at the first day of last month. A month whose archive is not
+published yet is skipped.
 Connection comes from CLICKHOUSE_HOST / CLICKHOUSE_PORT / CLICKHOUSE_USER / CLICKHOUSE_PASSWORD
 (default localhost:8123, user `default`). `moon run repo:e2e` runs this script against its
 throwaway server, so it is kept working by the E2E gate.

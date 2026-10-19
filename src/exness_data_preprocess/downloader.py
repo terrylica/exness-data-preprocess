@@ -4,6 +4,7 @@ HTTP download operations for Exness tick data.
 Handles downloading monthly ZIP files from ticks.ex2archive.com with the correct URL pattern.
 """
 
+import os
 from pathlib import Path
 from typing import Optional
 from urllib.error import URLError
@@ -71,12 +72,18 @@ class ExnessDownloader:
         if zip_path.exists():
             return zip_path
 
+        # Download to a sibling .part file and rename on success, so an interrupted or concurrent
+        # download never leaves a truncated ZIP at zip_path for the exists() check above to reuse.
+        part_path = zip_path.with_name(f"{zip_path.name}.{os.getpid()}.part")
         try:
             print(f"Downloading: {url}")
-            urlretrieve(url, zip_path)
+            urlretrieve(url, part_path)
+            part_path.replace(zip_path)
             size_mb = zip_path.stat().st_size / 1024 / 1024
             print(f"✓ Downloaded: {size_mb:.2f} MB")
             return zip_path
         except URLError as e:
             print(f"✗ Download failed: {e}")
             return None
+        finally:
+            part_path.unlink(missing_ok=True)

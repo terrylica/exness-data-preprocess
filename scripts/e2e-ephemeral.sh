@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Hermetic end-to-end run: a throwaway ClickHouse server, the full pytest suite, every
-# scripts/validate_clickhouse.py check (including a real one-month EURUSD load) and
+# scripts/validate_clickhouse.py check (including a real EURUSD load) and
 # examples/basic_usage.py, then teardown.
 #
 # Usage: bash scripts/e2e-ephemeral.sh   (or: moon run repo:e2e)
@@ -11,17 +11,29 @@
 # is the only thing removed afterwards. EXNESS_REQUIRE_CLICKHOUSE=1 turns pytest's "ClickHouse
 # unavailable" skips into a hard failure, so this run cannot pass by skipping.
 #
-# Memory: the load step parses ~2 x 10M ticks with pandas; under systemd the whole run is capped
-# with MemoryMax (E2E_MEMORY_MAX, default 16G) via systemd-run --user --scope when available.
+# Memory: the load step parses a few million ticks per month with pandas. When a systemd user
+# manager is up (state `running` or `degraded`; el02 is often `degraded` because of unrelated
+# failed units) the whole run re-execs inside `systemd-run --user --scope -p MemoryMax=...`
+# (E2E_MEMORY_MAX, default 16G). If systemd-run then fails, the run fails. Without a user manager
+# the run continues uncapped and says so on stderr; E2E_MEMORY_MAX=off skips the cap on purpose.
 #
-# Exit code: the first failing step's code; 0 only when every step passed.
+# Python: the repo's .python-version wins, so an exported UV_PYTHON (which overrides it) is unset.
+# Downloads: EXNESS_DOWNLOAD_DIR points inside the work dir, so no shared download dir is touched.
+#
+# Exit code: the first failing step's code (128+N if interrupted by signal N); 0 only when every
+# step passed.
 set -euo pipefail
 
-if [[ -z "${E2E_IN_SCOPE:-}" ]] && command -v systemd-run >/dev/null 2>&1 \
-    && systemctl --user is-system-running >/dev/null 2>&1; then
-    export E2E_IN_SCOPE=1
-    exec systemd-run --user --scope --quiet -p MemoryMax="${E2E_MEMORY_MAX:-16G}" -- bash "$0" "$@"
+if [[ -z "${E2E_IN_SCOPE:-}" && "${E2E_MEMORY_MAX:-16G}" != "off" ]]; then
+    user_manager_state="$(systemctl --user is-system-running 2>/dev/null || true)"
+    if command -v systemd-run >/dev/null 2>&1 && [[ "${user_manager_state}" =~ ^(running|degraded)$ ]]; then
+        export E2E_IN_SCOPE=1
+        exec systemd-run --user --scope --quiet -p MemoryMax="${E2E_MEMORY_MAX:-16G}" -- bash "$0" "$@"
+    fi
+    echo "WARNING: no systemd user manager (state: '${user_manager_state:-none}'); running WITHOUT a memory cap" >&2
 fi
+
+unset UV_PYTHON
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -34,17 +46,32 @@ fi
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/exness-e2e.XXXXXX")"
 SERVER_PID=""
 
+stop_server() {
+    [[ -n "${SERVER_PID}" ]] && kill -0 "${SERVER_PID}" 2>/dev/null || return 0
+    kill -TERM "${SERVER_PID}" 2>/dev/null || true
+    for _ in $(seq 1 30); do
+        kill -0 "${SERVER_PID}" 2>/dev/null || break
+        sleep 1
+    done
+    if kill -0 "${SERVER_PID}" 2>/dev/null; then
+        echo "WARNING: ClickHouse (PID ${SERVER_PID}) ignored SIGTERM for 30s; sending SIGKILL" >&2
+        kill -KILL "${SERVER_PID}" 2>/dev/null || true
+    fi
+    wait "${SERVER_PID}" 2>/dev/null || true
+}
+
 cleanup() {
     local rc=$?
-    if [[ -n "${SERVER_PID}" ]] && kill -0 "${SERVER_PID}" 2>/dev/null; then
-        kill -TERM "${SERVER_PID}" 2>/dev/null || true
-        wait "${SERVER_PID}" 2>/dev/null || true
-    fi
+    trap - EXIT INT TERM
+    stop_server
     # Only the directory this script created; it holds nothing else.
     rm -rf -- "${WORK_DIR}"
     exit "${rc}"
 }
-trap cleanup EXIT INT TERM
+# A signal must never end in exit 0: set the 128+N code before the EXIT trap runs cleanup.
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 read -r HTTP_PORT TCP_PORT < <(python3 -c '
 import socket
@@ -108,6 +135,7 @@ export CLICKHOUSE_USER=default
 export CLICKHOUSE_PASSWORD=""
 export CLICKHOUSE_DATABASE=exness
 export EXNESS_REQUIRE_CLICKHOUSE=1
+export EXNESS_DOWNLOAD_DIR="${WORK_DIR}/downloads"
 
 cd "${REPO_ROOT}"
 echo "--- pytest (ClickHouse required) ---"

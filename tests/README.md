@@ -6,7 +6,7 @@
 moon run repo:test     # pytest; ClickHouse-backed tests skip (with the probe's reason) if no server is usable
 moon run repo:check    # offline gate: ruff + mypy + pytest
 moon run repo:e2e      # hermetic: throwaway ClickHouse on free ports, full pytest with ClickHouse required,
-                       # then scripts/validate_clickhouse.py all (schema, one-month EURUSD load, queries)
+                       # then scripts/validate_clickhouse.py all (schema, a real EURUSD load, queries)
 ```
 
 ## ClickHouse-backed tests

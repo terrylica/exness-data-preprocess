@@ -43,13 +43,18 @@ def clickhouse_unavailable_reason() -> str | None:
     return None
 
 
+def pytest_itemcollected(item: pytest.Item) -> None:
+    """Mark fixture users ``clickhouse`` at collection, before ``-m`` deselection reads markers."""
+    if CLICKHOUSE_FIXTURE in getattr(item, "fixturenames", ()) and not item.get_closest_marker(
+        "clickhouse"
+    ):
+        item.add_marker(pytest.mark.clickhouse)
+
+
+@pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    needs_clickhouse = [
-        item
-        for item in items
-        if item.get_closest_marker("clickhouse")
-        or CLICKHOUSE_FIXTURE in getattr(item, "fixturenames", ())
-    ]
+    """Probe once, over the items that survived ``-m`` / ``-k`` deselection."""
+    needs_clickhouse = [item for item in items if item.get_closest_marker("clickhouse")]
     if not needs_clickhouse:
         return
     reason = clickhouse_unavailable_reason()

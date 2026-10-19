@@ -4,7 +4,7 @@
 Usage:
     uv run python scripts/validate_clickhouse.py status       # port probe + client connection check
     uv run python scripts/validate_clickhouse.py schema       # ClickHouseManager().ensure_schema() (creates tables)
-    uv run python scripts/validate_clickhouse.py load         # download + insert last month's EURUSD from ticks.ex2archive.com
+    uv run python scripts/validate_clickhouse.py load         # download + insert EURUSD from the month before last (ticks.ex2archive.com)
     uv run python scripts/validate_clickhouse.py data         # query_ticks('EURUSD') returns the expected columns
     uv run python scripts/validate_clickhouse.py pagination   # LIMIT / OFFSET / cursor / batch iteration
     uv run python scripts/validate_clickhouse.py ohlc         # query_ohlc('EURUSD', '1h')
@@ -63,9 +63,14 @@ def check_schema() -> None:
 
 
 def check_load() -> None:
-    """Load last month's EURUSD (both variants) so the query checks have real rows."""
+    """Load EURUSD (both variants) from the month before last, so the query checks have real rows.
+
+    The month before last, not last month: early in a month, last month's archive may not be
+    published yet, and update_data skips unpublished months, which would fail the row assertions.
+    """
     first_of_this_month = dt.date.today().replace(day=1)
-    start = (first_of_this_month - dt.timedelta(days=1)).replace(day=1)
+    first_of_last_month = (first_of_this_month - dt.timedelta(days=1)).replace(day=1)
+    start = (first_of_last_month - dt.timedelta(days=1)).replace(day=1)
     print(f"🔍 Loading EURUSD from {start:%Y-%m} via ticks.ex2archive.com...")
     from exness_data_preprocess import ExnessDataProcessor, UpdateResult
 
