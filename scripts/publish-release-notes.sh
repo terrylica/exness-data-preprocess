@@ -28,7 +28,9 @@ if [[ "${current}" == *"${marker}"* ]]; then
 else
     generated="${current}"
 fi
-generated="${generated#$'\n'}"
+# Drop every leading newline: the separator below re-adds exactly one blank line, so a re-run
+# reproduces the same bytes instead of growing the body by a newline each time.
+while [[ "${generated}" == $'\n'* ]]; do generated="${generated#$'\n'}"; done
 
 body_file="$(mktemp)"
 trap 'rm -f -- "${body_file}"' EXIT
