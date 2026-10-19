@@ -40,7 +40,6 @@ from exness_data_preprocess.clickhouse_manager import (
 )
 from exness_data_preprocess.clickhouse_ohlc_generator import ClickHouseOHLCGenerator
 from exness_data_preprocess.clickhouse_query_engine import ClickHouseQueryEngine
-from exness_data_preprocess.config import ConfigModel
 from exness_data_preprocess.downloader import ExnessDownloader
 from exness_data_preprocess.models import (
     CoverageInfo,
@@ -92,15 +91,11 @@ class ExnessDataProcessor:
     # ClickHouse database name
     DATABASE = "exness"
 
-    def __init__(self, config: Optional[ConfigModel] = None):
+    def __init__(self) -> None:
         """
         Initialize processor with ClickHouse backend.
 
-        Args:
-            config: Optional user configuration
-
-        Note:
-            ClickHouse connection configured via environment variables:
+        Configuration comes only from environment variables:
             - CLICKHOUSE_MODE: "local" or "cloud"
             - CLICKHOUSE_HOST: hostname (default: localhost)
             - CLICKHOUSE_PORT: port (default: 8123 local, 8443 cloud)
@@ -108,8 +103,6 @@ class ExnessDataProcessor:
             - CLICKHOUSE_PASSWORD: password (default: empty)
             - EXNESS_DOWNLOAD_DIR: where month ZIPs are downloaded (default: ~/eon/exness-data/temp)
         """
-        self.config = config
-
         # Temp dir for downloads only (ZIPs are deleted after insert unless delete_zip=False).
         # EXNESS_DOWNLOAD_DIR overrides the default, e.g. to keep a test run self-contained.
         self.temp_dir = Path(

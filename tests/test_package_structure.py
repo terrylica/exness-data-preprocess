@@ -34,7 +34,6 @@ MODULES = [
     "exness_data_preprocess.clickhouse_manager",
     "exness_data_preprocess.clickhouse_ohlc_generator",
     "exness_data_preprocess.clickhouse_query_engine",
-    "exness_data_preprocess.config",
     "exness_data_preprocess.downloader",
     "exness_data_preprocess.exchanges",
     "exness_data_preprocess.models",
