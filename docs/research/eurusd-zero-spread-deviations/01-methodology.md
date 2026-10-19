@@ -196,25 +196,32 @@ Where:
 ```python
 class MultiPeriodValidationError(Exception):
     """Base exception for multi-period validation"""
+
     pass
+
 
 class DataLoadError(MultiPeriodValidationError):
     """Failed to load data file"""
+
     def __init__(self, filepath, cause):
         self.filepath = filepath
         self.cause = cause
         super().__init__(f"Failed to load {filepath}: {cause}")
 
+
 class ValidationError(MultiPeriodValidationError):
     """Validation check failed"""
+
     def __init__(self, check_name, expected, actual):
         self.check_name = check_name
         self.expected = expected
         self.actual = actual
         super().__init__(f"{check_name} validation failed: expected {expected}, got {actual}")
 
+
 class LinAlgError(MultiPeriodValidationError):
     """Linear algebra operation failed (e.g., singular matrix)"""
+
     pass
 ```
 

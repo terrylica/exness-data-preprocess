@@ -322,9 +322,9 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         insert_df["timestamp"] = pd.to_datetime(insert_df["timestamp"])
 
         # Insert updated data
-        self.client.insert(
+        self.client.insert_df(
             table="ohlc_1m",
-            data=insert_df,
+            df=insert_df,
             database=self.DATABASE,
         )
 

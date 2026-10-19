@@ -254,22 +254,22 @@ python3 scripts/baseline-sep2024/04_regime_detection_analysis.py
 import pandas as pd
 
 # Load your results
-results = pd.read_csv('/tmp/multiperiod_mean_reversion_results.csv')
+results = pd.read_csv("/tmp/multiperiod_mean_reversion_results.csv")
 
 # Expected values
-assert 0.85 < results['toward_5s'].mean() < 0.89, "Mean reversion outside expected range"
-assert results['toward_5s'].std() < 0.03, "Temporal stability too variable"
+assert 0.85 < results["toward_5s"].mean() < 0.89, "Mean reversion outside expected range"
+assert results["toward_5s"].std() < 0.03, "Temporal stability too variable"
 print("✅ Phase 2 results validated")
 ```
 
 **Phase 3 (Volatility Model)**:
 
 ```python
-results = pd.read_csv('/tmp/multiperiod_volatility_model_results.csv')
+results = pd.read_csv("/tmp/multiperiod_volatility_model_results.csv")
 
 # Year-over-year regime shift
-r2_2024 = results[results['month'].str.startswith('2024')]['r_squared'].mean()
-r2_2025 = results[results['month'].str.startswith('2025')]['r_squared'].mean()
+r2_2024 = results[results["month"].str.startswith("2024")]["r_squared"].mean()
+r2_2025 = results[results["month"].str.startswith("2025")]["r_squared"].mean()
 
 assert 0.35 < r2_2024 < 0.40, "2024 R² outside expected range"
 assert 0.19 < r2_2025 < 0.23, "2025 R² outside expected range"

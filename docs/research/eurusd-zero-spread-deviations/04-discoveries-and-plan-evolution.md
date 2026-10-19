@@ -52,13 +52,13 @@ Updated loader function:
 
 ```python
 # Before (assumed)
-df = pd.read_csv(f, header=None, names=['timestamp_ms', 'bid', 'ask'])
-df['timestamp'] = pd.to_datetime(df['timestamp_ms'], unit='ms', utc=True)
+df = pd.read_csv(f, header=None, names=["timestamp_ms", "bid", "ask"])
+df["timestamp"] = pd.to_datetime(df["timestamp_ms"], unit="ms", utc=True)
 
 # After (actual)
 df = pd.read_csv(f)  # Has header row
-df = df[['Timestamp', 'Bid', 'Ask']].copy()
-df['timestamp'] = pd.to_datetime(df['Timestamp'], utc=True)  # ISO 8601
+df = df[["Timestamp", "Bid", "Ask"]].copy()
+df["timestamp"] = pd.to_datetime(df["Timestamp"], utc=True)  # ISO 8601
 ```
 
 ### Impact
@@ -103,9 +103,9 @@ No zero-spread events in 2024-02
 Checked spread distribution in Standard variant:
 
 ```python
-std['spread'] = std['ask'] - std['bid']
-print(f'Min spread: {std.spread.min():.10f}')  # 0.0000500000 (0.5 pips)
-print(f'Zero spread count: {(std.spread == 0).sum():,}')  # 0
+std["spread"] = std["ask"] - std["bid"]
+print(f"Min spread: {std.spread.min():.10f}")  # 0.0000500000 (0.5 pips)
+print(f"Zero spread count: {(std.spread == 0).sum():,}")  # 0
 ```
 
 Result: Standard variant has ZERO zero-spread events (minimum 0.5 pips).

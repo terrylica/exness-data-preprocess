@@ -105,7 +105,6 @@ node_modules/
 
 # Link checking (lychee)
 .lychee*
-.lycheecache
 
 # DBeaver (credentials in generated JSON)
 # ADR: /docs/adr/2025-12-10-clickhouse-pydantic-config.md

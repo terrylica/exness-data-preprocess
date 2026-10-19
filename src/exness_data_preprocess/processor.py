@@ -10,7 +10,7 @@ Architecture (v2.0.0 - ClickHouse-Only):
 4. Incremental updates with automatic gap detection
 5. ReplacingMergeTree for deduplication
 
-Phase7 Schema (v1.6.0 - 26 columns):
+OHLC schema (27 columns):
 - Timestamp, Open, High, Low, Close (BID-based from Raw_Spread)
 - raw_spread_avg, standard_spread_avg (dual spread tracking)
 - tick_count_raw_spread, tick_count_standard (dual tick counts)
@@ -26,6 +26,7 @@ BREAKING CHANGES (v2.0.0):
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -68,7 +69,7 @@ class ExnessDataProcessor:
     - Single ClickHouse database (exness) with instrument column
     - Dual-variant storage (Raw_Spread + Standard) for Phase7
     - Incremental updates with automatic gap detection
-    - 26-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
+    - 27-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
       holiday detection, and 10 global exchange session flags
 
     Features:
@@ -105,11 +106,15 @@ class ExnessDataProcessor:
             - CLICKHOUSE_PORT: port (default: 8123 local, 8443 cloud)
             - CLICKHOUSE_USER: username (default: default)
             - CLICKHOUSE_PASSWORD: password (default: empty)
+            - EXNESS_DOWNLOAD_DIR: where month ZIPs are downloaded (default: ~/eon/exness-data/temp)
         """
         self.config = config
 
-        # Temp dir for downloads only
-        self.temp_dir = Path.home() / "eon" / "exness-data" / "temp"
+        # Temp dir for downloads only (ZIPs are deleted after insert unless delete_zip=False).
+        # EXNESS_DOWNLOAD_DIR overrides the default, e.g. to keep a test run self-contained.
+        self.temp_dir = Path(
+            os.environ.get("EXNESS_DOWNLOAD_DIR") or Path.home() / "eon" / "exness-data" / "temp"
+        ).expanduser()
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
         # Bootstrap the `exness` ClickHouse database BEFORE the first
@@ -510,7 +515,7 @@ class ExnessDataProcessor:
             limit: Maximum rows to return
 
         Returns:
-            DataFrame with OHLC data (26-column Phase7 schema)
+            DataFrame with OHLC data (27-column schema)
 
         Example:
             >>> processor = ExnessDataProcessor()

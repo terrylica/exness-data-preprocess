@@ -195,7 +195,7 @@
 ```python
 # Define regime based on mode-truncation
 mode_value = 0.56  # From analysis
-df['regime'] = (df['spread'] != mode_value).astype(int)
+df["regime"] = (df["spread"] != mode_value).astype(int)
 # 0 = in-mode (static), 1 = excursion (varying)
 ```
 
@@ -204,9 +204,16 @@ df['regime'] = (df['spread'] != mode_value).astype(int)
 ```python
 # Calculate rolling CV excluding mode
 window = 100  # ticks
-df['rolling_cv_truncated'] = df['spread'].rolling(window).apply(
-    lambda x: (x[x != mode_value].std() / x[x != mode_value].mean()) * 100
-    if len(x[x != mode_value]) > 0 else 0
+df["rolling_cv_truncated"] = (
+    df["spread"]
+    .rolling(window)
+    .apply(
+        lambda x: (
+            (x[x != mode_value].std() / x[x != mode_value].mean()) * 100
+            if len(x[x != mode_value]) > 0
+            else 0
+        )
+    )
 )
 ```
 
@@ -214,9 +221,9 @@ df['rolling_cv_truncated'] = df['spread'].rolling(window).apply(
 
 ```python
 # Non-modal spread percentiles
-non_modal = df[df['spread'] != mode_value]['spread']
-df['p90_excursion'] = non_modal.rolling(window).quantile(0.90)
-df['p99_excursion'] = non_modal.rolling(window).quantile(0.99)
+non_modal = df[df["spread"] != mode_value]["spread"]
+df["p90_excursion"] = non_modal.rolling(window).quantile(0.90)
+df["p99_excursion"] = non_modal.rolling(window).quantile(0.99)
 ```
 
 #### 4. Regime Transition Probability
@@ -224,11 +231,8 @@ df['p99_excursion'] = non_modal.rolling(window).quantile(0.99)
 ```python
 # Markov transition matrix
 from sklearn.preprocessing import LabelEncoder
-regime_transitions = pd.crosstab(
-    df['regime'].shift(1),
-    df['regime'],
-    normalize='index'
-)
+
+regime_transitions = pd.crosstab(df["regime"].shift(1), df["regime"], normalize="index")
 # P(excursion | in-mode) = transition probability
 ```
 

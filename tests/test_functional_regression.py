@@ -3,7 +3,7 @@
 ADR: 2025-12-11-duckdb-removal-clickhouse
 
 TRUE End-to-End Testing: Downloads from https://ticks.ex2archive.com/ - No mocking.
-Requires: ClickHouse running on localhost:8123
+ClickHouse-backed tests use the processor_with_clickhouse fixture (see conftest.py).
 
 SLO Coverage:
 - SLO-CR-5: v2.0.0 functional behavior preserved: 0 regressions detected
@@ -13,30 +13,8 @@ SLO Coverage:
 """
 
 import pandas as pd
-import pytest
 
 from exness_data_preprocess.models import CoverageInfo
-
-
-def clickhouse_available() -> bool:
-    """Check if ClickHouse is running on localhost:8123."""
-    import socket
-
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex(("localhost", 8123))
-        sock.close()
-        return result == 0
-    except Exception:
-        return False
-
-
-# Skip all tests in this module if ClickHouse is not available
-pytestmark = pytest.mark.skipif(
-    not clickhouse_available(),
-    reason="ClickHouse not running on localhost:8123",
-)
 
 
 class TestClickHouseQueryMethods:

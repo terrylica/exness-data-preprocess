@@ -136,13 +136,9 @@ class UpdateResult(BaseModel):
     """Result of update_data() operation."""
 
     # RENAMED: ClickHouse-idiomatic names
-    database: str = Field(
-        description="ClickHouse database name (e.g., 'exness')"
-    )
+    database: str = Field(description="ClickHouse database name (e.g., 'exness')")
     storage_bytes: int = Field(
-        default=0,
-        ge=0,
-        description="Total storage in bytes (from system.tables)"
+        default=0, ge=0, description="Total storage in bytes (from system.tables)"
     )
 
     # Keep other fields unchanged
@@ -158,14 +154,8 @@ class CoverageInfo(BaseModel):
     """Data coverage information."""
 
     # RENAMED: ClickHouse-idiomatic names
-    database: str = Field(
-        description="ClickHouse database name"
-    )
-    storage_bytes: int = Field(
-        default=0,
-        ge=0,
-        description="Total storage in bytes"
-    )
+    database: str = Field(description="ClickHouse database name")
+    storage_bytes: int = Field(default=0, ge=0, description="Total storage in bytes")
 
     # Keep other fields
     instrument: str
@@ -285,6 +275,7 @@ def clickhouse_client():
         client.close()
     except ClickHouseConnectionError:
         pytest.skip("ClickHouse not available")
+
 
 @pytest.fixture
 def processor_with_clickhouse(temp_dir, clickhouse_client):

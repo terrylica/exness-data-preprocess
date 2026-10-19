@@ -1,238 +1,31 @@
-# Documentation Hub
+# Documentation
 
-**Architecture**: Link Farm + Hub-and-Spoke with Progressive Disclosure
+Start with the project [README](/README.md) (install, API, schema summary). The schema DDL in [`clickhouse_manager.py`](/src/exness_data_preprocess/clickhouse_manager.py) is authoritative; tasks are in [`moon.yml`](/moon.yml).
 
-**Project Overview**: [`../README.md`](/README.md) - Full project documentation
+## Guides
 
-**Project Memory**: [`../CLAUDE.md`](/CLAUDE.md) - Essential architecture decisions and quick links
+| Document                                                   | Covers                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------- |
+| [CLICKHOUSE_USER_GUIDE.md](/docs/CLICKHOUSE_USER_GUIDE.md) | Connecting, querying, pagination, resampling, troubleshooting |
+| [EXNESS_DATA_SOURCES.md](/docs/EXNESS_DATA_SOURCES.md)     | ticks.ex2archive.com layout, Raw_Spread vs Standard variants  |
 
----
+## Decisions
 
-## Architecture & Planning
+Architecture Decision Records in [`adr/`](/docs/adr/), each with an implementation spec in [`design/`](/docs/design/) under the same date-slug. They are historical records: they describe the repository as it was when written and are not edited afterwards.
 
-### Research Patterns v1.0.0
+| ADR                                                                                                         | Decision                                   |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [2025-12-09 exness-clickhouse-migration](/docs/adr/2025-12-09-exness-clickhouse-migration.md)               | Move storage from DuckDB to ClickHouse     |
+| [2025-12-09 codebase-pruning](/docs/adr/2025-12-09-codebase-pruning.md)                                     | Dependency, documentation and code pruning |
+| [2025-12-10 clickhouse-e2e-validation-pipeline](/docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md) | Pagination API and E2E validation          |
+| [2025-12-10 clickhouse-pydantic-config](/docs/adr/2025-12-10-clickhouse-pydantic-config.md)                 | Pydantic connection config, DBeaver output |
+| [2025-12-11 duckdb-removal-clickhouse](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md)                   | ClickHouse-only backend (the 2.x line)     |
 
-**Comprehensive Specification**: [`RESEARCH_PATTERNS.md`](/docs/RESEARCH_PATTERNS.md)
+## Research
 
-**Architecture Principle**: DuckDB as single source of truth for validated research outcomes (materialized results), not exploratory tools (pandas/Polars ASOF operations).
+Completed studies with their scripts. Several predate the ClickHouse backend and were run on DuckDB; their findings are about the data, not the storage.
 
-**Research Lifecycle**:
-
-1. **Explore**: pandas/Polars for tick-level ASOF merges (0.04s at 880K ticks)
-2. **Validate**: Confirm statistical significance, temporal stability
-3. **Graduate**: Materialize results to DuckDB tables with COMMENT ON
-4. **Query**: SQL views on materialized data (sub-15ms)
-
-**Key Finding**: pandas/Polars are 24x faster than DuckDB for tick-level ASOF joins (0.04s vs 0.89s at 880K ticks). Use pandas/Polars for exploration, DuckDB for validated results.
-
----
-
-### Unified Single-File DuckDB Architecture v2.0.0
-
-**Comprehensive Plan**: [`UNIFIED_DUCKDB_PLAN_v2.md`](/docs/UNIFIED_DUCKDB_PLAN_v2.md)
-
-**Database Schema**: [`DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md) - Complete table structure, relationships, and query examples
-
-**Decision**: Single DuckDB file per instrument (eurusd.duckdb, not monthly files)
-
-**Key Advantages**:
-
-- ✅ **Single file per instrument**: All years in one database (no file fragmentation)
-- ✅ **Incremental updates**: Automatic gap detection, download only missing months
-- ✅ **PRIMARY KEY constraints**: Prevents duplicates during incremental updates
-- ✅ **Performance**: <15ms queries for all timeframes
-- ✅ **Phase7 Compliant**: Dual-variant 13-column (v1.2.0) schema
-- ✅ **SQL on Ticks**: Direct tick analysis with date range filtering
-- ✅ **Scalability**: 2.08 GB for 13 months, ~4.8 GB for 3 years
-
-**Validation**: Real EURUSD Oct 2024 - Oct 2025 (18.6M Raw_Spread ticks, 19.6M Standard ticks, 413K OHLC bars)
-
-**Implementation Status**: ✅ Completed and validated (2025-10-12)
-
----
-
-### Implementation Architecture v1.7.0
-
-**Pattern**: Facade with 7 specialized modules
-
-**Key Modules**:
-
-- **processor.py** - Thin orchestrator facade, delegates to modules
-- **downloader.py** - HTTP download operations (httpx)
-- **tick_loader.py** - CSV parsing (pandas)
-- **database_manager.py** - Database operations (DuckDB)
-- **session_detector.py** - Holiday and session detection (exchange_calendars) - v1.7.0: Vectorized 2.2x speedup
-- **gap_detector.py** - Incremental update logic - v1.7.0: SQL EXCEPT with complete gap coverage
-- **ohlc_generator.py** - Phase7 30-column OHLC generation - v1.7.0: Incremental 7.3x speedup
-- **query_engine.py** - Query operations with on-demand resampling
-
-**Design Principles**:
-
-- ✅ **Separation of concerns**: Each module has single responsibility
-- ✅ **SLO-based design**: All modules define Availability, Correctness, Observability, Maintainability
-- ✅ **Off-the-shelf libraries**: httpx, pandas, DuckDB, exchange_calendars (no custom implementations)
-- ✅ **Zero regressions**: All 48 tests pass after 7-module extraction (53% line reduction)
-
-**Status**: v0.5.0 Released (2025-10-18)
-
----
-
-### Performance Optimizations (v0.5.0)
-
-**Optimization Plans (SSoT)**:
-
-- [`phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](/docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml) - OpenAPI 3.1.0 specification for session vectorization
-- [`phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](/docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml) - OpenAPI 3.1.0 specification for SQL gap detection
-
-**Validation Results**:
-
-- [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md) - Incremental OHLC 7.3x speedup validation
-- [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md) - Session vectorization 2.2x speedup validation
-
-**Key Achievements**:
-
-- ✅ **Incremental OHLC Generation**: 7.3x speedup (8.05s → 1.10s for incremental updates)
-- ✅ **Vectorized Session Detection**: 2.2x speedup (5.99s → 2.69s for 302K bars, 10 exchanges)
-- ✅ **Combined Phase 1+2**: ~16x total speedup (8.05s → 0.50s)
-- ✅ **SQL Gap Detection**: Complete coverage (detects internal gaps Python missed), 46% LOC reduction
-- ✅ **Spike-Test-First Methodology**: All optimizations validated before implementation
-- ✅ **Zero Regressions**: All 48 tests pass, 100% backward compatible
-
-**Release Notes**: [`../CHANGELOG.md`](/CHANGELOG.md) - Complete v0.5.0 changelog
-
----
-
-## Data Sources
-
-### Exness Tick Data
-
-**Complete Guide**: [`EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)
-
-**Quick Reference**:
-
-- **URL Pattern**: `https://ticks.ex2archive.com/ticks/{VARIANT}/{YEAR}/{MONTH}/`
-- **4 Variants**: Standard, Raw_Spread, Standart_Plus, Zero_Spread
-- **Phase7 Requires**: Raw_Spread (primary) + Standard (reference)
-- **Storage**: ~11 MB per month per instrument (unified DuckDB)
-
-**Discovery**:
-
-```bash
-curl -s "https://ticks.ex2archive.com/ticks/" | jq -r '.[] | .name' | grep -i "EURUSD"
-```
-
----
-
-## Research Findings
-
-### Compression Benchmarks
-
-**Location**: [`research/compression-benchmarks/README.md`](/docs/research/compression-benchmarks/README.md)
-
-**Decision**: Parquet with Zstd-22 (lossless, 9% smaller than ZIP)
-
-**Key Findings**:
-
-- ✅ **Zstd-22**: 4.77 MB, 0.78s write, 0.014s read, queryable
-- ❌ **Brotli-11**: 4.34 MB but 13.67s write (17.5x slower)
-- ❌ **Delta Encoding**: 1.59 MB but LOSSY (36 pips error)
-
-**Scripts**:
-
-- `test_parquet_compression_methods.py` - Initial codec comparison
-- `test_all_compression_methods.py` - Comprehensive benchmark
-- `test_delta_encoding_properly.py` - Adversarial audit (revealed lossiness)
-
----
-
-### Zero-Spread Deviation Analysis
-
-**Location**: [`research/eurusd-zero-spread-deviations/README.md`](/docs/research/eurusd-zero-spread-deviations/README.md)
-
-**Period**: Sep 2024 baseline + 16-month validation (Jan-Aug 2024+2025)
-
-**Key Findings**:
-
-- ✅ **Mean Reversion**: 87.3% ± 1.9% stable (ROBUST signal)
-- ⚠️ **Volatility Prediction**: Regime shift 2024→2025 (R²: 0.371→0.209)
-- ✅ **Phase7 Methodology**: Dual-variant BID-only OHLC validated
-
-**Documentation Structure**:
-
-- [`01-methodology.md`](/docs/research/eurusd-zero-spread-deviations/01-methodology.md) - Data sources, formulas, SLOs
-- [`03-multiperiod-validation.md`](/docs/research/eurusd-zero-spread-deviations/03-multiperiod-validation.md) - Temporal stability testing
-- [`04-discoveries-and-plan-evolution.md`](/docs/research/eurusd-zero-spread-deviations/04-discoveries-and-plan-evolution.md) - Version-tracked findings
-- [`data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](/docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) - OHLC specification
-
-**Phase7 Schema** (27 columns, v2.0.0):
-
-- **Comprehensive Guide**: [`DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)
-- **Architecture**: Exchange Registry Pattern with 10 global exchange sessions (trading hour detection)
-
----
-
-### EURUSD Spread Analysis
-
-**Location**: [`research/eurusd-spread-analysis/README.md`](/docs/research/eurusd-spread-analysis/README.md)
-
-**Method**: Modal-band-excluded variance estimation
-
----
-
----
-
-## Quick Navigation
-
-| Topic                    | Document                                                                                                                                                                                   | Type                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------ |
-| **Research Patterns**    | [`RESEARCH_PATTERNS.md`](/docs/RESEARCH_PATTERNS.md)                                                                                                                                       | ⭐ Architecture Decision |
-| **v2.0.0 Architecture**  | [`UNIFIED_DUCKDB_PLAN_v2.md`](/docs/UNIFIED_DUCKDB_PLAN_v2.md)                                                                                                                             | ⭐ Implementation Plan   |
-| **Database Schema**      | [`DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)                                                                                                                                           | ⭐ Schema Reference      |
-| **Module Architecture**  | [`MODULE_ARCHITECTURE.md`](/docs/MODULE_ARCHITECTURE.md)                                                                                                                                   | Implementation Details   |
-| **Data Sources**         | [`EXNESS_DATA_SOURCES.md`](/docs/EXNESS_DATA_SOURCES.md)                                                                                                                                   | Guide                    |
-| **Compression**          | [`research/compression-benchmarks/README.md`](/docs/research/compression-benchmarks/README.md)                                                                                             | Research                 |
-| **Zero-Spread**          | [`research/eurusd-zero-spread-deviations/README.md`](/docs/research/eurusd-zero-spread-deviations/README.md)                                                                               | Research                 |
-| **Phase7 v1.1.0**        | [`research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md`](/docs/research/eurusd-zero-spread-deviations/data/plan/phase7_bid_ohlc_construction_v1.1.0.md) | Specification            |
-| **Methodology**          | [`research/eurusd-zero-spread-deviations/01-methodology.md`](/docs/research/eurusd-zero-spread-deviations/01-methodology.md)                                                               | Reference                |
-| **Phase 2 Optimization** | [`phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml`](/docs/phases/PHASE2_SESSION_VECTORIZATION_PLAN.yaml)                                                                                     | SSoT Plan                |
-| **Phase 3 Optimization** | [`phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml`](/docs/phases/PHASE3_SQL_GAP_DETECTION_PLAN.yaml)                                                                                             | SSoT Plan                |
-| **Spike Test Phase 1**   | [`validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE1_2025-10-18.md)                                                                           | Validation               |
-| **Spike Test Phase 2**   | [`validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md`](/docs/validation/SPIKE_TEST_RESULTS_PHASE2_2025-10-18.md)                                                                           | Validation               |
-| **API Reference**        | [`../README.md`](/README.md)                                                                                                                                                               | Main Doc                 |
-| **Examples**             | [`../examples/`](/examples/)                                                                                                                                                               | Code Samples             |
-
----
-
-## Contributing to Documentation
-
-### Structure Principles
-
-1. **Link Farm + Hub-and-Spoke**: Each directory has README.md as hub
-2. **Progressive Disclosure**: Essentials first, links to deeper content
-3. **Single Source of Truth**: One authoritative document per topic
-4. **Absolute Paths**: Always use absolute paths in documentation
-
-### Documentation Types
-
-- **Research**: Empirical findings with reproducible scripts
-- **Guides**: How-to documentation with examples
-- **Specifications**: OpenAPI/JSON Schema machine-readable specs
-- **References**: Technical specifications and methodologies
-
-### File Naming Conventions
-
-- **README.md**: Hub document (directory index)
-- **{topic}\_v{version}.md**: Versioned specifications (e.g., `phase7_bid_ohlc_construction_v1.1.0.md`)
-- **{phase}-{topic}.md**: Sequential documents (e.g., `01-methodology.md`)
-- **{topic}-report.md**: Research findings (e.g., `phase2-mean-reversion-report.md`)
-
----
-
-## Archived Documentation
-
-Historical planning, research, and completed phase documents are archived in [`archive/`](/docs/archive/).
-
----
-
-**Last Updated**: 2025-12-09
-**Maintainer**: Terry Li <terry@eonlabs.com>
+- [eurusd-spread-analysis/](/docs/research/eurusd-spread-analysis/README.md): Raw_Spread vs Standard spread variance
+- [eurusd-zero-spread-deviations/](/docs/research/eurusd-zero-spread-deviations/README.md): zero-spread deviation multi-period study
+- [compression-benchmarks/](/docs/research/compression-benchmarks/README.md): tick storage compression comparison
+- [HYBRID_SESSION_DETECTION_ANALYSIS.md](/docs/research/HYBRID_SESSION_DETECTION_ANALYSIS.md): session and holiday detection approach

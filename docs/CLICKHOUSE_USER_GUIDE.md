@@ -1,4 +1,4 @@
-# ClickHouse User Guide - exness-data-preprocess v2.0.0
+# ClickHouse User Guide - exness-data-preprocess
 
 **Package**: `exness-data-preprocess` - Professional forex tick data preprocessing with ClickHouse backend
 
@@ -17,7 +17,7 @@
 5. [Querying OHLC Data](#querying-ohlc-data)
 6. [Data Coverage](#data-coverage)
 7. [Updating Data](#updating-data)
-8. [26-Column OHLC Schema](#26-column-ohlc-schema)
+8. [27-Column OHLC Schema](#27-column-ohlc-schema)
 9. [Direct ClickHouse SQL Patterns](#direct-clickhouse-sql-patterns)
 10. [moon Tasks for ClickHouse](#moon-tasks-for-clickhouse)
 11. [Environment Configuration](#environment-configuration)
@@ -183,7 +183,7 @@ df_std = processor.query_ticks(
 )
 
 # Calculate spread statistics
-df_std['spread'] = df_std['ask'] - df_std['bid']
+df_std["spread"] = df_std["ask"] - df_std["bid"]
 print(f"Mean spread: {df_std['spread'].mean() * 10000:.4f} pips")
 ```
 
@@ -356,9 +356,9 @@ print(f"Gap months: {', '.join(result.gap_months)}")
 
 ---
 
-## 26-Column OHLC Schema
+## 27-Column OHLC Schema
 
-The `ohlc_1m` table contains 26 columns organized into categories:
+The `ohlc_1m` table contains 27 columns organized into categories:
 
 ### Core OHLC (5 columns)
 
@@ -702,7 +702,7 @@ If queries return empty DataFrames:
 
 ### Schema Mismatch
 
-If OHLC columns don't match expected 26-column schema:
+If OHLC columns don't match expected 27-column schema:
 
 ```bash
 # Regenerate OHLC for instrument

@@ -144,7 +144,8 @@ def check_connection(client: Client) -> bool:
     """
     try:
         result = client.query("SELECT 1")
-        return result.first_row[0] == 1
+        row = result.first_row
+        return row is not None and row[0] == 1
     except Exception as e:
         raise ClickHouseConnectionError(f"ClickHouse connection check failed: {e}") from e
 

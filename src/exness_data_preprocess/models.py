@@ -48,9 +48,10 @@ Example:
     >>> print(result['months_added'])    # ✓ Dict access (backward compat)
 """
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, Field, computed_field
+import pandas as pd
+from pydantic import BaseModel, Field, WithJsonSchema, computed_field
 
 # ============================================================================
 # Layer 1: Type Definitions
@@ -168,7 +169,7 @@ class UpdateResult(BaseModel):
         description="Total storage in bytes from system.tables (sum of data_compressed_bytes).",
     )
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def avg_ticks_per_month(self) -> float:
         """
@@ -187,7 +188,7 @@ class UpdateResult(BaseModel):
         total_ticks = self.raw_ticks_added + self.standard_ticks_added
         return total_ticks / self.months_added
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def storage_efficiency_mb_per_million_ticks(self) -> float:
         """
@@ -282,7 +283,7 @@ class CoverageInfo(BaseModel):
         description="Number of calendar days between earliest_date and latest_date (0 if no data)",
     )
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_ticks(self) -> int:
         """
@@ -297,7 +298,7 @@ class CoverageInfo(BaseModel):
         """
         return self.raw_spread_ticks + self.standard_ticks
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def coverage_percentage(self) -> float:
         """
@@ -327,7 +328,7 @@ class CoverageInfo(BaseModel):
 
         return (actual_coverage / expected_trading_days) * 100 if expected_trading_days > 0 else 0.0
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def storage_efficiency_mb_per_million_ticks(self) -> float:
         """
@@ -388,8 +389,9 @@ class CursorResult(BaseModel):
         ...     result = engine.query_ticks_paginated("EURUSD", cursor=result.next_cursor)
     """
 
-    data: object = Field(
-        description="DataFrame containing the current page of results (pd.DataFrame)"
+    # A DataFrame has no JSON form; WithJsonSchema keeps model_json_schema() working.
+    data: Annotated[pd.DataFrame, WithJsonSchema({"type": "string", "format": "dataframe"})] = (
+        Field(description="DataFrame containing the current page of results")
     )
     next_cursor: Optional[str] = Field(
         default=None, description="ISO 8601 timestamp to pass for next page (None if no more data)"
@@ -454,7 +456,7 @@ class DryRunResult(BaseModel):
         description="List of YYYY-MM month strings that would be downloaded, in chronological order",
     )
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def estimated_total_ticks(self) -> int:
         """
@@ -469,7 +471,7 @@ class DryRunResult(BaseModel):
         """
         return self.estimated_raw_ticks + self.estimated_standard_ticks
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def avg_ticks_per_month(self) -> float:
         """

@@ -144,6 +144,5 @@ Generated: 2025-10-04
 
 ## Related Documentation
 
-- [MODULE_ARCHITECTURE.md](/docs/MODULE_ARCHITECTURE.md) - Module architecture
-- [DATABASE_SCHEMA.md](/docs/DATABASE_SCHEMA.md) - Database schema reference
+- [Schema summary](/README.md#schema) - current ClickHouse tables
 - [README.md](/docs/README.md) - Documentation hub

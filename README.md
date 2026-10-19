@@ -1,4 +1,4 @@
-# exness-data-preprocess v2.0.0
+# exness-data-preprocess
 
 Forex tick data preprocessing with ClickHouse backend. Downloads, stores, and queries tick data from Exness public repository.
 
@@ -46,16 +46,16 @@ import exness_data_preprocess as edp
 # Context manager (recommended)
 with edp.ExnessDataProcessor() as processor:
     # Query ticks
-    df = processor.query_ticks('EURUSD', 'raw_spread', '2024-01-01', '2024-01-31')
+    df = processor.query_ticks("EURUSD", "raw_spread", "2024-01-01", "2024-01-31")
 
     # Query OHLC
-    df = processor.query_ohlc('EURUSD', '1m', '2024-01-01', '2024-01-31')
+    df = processor.query_ohlc("EURUSD", "1m", "2024-01-01", "2024-01-31")
 
     # Get coverage info
-    cov = processor.get_data_coverage('EURUSD')
+    cov = processor.get_data_coverage("EURUSD")
 
     # Download new data (incremental)
-    result = processor.update_data('EURUSD', start_date='2022-01-01')
+    result = processor.update_data("EURUSD", start_date="2022-01-01")
 ```
 
 ### API Methods
@@ -71,19 +71,19 @@ with edp.ExnessDataProcessor() as processor:
 
 ```python
 # UpdateResult
-result.months_added        # int: months downloaded
-result.raw_ticks_added     # int: raw spread ticks added
-result.standard_ticks_added # int: standard ticks added
-result.ohlc_bars           # int: OHLC bars generated
-result.storage_bytes       # int: storage used
+result.months_added  # int: months downloaded
+result.raw_ticks_added  # int: raw spread ticks added
+result.standard_ticks_added  # int: standard ticks added
+result.ohlc_bars  # int: OHLC bars generated
+result.storage_bytes  # int: storage used
 
 # CoverageInfo
-cov.raw_spread_ticks       # int: total raw spread ticks
-cov.standard_ticks         # int: total standard ticks
-cov.ohlc_bars              # int: total OHLC bars
-cov.earliest_date          # str: earliest timestamp
-cov.latest_date            # str: latest timestamp
-cov.storage_bytes          # int: storage used
+cov.raw_spread_ticks  # int: total raw spread ticks
+cov.standard_ticks  # int: total standard ticks
+cov.ohlc_bars  # int: total OHLC bars
+cov.earliest_date  # str: earliest timestamp
+cov.latest_date  # str: latest timestamp
+cov.storage_bytes  # int: storage used
 ```
 
 ## Direct SQL Access
@@ -133,8 +133,8 @@ ORDER BY ts"
 | ---------- | ---------------------- | ------------------- |
 | instrument | LowCardinality(String) | -                   |
 | timestamp  | DateTime64(6, 'UTC')   | DoubleDelta, LZ4    |
-| bid        | Float64                | Gorilla(8), ZSTD(1) |
-| ask        | Float64                | Gorilla(8), ZSTD(1) |
+| bid        | Float64                | Gorilla, ZSTD       |
+| ask        | Float64                | Gorilla, ZSTD       |
 
 ### OHLC Table
 
@@ -181,8 +181,8 @@ uv run mypy src/
 ## Documentation
 
 - [ClickHouse User Guide](/docs/CLICKHOUSE_USER_GUIDE.md) - Detailed ClickHouse usage
-- [Database Schema](/docs/DATABASE_SCHEMA.md) - 27-column OHLC specification
-- [Module Architecture](/docs/MODULE_ARCHITECTURE.md) - 13 modules with SLOs
+- [Schema](#schema) - summary above; the DDL in [`clickhouse_manager.py`](/src/exness_data_preprocess/clickhouse_manager.py) is authoritative
+- [Exness Data Sources](/docs/EXNESS_DATA_SOURCES.md) - archive layout and variants
 - [ADR: ClickHouse Migration](/docs/adr/2025-12-11-duckdb-removal-clickhouse.md) - Architecture decision
 
 ## License
