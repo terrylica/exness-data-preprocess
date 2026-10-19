@@ -1,3 +1,22 @@
+# [3.0.0](https://github.com/terrylica/exness-data-preprocess/compare/v2.1.1...v3.0.0) (2026-10-19)
+
+
+* fix!: keep distinct ticks that share a timestamp; read with FINAL; make force_redownload work ([e7ac22b](https://github.com/terrylica/exness-data-preprocess/commit/e7ac22ba659c7eb1c03f3ad1f223d23bff515304)), closes [#23](https://github.com/terrylica/exness-data-preprocess/issues/23)
+* refactor!: remove the unused config module, ExnessDataProcessor(config=...) and pyyaml ([b43be4a](https://github.com/terrylica/exness-data-preprocess/commit/b43be4a09702c6135a41b27256345952c83e6708)), closes [#21](https://github.com/terrylica/exness-data-preprocess/issues/21)
+
+
+### Bug Fixes
+
+* apply review findings (inclusive end_date day, cursor pruning, scoped ASOF build side, forced re-download) ([dd3a0b3](https://github.com/terrylica/exness-data-preprocess/commit/dd3a0b373689116d600f43ff489e3076a66eb13e)), closes [#23](https://github.com/terrylica/exness-data-preprocess/issues/23) [#24](https://github.com/terrylica/exness-data-preprocess/issues/24)
+* **query:** bind datetime parameters as DateTime64(6, 'UTC') so filters are not shifted on non-UTC servers ([1f88c41](https://github.com/terrylica/exness-data-preprocess/commit/1f88c41b372306bb5e929d131e1338d71e9ac539)), closes [#24](https://github.com/terrylica/exness-data-preprocess/issues/24)
+* report real storage_bytes and OHLC bar counts instead of placeholders ([a970be5](https://github.com/terrylica/exness-data-preprocess/commit/a970be5f75b8dbddff890e92a628388261f10026)), closes [#19](https://github.com/terrylica/exness-data-preprocess/issues/19)
+
+
+### BREAKING CHANGES
+
+* raw_spread_ticks and standard_ticks gain a `seq` column and sort by (instrument, timestamp, seq); existing tables are migrated in place by ensure_schema() (re-download months with update_data(..., force_redownload=True) to restore ticks the old key collapsed). CursorResult.next_cursor is now an opaque "<timestamp>#<seq>" string rather than a plain timestamp. Tick counts, tick queries and OHLC generation read with FINAL.
+* ExnessDataProcessor() no longer accepts a `config` argument, the exness_data_preprocess.config module (ConfigModel, load_config, get_default_config_path) is removed, and PyYAML is no longer installed as a dependency. Configure through environment variables (CLICKHOUSE_*, EXNESS_DOWNLOAD_DIR).
+
 ## [2.1.1](https://github.com/terrylica/exness-data-preprocess/compare/v2.1.0...v2.1.1) (2026-10-19)
 
 
