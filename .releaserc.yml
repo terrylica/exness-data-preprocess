@@ -10,7 +10,12 @@ plugins:
   - - "@semantic-release/exec"
     # `uv version --frozen` rewrites [project].version in pyproject.toml only (uv.lock is not tracked).
     # __version__ is read from the installed distribution metadata, so nothing else needs bumping.
-    - prepareCmd: "uv version ${nextRelease.version} --frozen"
+    # The release narrative is a tracked file written in the PR before the release; without it
+    # there is no release. After @semantic-release/github publishes, the body is rebuilt as
+    # narrative + generated section (idempotent; see scripts/publish-release-notes.sh).
+    - verifyReleaseCmd: "test -s docs/release-notes/${nextRelease.version}.md || { echo 'missing docs/release-notes/${nextRelease.version}.md' >&2; exit 1; }"
+      prepareCmd: "uv version ${nextRelease.version} --frozen"
+      successCmd: "bash scripts/publish-release-notes.sh ${nextRelease.version}"
   - - "@semantic-release/git"
     - assets:
         - pyproject.toml
