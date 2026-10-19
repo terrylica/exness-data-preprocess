@@ -5,15 +5,14 @@ ADR: /docs/adr/2025-12-09-exness-clickhouse-migration.md
 
 SLOs:
 - Availability: OHLC generation must succeed or raise exception (no silent failures)
-- Correctness: Phase7 30-column schema with dual variants, normalized metrics, holiday/session detection
+- Correctness: 27-column ohlc_1m with dual-variant spreads and tick counts, holiday/session detection
 - Observability: All OHLC operations logged via structured logging
 - Maintainability: Single module for all OHLC logic, off-the-shelf ClickHouse and exchange_calendars
 
 Handles:
-- Phase7 30-column OHLC schema
+- 27-column OHLC schema (ohlc_1m)
 - BID-only OHLC construction from raw_spread_ticks
-- ASOF JOIN with standard_ticks for dual spread tracking
-- Normalized metrics (range_per_spread, range_per_tick, body_per_spread, body_per_tick)
+- Per-minute Standard spread and tick count from standard_ticks, joined on the minute
 - Timezone/session tracking (NY and London sessions)
 - Holiday detection (US, UK, major holidays via exchange_calendars)
 - 10 global exchange session flags with trading hour detection
@@ -33,12 +32,11 @@ from exness_data_preprocess.session_detector import SessionDetector
 
 class ClickHouseOHLCGenerator(ClickHouseClientMixin):
     """
-    Generate Phase7 30-column OHLC from dual-variant tick data in ClickHouse.
+    Generate 27-column 1-minute OHLC from dual-variant tick data in ClickHouse.
 
     Responsibilities:
     - Delete existing OHLC data before regeneration (by instrument)
-    - Generate BID-only OHLC from raw_spread_ticks with ASOF JOIN to standard_ticks
-    - Calculate normalized spread metrics (NULL-safe)
+    - Generate BID-only OHLC from raw_spread_ticks plus per-minute Standard aggregates
     - Add timezone/session tracking for NY and London
     - Delegate holiday and session detection to SessionDetector
     - Insert OHLC data with holiday and session flags
@@ -69,11 +67,12 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         end_date: str | None = None,
     ) -> int:
         """
-        Generate/update OHLC table with Phase7 schema (30 columns).
+        Generate/update ohlc_1m (27 columns).
 
-        Uses ASOF JOIN to combine raw_spread_ticks and standard_ticks.
-        Includes normalized spread metrics, timezone/session tracking,
-        holiday detection, and 10 global exchange session flags.
+        Raw_Spread and Standard ticks are each aggregated per minute and joined on the minute:
+        standard_spread_avg and tick_count_standard describe the Standard ticks in that minute
+        (NULL / 0 when there are none). Includes timezone/session tracking, holiday detection,
+        and 10 global exchange session flags.
 
         Supports three operation modes:
         1. Full regeneration (start_date=None, end_date=None): DELETE all + INSERT all
@@ -143,44 +142,42 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
             )
 
         where_sql = " AND ".join(where_parts)
-        standard_where = ["instrument = {instrument:String}"]
-        if start_date:
-            standard_where.append("timestamp >= {start_date:DateTime64(6, 'UTC')} - INTERVAL 7 DAY")
-        standard_where_sql = " AND ".join(standard_where)
 
         # Generate session column initializations from exchange registry
         session_columns = ", ".join([f"0 AS is_{name}_session" for name in EXCHANGES.keys()])
 
-        # Generate OHLC with 27-column schema (matches DATABASE_SCHEMA.md)
-        # Note: ClickHouse ASOF JOIN matches closest preceding timestamp from standard_ticks
+        # Each variant is aggregated per minute on its own and the two are joined on the minute.
+        # Bars exist for minutes with Raw_Spread ticks; standard_spread_avg / tick_count_standard
+        # describe the Standard ticks inside the same minute (NULL / 0 when there are none).
+        # Both subqueries apply the same instrument and date filter (alias r in each).
         insert_sql = f"""
             INSERT INTO {self.DATABASE}.ohlc_1m
             SELECT
                 {{instrument:String}} AS instrument,
-                toStartOfMinute(r.timestamp) AS timestamp,
-                argMin(r.bid, (r.timestamp, r.seq)) AS open,
-                max(r.bid) AS high,
-                min(r.bid) AS low,
-                argMax(r.bid, (r.timestamp, r.seq)) AS close,
-                avg(r.ask - r.bid) AS raw_spread_avg,
-                avg(s.ask - s.bid) AS standard_spread_avg,
-                toUInt32(count(r.timestamp)) AS tick_count_raw_spread,
-                toUInt32(countIf(s.timestamp IS NOT NULL)) AS tick_count_standard,
+                r.minute AS timestamp,
+                r.open AS open,
+                r.high AS high,
+                r.low AS low,
+                r.close AS close,
+                r.raw_spread_avg AS raw_spread_avg,
+                s.standard_spread_avg AS standard_spread_avg,
+                r.tick_count_raw_spread AS tick_count_raw_spread,
+                ifNull(s.tick_count_standard, toUInt32(0)) AS tick_count_standard,
                 -- Timezone-aware session columns
-                toUInt8(toHour(toTimezone(toStartOfMinute(r.timestamp), 'America/New_York'))) AS ny_hour,
-                toUInt8(toHour(toTimezone(toStartOfMinute(r.timestamp), 'Europe/London'))) AS london_hour,
+                toUInt8(toHour(toTimezone(r.minute, 'America/New_York'))) AS ny_hour,
+                toUInt8(toHour(toTimezone(r.minute, 'Europe/London'))) AS london_hour,
                 multiIf(
-                    toHour(toTimezone(toStartOfMinute(r.timestamp), 'America/New_York')) >= 9
-                    AND toHour(toTimezone(toStartOfMinute(r.timestamp), 'America/New_York')) <= 16,
+                    toHour(toTimezone(r.minute, 'America/New_York')) >= 9
+                    AND toHour(toTimezone(r.minute, 'America/New_York')) <= 16,
                     'NY_Session',
-                    toHour(toTimezone(toStartOfMinute(r.timestamp), 'America/New_York')) >= 17
-                    AND toHour(toTimezone(toStartOfMinute(r.timestamp), 'America/New_York')) <= 20,
+                    toHour(toTimezone(r.minute, 'America/New_York')) >= 17
+                    AND toHour(toTimezone(r.minute, 'America/New_York')) <= 20,
                     'NY_After_Hours',
                     'NY_Closed'
                 ) AS ny_session,
                 if(
-                    toHour(toTimezone(toStartOfMinute(r.timestamp), 'Europe/London')) >= 8
-                    AND toHour(toTimezone(toStartOfMinute(r.timestamp), 'Europe/London')) <= 16,
+                    toHour(toTimezone(r.minute, 'Europe/London')) >= 8
+                    AND toHour(toTimezone(r.minute, 'Europe/London')) <= 16,
                     'London_Session',
                     'London_Closed'
                 ) AS london_session,
@@ -190,20 +187,30 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 toUInt8(0) AS is_major_holiday,
                 -- Trading session flags (initialized to 0, updated via session_detector)
                 {session_columns}
-            FROM {self.DATABASE}.raw_spread_ticks AS r FINAL
-            ASOF LEFT JOIN (
-                -- Only this instrument, and only from a week before start_date: enough for the
-                -- closest preceding Standard tick across a weekend, without reading (and FINAL-
-                -- merging) every instrument and month on the join's build side.
-                SELECT instrument, timestamp, ask, bid
-                FROM {self.DATABASE}.standard_ticks FINAL
-                WHERE {standard_where_sql}
-            ) AS s
-                ON r.instrument = s.instrument
-                AND r.timestamp >= s.timestamp
-            WHERE {where_sql}
-            GROUP BY toStartOfMinute(r.timestamp)
+            FROM (
+                SELECT
+                    toStartOfMinute(r.timestamp) AS minute,
+                    argMin(r.bid, (r.timestamp, r.seq)) AS open,
+                    max(r.bid) AS high,
+                    min(r.bid) AS low,
+                    argMax(r.bid, (r.timestamp, r.seq)) AS close,
+                    avg(r.ask - r.bid) AS raw_spread_avg,
+                    toUInt32(count()) AS tick_count_raw_spread
+                FROM {self.DATABASE}.raw_spread_ticks AS r FINAL
+                WHERE {where_sql}
+                GROUP BY minute
+            ) AS r
+            LEFT JOIN (
+                SELECT
+                    toStartOfMinute(r.timestamp) AS minute,
+                    avg(r.ask - r.bid) AS standard_spread_avg,
+                    toUInt32(count()) AS tick_count_standard
+                FROM {self.DATABASE}.standard_ticks AS r FINAL
+                WHERE {where_sql}
+                GROUP BY minute
+            ) AS s ON r.minute = s.minute
             ORDER BY timestamp
+            SETTINGS join_use_nulls = 1
         """
 
         execute_command(self.client, insert_sql, parameters=params)

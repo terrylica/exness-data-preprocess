@@ -233,6 +233,51 @@ def check_ties() -> None:
     print("✅ Tie pagination passed")
 
 
+def check_ohlc_counts() -> None:
+    """ohlc_1m tick counts and Standard spread match their definitions (per minute, per variant)."""
+    print("🔍 Validating OHLC tick counts and Standard spread...")
+    from exness_data_preprocess import get_clickhouse_client
+
+    client = get_clickhouse_client()
+    try:
+        sum_std, sum_raw, differing = client.query(
+            "SELECT sum(tick_count_standard), sum(tick_count_raw_spread),"
+            " countIf(tick_count_standard != tick_count_raw_spread)"
+            " FROM exness.ohlc_1m FINAL WHERE instrument = 'EURUSD'"
+        ).first_row
+        raw_total = client.query(
+            "SELECT count() FROM exness.raw_spread_ticks FINAL WHERE instrument = 'EURUSD'"
+        ).first_row[0]
+        std_in_bars = client.query(
+            "SELECT count() FROM exness.standard_ticks FINAL WHERE instrument = 'EURUSD'"
+            " AND toStartOfMinute(timestamp) IN"
+            " (SELECT timestamp FROM exness.ohlc_1m FINAL WHERE instrument = 'EURUSD')"
+        ).first_row[0]
+        minute, bar_avg, direct_avg = client.query(
+            "SELECT o.timestamp, o.standard_spread_avg, d.avg_spread FROM exness.ohlc_1m AS o FINAL"
+            " INNER JOIN (SELECT toStartOfMinute(timestamp) AS m, avg(ask - bid) AS avg_spread, count() AS n"
+            " FROM exness.standard_ticks FINAL WHERE instrument = 'EURUSD' GROUP BY m"
+            " ORDER BY n DESC, m LIMIT 1) AS d ON o.timestamp = d.m WHERE o.instrument = 'EURUSD'"
+        ).first_row
+    finally:
+        client.close()
+    assert sum_raw == raw_total, (
+        f"sum(tick_count_raw_spread)={sum_raw:,} != stored Raw_Spread ticks {raw_total:,}"
+    )
+    assert sum_std == std_in_bars, (
+        f"sum(tick_count_standard)={sum_std:,} != Standard ticks in bar minutes {std_in_bars:,}"
+    )
+    assert differing > 0, "tick_count_standard equals tick_count_raw_spread on every bar"
+    assert abs(bar_avg - direct_avg) < 1e-12, (
+        f"standard_spread_avg {bar_avg} != direct {direct_avg} at {minute}"
+    )
+    print(
+        f"  ✓ sum(tick_count_raw_spread)={sum_raw:,} = stored; sum(tick_count_standard)={sum_std:,} ="
+        f" Standard ticks in bar minutes; counts differ on {differing:,} bars; spread avg exact at {minute}"
+    )
+    print("✅ OHLC count validation passed")
+
+
 def check_data() -> None:
     print("🔍 Validating ClickHouse data operations...")
     from exness_data_preprocess import ClickHouseQueryEngine
@@ -318,6 +363,7 @@ CHECKS: dict[str, Callable[[], None]] = {
     "pagination": check_pagination,
     "ties": check_ties,
     "ohlc": check_ohlc,
+    "ohlc_counts": check_ohlc_counts,
 }
 
 
