@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/terrylica/exness-data-preprocess/compare/v3.0.0...v3.0.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **ohlc:** compute tick_count_standard and standard_spread_avg per minute from standard_ticks ([a26ec2c](https://github.com/terrylica/exness-data-preprocess/commit/a26ec2cca0e8e2b326c8b5c6f93f2c9f2a658986)), closes [#25](https://github.com/terrylica/exness-data-preprocess/issues/25)
+
 # [3.0.0](https://github.com/terrylica/exness-data-preprocess/compare/v2.1.1...v3.0.0) (2026-10-19)
 
 
