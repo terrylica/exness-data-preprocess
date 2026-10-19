@@ -8,15 +8,12 @@ plugins:
   - "@semantic-release/release-notes-generator"
   - "@semantic-release/changelog"
   - - "@semantic-release/exec"
-    - prepareCmd: |
-        # Update version in pyproject.toml
-        sed -i '' 's/^version = ".*"/version = "${nextRelease.version}"/' pyproject.toml
-        # Update version in __init__.py
-        sed -i '' 's/^__version__ = ".*"/__version__ = "${nextRelease.version}"/' src/exness_data_preprocess/__init__.py
+    # `uv version --frozen` rewrites [project].version in pyproject.toml only (uv.lock is not tracked).
+    # __version__ is read from the installed distribution metadata, so nothing else needs bumping.
+    - prepareCmd: "uv version ${nextRelease.version} --frozen"
   - - "@semantic-release/git"
     - assets:
         - pyproject.toml
-        - src/exness_data_preprocess/__init__.py
         - CHANGELOG.md
       message: "chore(release): bump version ${lastRelease.version} → ${nextRelease.version} [skip ci]"
   - "@semantic-release/github"

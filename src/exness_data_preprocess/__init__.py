@@ -63,7 +63,10 @@ AI Agent Discovery:
     >>> print(get_args(TimeframeType))  # ('1m', '5m', '15m', ...)
 """
 
-__version__ = "2.1.0"
+from importlib.metadata import version as _dist_version
+
+# pyproject.toml is the only place the version is written (semantic-release runs `uv version`).
+__version__ = _dist_version("exness-data-preprocess")
 __author__ = "Terry Li <terry@eonlabs.com>"
 __license__ = "MIT"
 
