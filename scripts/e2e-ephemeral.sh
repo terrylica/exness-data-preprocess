@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Hermetic end-to-end run: a throwaway ClickHouse server, the full pytest suite, and every
-# scripts/validate_clickhouse.py check (including a real one-month EURUSD load), then teardown.
+# Hermetic end-to-end run: a throwaway ClickHouse server, the full pytest suite, every
+# scripts/validate_clickhouse.py check (including a real one-month EURUSD load) and
+# examples/basic_usage.py, then teardown.
 #
 # Usage: bash scripts/e2e-ephemeral.sh   (or: moon run repo:e2e)
 #
@@ -113,4 +114,6 @@ echo "--- pytest (ClickHouse required) ---"
 uv run pytest tests/ --tb=short
 echo "--- validate_clickhouse.py all ---"
 uv run python scripts/validate_clickhouse.py all
+echo "--- examples/basic_usage.py ---"
+uv run python examples/basic_usage.py
 echo "✅ repo:e2e passed"

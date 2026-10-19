@@ -1,4 +1,4 @@
-# exness-data-preprocess v2.0.0
+# exness-data-preprocess
 
 Forex tick data preprocessing with ClickHouse backend. Downloads, stores, and queries tick data from Exness public repository.
 
