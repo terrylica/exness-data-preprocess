@@ -166,7 +166,7 @@ class UpdateResult(BaseModel):
     storage_bytes: int = Field(
         default=0,
         ge=0,
-        description="Total storage in bytes from system.tables (sum of data_compressed_bytes).",
+        description="On-disk bytes of the package tables in the database, all instruments (system.tables.total_bytes).",
     )
 
     @computed_field  # type: ignore[prop-decorator]
@@ -254,7 +254,7 @@ class CoverageInfo(BaseModel):
     storage_bytes: int = Field(
         default=0,
         ge=0,
-        description="Total storage in bytes from system.tables (0 if no data)",
+        description="On-disk bytes of the package tables in the database, all instruments (system.tables.total_bytes); 0 if empty.",
     )
     raw_spread_ticks: int = Field(
         ge=0,

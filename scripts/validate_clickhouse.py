@@ -81,6 +81,22 @@ def check_load() -> None:
         coverage = processor.get_data_coverage("EURUSD")
     assert coverage.raw_spread_ticks > 0, "no Raw_Spread ticks after load"
     assert coverage.standard_ticks > 0, "no Standard ticks after load"
+    assert coverage.storage_bytes > 0, "storage_bytes is 0 with data loaded"
+    assert coverage.ohlc_bars > 0, "no OHLC bars after load"
+
+    # A second update finds nothing to download; its result must describe the stored data.
+    with ExnessDataProcessor() as processor:
+        again = processor.update_data("EURUSD", start_date=start.isoformat())
+    assert isinstance(again, UpdateResult) and again.months_added == 0, (
+        "second update was not a no-op"
+    )
+    assert again.ohlc_bars == coverage.ohlc_bars, (
+        f"up-to-date UpdateResult.ohlc_bars={again.ohlc_bars} != stored bars {coverage.ohlc_bars}"
+    )
+    assert again.storage_bytes > 0, "up-to-date UpdateResult.storage_bytes is 0"
+    print(
+        f"  ✓ storage_bytes={coverage.storage_bytes:,} ohlc_bars={coverage.ohlc_bars:,} (no-op update agrees)"
+    )
     print(
         f"  ✓ raw_spread_ticks={coverage.raw_spread_ticks:,} standard_ticks={coverage.standard_ticks:,}"
     )

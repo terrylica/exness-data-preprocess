@@ -26,6 +26,7 @@ from exness_data_preprocess.clickhouse_client import (
     ClickHouseQueryError,
     execute_query,
 )
+from exness_data_preprocess.clickhouse_manager import get_storage_bytes
 from exness_data_preprocess.models import (
     CoverageInfo,
     CursorResult,
@@ -365,7 +366,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
 
         return CoverageInfo(
             database=self.DATABASE,  # v2.0.0: ClickHouse database name
-            storage_bytes=0,  # TODO: Query system.tables for actual size
+            storage_bytes=get_storage_bytes(self.client, self.DATABASE),
             raw_spread_ticks=raw_count,
             standard_ticks=std_count,
             ohlc_bars=ohlc_count,
