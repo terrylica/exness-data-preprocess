@@ -17,7 +17,7 @@ moon run repo:build      # sdist + wheel into dist/
 ## Toolchain
 
 - proto pins uv (`.prototools`); uv owns Python. `.python-version` pins 3.11 and wins. If `UV_PYTHON` is exported in the shell, it overrides the pin, so run `env -u UV_PYTHON uv ...` or the venv is built on the wrong interpreter.
-- Releases: semantic-release (`npm run release`) runs `uv version <next> --frozen`. pyproject.toml is the only place the version lives; `__version__` reads installed metadata. Publishing is `.github/workflows/publish.yml` (PyPI Trusted Publishing on a GitHub Release), the only publish path.
+- Releases: write `docs/release-notes/<next>.md` (narrative paragraph + Keep a Changelog bullets, one line each) in the PR before releasing; semantic-release (`npm run release`) refuses to release without it, runs `uv version <next> --frozen`, and `scripts/publish-release-notes.sh` rebuilds the GitHub Release body as narrative + generated section. pyproject.toml is the only place the version lives; `__version__` reads installed metadata. Publishing is `.github/workflows/publish.yml` (PyPI Trusted Publishing on a GitHub Release), the only publish path.
 - Dependency update PRs come from `.github/dependabot.yml`. No other CI runs in Actions; gates are local.
 
 ## Invariants
