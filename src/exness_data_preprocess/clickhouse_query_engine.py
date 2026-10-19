@@ -102,11 +102,11 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             >>> page2 = engine.query_ticks("EURUSD", limit=1000, offset=1000)
         """
         table_name = f"{variant}_ticks"
-        instrument = instrument.upper()
+        symbol = instrument.upper()
 
         # Build WHERE clauses
         where_parts = ["instrument = {instrument:String}"]
-        params: dict = {"instrument": instrument}
+        params: dict = {"instrument": symbol}
 
         if start_date:
             where_parts.append("timestamp >= {start_date:DateTime64}")
@@ -171,7 +171,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             >>> # Paginate through results
             >>> page1 = engine.query_ohlc("EURUSD", limit=1000, offset=0)
         """
-        instrument = instrument.upper()
+        symbol = instrument.upper()
 
         # Timeframe to minutes mapping
         timeframe_minutes = {
@@ -191,7 +191,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
 
         # Build WHERE clauses
         where_parts = ["instrument = {instrument:String}"]
-        params: dict = {"instrument": instrument, "minutes": minutes}
+        params: dict = {"instrument": symbol, "minutes": minutes}
 
         if start_date:
             where_parts.append("timestamp >= {start_date:DateTime64}")
@@ -295,7 +295,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             >>> print(f"Coverage: {coverage.earliest_date} to {coverage.latest_date}")
             >>> print(f"Total: {coverage.raw_spread_ticks:,} ticks")
         """
-        instrument = instrument.upper()
+        symbol = instrument.upper()
 
         # Get tick counts
         query = """
@@ -317,7 +317,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             result = execute_query(
                 self.client,
                 query,
-                parameters={"database": self.DATABASE, "instrument": instrument},
+                parameters={"database": self.DATABASE, "instrument": symbol},
             )
             raw_count = result.first_row[0] if result.result_rows else 0
             std_count = result.first_row[1] if result.result_rows else 0
@@ -330,7 +330,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             ohlc_result = execute_query(
                 self.client,
                 f"SELECT count() FROM {self.DATABASE}.ohlc_1m WHERE instrument = {{instrument:String}}",
-                parameters={"instrument": instrument},
+                parameters={"instrument": symbol},
             )
             ohlc_count = ohlc_result.first_row[0] if ohlc_result.result_rows else 0
         except ClickHouseQueryError:
@@ -347,7 +347,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
                 FROM {self.DATABASE}.raw_spread_ticks
                 WHERE instrument = {{instrument:String}}
                 """,
-                parameters={"instrument": instrument},
+                parameters={"instrument": symbol},
             )
 
             if range_result.result_rows and range_result.first_row[0]:
@@ -423,11 +423,11 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             ...     next_page = engine.query_ticks_paginated("EURUSD", cursor=result.next_cursor)
         """
         table_name = f"{variant}_ticks"
-        instrument = instrument.upper()
+        symbol = instrument.upper()
 
         # Build WHERE clauses
         where_parts = ["instrument = {instrument:String}"]
-        params: dict = {"instrument": instrument}
+        params: dict = {"instrument": symbol}
 
         if cursor:
             where_parts.append("timestamp > {cursor:DateTime64}")

@@ -317,9 +317,9 @@ class ClickHouseManager(ClickHouseClientMixin):
 
         # Insert using clickhouse-connect
         try:
-            self.client.insert(
+            self.client.insert_df(
                 table=table_name,
-                data=df,
+                df=df,
                 database=self.DATABASE,
                 column_names=["instrument", "timestamp", "bid", "ask"],
             )
@@ -349,7 +349,7 @@ class ClickHouseManager(ClickHouseClientMixin):
             f"SELECT count() FROM {self.DATABASE}.{table_name} WHERE instrument = {{instrument:String}}",
             parameters={"instrument": instrument.upper()},
         )
-        return result.first_row[0]
+        return int(result.first_row[0])
 
     def get_date_range(
         self, instrument: str, variant: str = "raw_spread"

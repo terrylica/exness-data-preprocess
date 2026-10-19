@@ -76,7 +76,9 @@ def check_load() -> None:
         coverage = processor.get_data_coverage("EURUSD")
     assert coverage.raw_spread_ticks > 0, "no Raw_Spread ticks after load"
     assert coverage.standard_ticks > 0, "no Standard ticks after load"
-    print(f"  ✓ raw_spread_ticks={coverage.raw_spread_ticks:,} standard_ticks={coverage.standard_ticks:,}")
+    print(
+        f"  ✓ raw_spread_ticks={coverage.raw_spread_ticks:,} standard_ticks={coverage.standard_ticks:,}"
+    )
     print("✅ Load passed")
 
 
@@ -87,7 +89,9 @@ def check_data() -> None:
     engine = ClickHouseQueryEngine()
 
     df = engine.query_ticks("EURUSD", limit=1000)
-    assert len(df) > 0, "query_ticks returned no rows (load EURUSD first: validate_clickhouse.py load)"
+    assert len(df) > 0, (
+        "query_ticks returned no rows (load EURUSD first: validate_clickhouse.py load)"
+    )
     print(f"  ✓ query_ticks returned {len(df)} rows")
 
     for col in ["timestamp", "bid", "ask"]:
@@ -134,7 +138,9 @@ def check_ohlc() -> None:
     df = engine.query_ohlc("EURUSD", timeframe="1h", limit=100)
     print(f"  ✓ query_ohlc(1h) returned {len(df)} bars")
 
-    assert len(df) > 0, "query_ohlc returned no bars (load EURUSD first: validate_clickhouse.py load)"
+    assert len(df) > 0, (
+        "query_ohlc returned no bars (load EURUSD first: validate_clickhouse.py load)"
+    )
     for col in ["open", "high", "low", "close"]:
         assert col in df.columns, f"Missing OHLC column: {col}"
     print("  ✓ All OHLC columns present")
