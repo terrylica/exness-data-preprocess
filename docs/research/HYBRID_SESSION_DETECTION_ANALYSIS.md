@@ -82,7 +82,7 @@ for exchange_name, calendar in self.calendars.items():
     def is_trading_hour(ts, calendar=calendar):
         """Check if timestamp is during exchange trading hours."""
         if ts.tz is None:
-            ts = ts.tz_localize('UTC')
+            ts = ts.tz_localize("UTC")
 
         # Uses exchange_calendars.is_open_on_minute() which handles:
         # - Weekends and holidays
@@ -146,7 +146,7 @@ The v1.6.0 implementation **already uses this separation**:
 ```python
 # Pattern 1: Python enrichment → DuckDB register → SQL UPDATE
 enriched_df = python_function(raw_df)  # Complex logic in Python
-conn.register('enriched_data', enriched_df)  # Register as temp table
+conn.register("enriched_data", enriched_df)  # Register as temp table
 conn.execute("""
     UPDATE target_table
     SET column1 = enriched_data.value1,
@@ -301,18 +301,21 @@ conn.register("holiday_flags", dates_df)  # ~500 rows × 15 columns = ~60 KB
 ```python
 # SLOW: Row-by-row updates (avoid this)
 for _, row in dates_df.iterrows():
-    conn.execute("""
+    conn.execute(
+        """
         UPDATE ohlc_1m
         SET is_us_holiday = ?
         WHERE DATE(Timestamp) = ?
-    """, [row['is_us_holiday'], row['date']])
+    """,
+        [row["is_us_holiday"], row["date"]],
+    )
 ```
 
 **Best Practice** (Bulk UPDATE via registered DataFrame):
 
 ```python
 # FAST: Single bulk UPDATE with registered DataFrame
-conn.register('holiday_flags', dates_df)
+conn.register("holiday_flags", dates_df)
 conn.execute("""
     UPDATE ohlc_1m
     SET is_us_holiday = hf.is_us_holiday,
@@ -362,7 +365,7 @@ def regenerate_ohlc_chunked(self, duckdb_path: Path, chunk_months: int = 3) -> N
         dates_df = conn.execute(
             "SELECT DISTINCT DATE(Timestamp) as date FROM ohlc_1m "
             "WHERE DATE(Timestamp) BETWEEN ? AND ?",
-            [current_date, chunk_end]
+            [current_date, chunk_end],
         ).df()
 
         # Detect sessions/holidays for chunk
@@ -371,7 +374,8 @@ def regenerate_ohlc_chunked(self, duckdb_path: Path, chunk_months: int = 3) -> N
 
         # Update chunk
         conn.register("holiday_flags", dates_df)
-        conn.execute("""
+        conn.execute(
+            """
             UPDATE ohlc_1m
             SET is_us_holiday = hf.is_us_holiday,
                 is_uk_holiday = hf.is_uk_holiday,
@@ -379,7 +383,9 @@ def regenerate_ohlc_chunked(self, duckdb_path: Path, chunk_months: int = 3) -> N
             FROM holiday_flags hf
             WHERE DATE(ohlc_1m.Timestamp) = hf.date
               AND DATE(ohlc_1m.Timestamp) BETWEEN ? AND ?
-        """, [current_date, chunk_end])
+        """,
+            [current_date, chunk_end],
+        )
 
         current_date = chunk_end + timedelta(days=1)
 
@@ -483,6 +489,7 @@ dates_df[col_name] = dates_df["ts"].apply(is_trading_hour)
 
 ```python
 from numba import jit
+
 
 @jit(nopython=True)
 def is_in_trading_hours(hour, minute, open_hour, open_min, close_hour, close_min):
@@ -702,12 +709,15 @@ END as is_xtks_session
 # SLOW: Row-by-row updates
 for _, row in ohlc_df.iterrows():
     for exchange in exchanges:
-        is_session = calendar.is_open_on_minute(row['Timestamp'])
-        conn.execute(f"""
+        is_session = calendar.is_open_on_minute(row["Timestamp"])
+        conn.execute(
+            f"""
             UPDATE ohlc_1m
             SET is_{exchange}_session = ?
             WHERE Timestamp = ?
-        """, [is_session, row['Timestamp']])
+        """,
+            [is_session, row["Timestamp"]],
+        )
 ```
 
 **Verdict**: ❌ **Rejected** - Unacceptable performance for production use.
@@ -824,6 +834,7 @@ for _, row in ohlc_df.iterrows():
 ```python
 from multiprocessing import Pool
 
+
 def detect_single_exchange(args):
     exchange_name, calendar, dates_df = args
     dates_df[f"is_{exchange_name}_session"] = dates_df["ts"].apply(
@@ -831,10 +842,11 @@ def detect_single_exchange(args):
     )
     return exchange_name, dates_df[f"is_{exchange_name}_session"]
 
+
 with Pool(processes=10) as pool:
-    results = pool.map(detect_single_exchange, [
-        (name, calendar, dates_df) for name, calendar in calendars.items()
-    ])
+    results = pool.map(
+        detect_single_exchange, [(name, calendar, dates_df) for name, calendar in calendars.items()]
+    )
 
     for exchange_name, session_column in results:
         dates_df[f"is_{exchange_name}_session"] = session_column
@@ -926,8 +938,7 @@ with Pool(processes=10) as pool:
 - [`/src/exness_data_preprocess/session_detector.py`](/src/exness_data_preprocess/session_detector.py)
 - [`/src/exness_data_preprocess/clickhouse_ohlc_generator.py`](/src/exness_data_preprocess/clickhouse_ohlc_generator.py)
 - [`/src/exness_data_preprocess/exchanges.py`](/src/exness_data_preprocess/exchanges.py)
-- [`/docs/MODULE_ARCHITECTURE.md`](/docs/MODULE_ARCHITECTURE.md)
-- [`/docs/DATABASE_SCHEMA.md`](/docs/DATABASE_SCHEMA.md)
+- [Schema summary](/README.md#schema)
 
 ---
 

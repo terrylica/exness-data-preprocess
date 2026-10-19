@@ -128,8 +128,9 @@ Phase 2 excludes ~4-8% of sampled deviations due to insufficient window data (< 
 
 ```python
 future = df_indexed.loc[t0:t1]  # All data from t0 to t0+5s
-if len(future) < 2: continue    # Need initial + final point
-final_pos = future['position_ratio'].iloc[-1]  # Last point in window
+if len(future) < 2:
+    continue  # Need initial + final point
+final_pos = future["position_ratio"].iloc[-1]  # Last point in window
 ```
 
 **Result:** Exclusion rate reduced from 99.8% (v1.0.0) to 4.8% (v1.0.1) ✅

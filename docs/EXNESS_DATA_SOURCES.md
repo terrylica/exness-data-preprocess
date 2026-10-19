@@ -203,6 +203,7 @@ done
 import requests
 from pathlib import Path
 
+
 def download_exness_variant(pair: str, year: int, month: int, variant: str = "") -> Path:
     """
     Download Exness tick data for specific variant.
@@ -224,12 +225,13 @@ def download_exness_variant(pair: str, year: int, month: int, variant: str = "")
     response = requests.get(url, stream=True)
     response.raise_for_status()
 
-    with open(output, 'wb') as f:
+    with open(output, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
 
     print(f"✅ Downloaded: {output} ({output.stat().st_size / 1024 / 1024:.2f} MB)")
     return output
+
 
 # Example: Phase7 dual-variant download
 raw_spread = download_exness_variant("EURUSD", 2024, 9, "Raw_Spread")

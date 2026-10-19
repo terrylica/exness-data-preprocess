@@ -10,7 +10,7 @@ Architecture (v2.0.0 - ClickHouse-Only):
 4. Incremental updates with automatic gap detection
 5. ReplacingMergeTree for deduplication
 
-Phase7 Schema (v1.6.0 - 26 columns):
+OHLC schema (27 columns):
 - Timestamp, Open, High, Low, Close (BID-based from Raw_Spread)
 - raw_spread_avg, standard_spread_avg (dual spread tracking)
 - tick_count_raw_spread, tick_count_standard (dual tick counts)
@@ -68,7 +68,7 @@ class ExnessDataProcessor:
     - Single ClickHouse database (exness) with instrument column
     - Dual-variant storage (Raw_Spread + Standard) for Phase7
     - Incremental updates with automatic gap detection
-    - 26-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
+    - 27-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
       holiday detection, and 10 global exchange session flags
 
     Features:
@@ -510,7 +510,7 @@ class ExnessDataProcessor:
             limit: Maximum rows to return
 
         Returns:
-            DataFrame with OHLC data (26-column Phase7 schema)
+            DataFrame with OHLC data (27-column schema)
 
         Example:
             >>> processor = ExnessDataProcessor()

@@ -101,13 +101,13 @@ This directory contains empirical benchmarks that determined the optimal compres
 
 ```python
 # Delta encoding (LOSSY)
-df_delta['Bid_delta'] = (df['Bid'].diff() * 100000).astype('int16')
+df_delta["Bid_delta"] = (df["Bid"].diff() * 100000).astype("int16")
 # Converts 1.08500123456789 → 10850 → 1.08500000000000
 # Loss: 0.00000123456789 (12.3 pips)
 
 # Normal Parquet (LOSSLESS)
 table = pa.Table.from_pandas(df_original)
-pq.write_table(table, normal_path, compression='zstd', compression_level=22)
+pq.write_table(table, normal_path, compression="zstd", compression_level=22)
 # Preserves full float64 precision
 ```
 

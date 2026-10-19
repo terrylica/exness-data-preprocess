@@ -13,7 +13,7 @@ Handles:
 - Database and table creation with proper codecs
 - Self-documenting COMMENT statements (20-27% AI accuracy improvement)
 - Tick data insertion with batch optimization
-- 26-column OHLC schema (ADR: 2025-12-11-duckdb-removal-clickhouse)
+- 27-column OHLC schema (ADR: 2025-12-11-duckdb-removal-clickhouse)
 
 Codec Selection (research-validated):
 - DateTime64: DoubleDelta + LZ4 (1.76x faster decompression)
@@ -87,7 +87,7 @@ class ClickHouseManager(ClickHouseClientMixin):
     - Create database and tables with proper schema
     - Add self-documenting COMMENT statements
     - Insert tick data with batch optimization
-    - Ensure 26-column OHLC schema
+    - Ensure 27-column OHLC schema
 
     Example:
         >>> manager = ClickHouseManager()
@@ -115,7 +115,7 @@ class ClickHouseManager(ClickHouseClientMixin):
         - exness database
         - raw_spread_ticks table (ReplacingMergeTree)
         - standard_ticks table (ReplacingMergeTree)
-        - ohlc_1m table (ReplacingMergeTree, 26 columns)
+        - ohlc_1m table (ReplacingMergeTree, 27 columns)
         - exchange_sessions table (MergeTree)
         - holidays table (MergeTree)
 
@@ -146,7 +146,7 @@ class ClickHouseManager(ClickHouseClientMixin):
         """Create raw_spread_ticks table with proper codecs.
 
         Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
-        Schema documentation is in table-level COMMENT and /docs/DATABASE_SCHEMA.md.
+        Schema documentation is in the table-level COMMENT and README.md#schema.
         """
         execute_command(
             self.client,
@@ -184,11 +184,11 @@ class ClickHouseManager(ClickHouseClientMixin):
         )
 
     def _create_ohlc_table(self) -> None:
-        """Create ohlc_1m table with 26-column schema.
+        """Create ohlc_1m table with 27-column schema.
 
         ADR: 2025-12-11-duckdb-removal-clickhouse
         Note: 4 normalized metric columns removed (range_per_*, body_per_*) - can't aggregate correctly.
-        Full schema documentation: /docs/DATABASE_SCHEMA.md
+        Schema summary: README.md#schema
         """
         execute_command(
             self.client,
@@ -224,7 +224,7 @@ class ClickHouseManager(ClickHouseClientMixin):
             ) ENGINE = ReplacingMergeTree()
             PARTITION BY toYYYYMM(timestamp)
             ORDER BY (instrument, timestamp)
-            COMMENT '26-column OHLC bars at 1-minute resolution. BID-only prices from raw_spread_ticks. Supports on-demand resampling to 5m/1h/1d. See /docs/DATABASE_SCHEMA.md for column details.'
+            COMMENT '27-column OHLC bars at 1-minute resolution. BID-only prices from raw_spread_ticks. Supports on-demand resampling to 5m/1h/1d. Column summary: README.md#schema in exness-data-preprocess.'
             """,
         )
 

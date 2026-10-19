@@ -15,7 +15,7 @@ Architecture (v2.0.0):
 - ClickHouse backend: Single-table design with instrument column
 - Dual-variant storage (Raw_Spread + Standard)
 - Incremental updates with automatic gap detection
-- 26-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
+- 27-column OHLC schema with dual spreads, tick counts, timezone/session tracking,
   holiday tracking, and 10 global exchange sessions with trading hour detection
 - Self-documenting database schema with embedded COMMENT statements
 - Pydantic models for validated API responses
