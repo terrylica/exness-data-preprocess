@@ -16,8 +16,8 @@ language: 'python'
 
 tasks:
   lint:
-    script: 'uv run ruff check src/ tests/'
-    inputs: ['src/**/*', 'tests/**/*', 'pyproject.toml']
+    script: 'uv run ruff check src/ tests/ scripts/ examples/ && uv run ruff format --check src/ tests/ scripts/ examples/'
+    inputs: ['src/**/*', 'tests/**/*', 'scripts/**/*', 'examples/**/*', 'pyproject.toml']
   typecheck:
     script: 'uv run mypy src/exness_data_preprocess/ --ignore-missing-imports'
     inputs: ['src/**/*', 'pyproject.toml', 'uv.lock']

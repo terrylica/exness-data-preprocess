@@ -1,0 +1,26 @@
+# Dependency update PRs. Replaces the scheduled pre-commit-autoupdate workflow.
+# No `uv` entry: uv.lock is not tracked and this is a library, so the only possible updates
+# would be raising the `>=` floors in pyproject.toml, which narrows what downstream users can install.
+version: 2
+updates:
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci(deps)"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      semantic-release:
+        patterns: ["*"]

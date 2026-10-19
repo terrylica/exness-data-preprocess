@@ -124,10 +124,6 @@ dev = [
     "types-requests>=2.32.4.20250913",
 ]
 
+# Only the commit-msg / pre-push message check; semantic-release does versioning and the changelog.
 [tool.commitizen]
 name = "cz_conventional_commits"
-tag_format = "v$version"
-version_scheme = "semver"
-version_provider = "pep621"
-major_version_zero = true
-bump_message = "chore(release): bump version $current_version → $new_version [skip ci]"
