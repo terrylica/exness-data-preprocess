@@ -242,7 +242,7 @@ class ClickHouseManager(ClickHouseClientMixin):
             "standard_ticks",
             "Standard tick data from Exness. Columns: instrument (forex pair), timestamp "
             "(microsecond), seq (position among same-timestamp ticks in source order), bid/ask "
-            "(traditional quotes, Bid < Ask). ASOF merged with raw_spread_ticks.",
+            "(traditional quotes, Bid < Ask). Aggregated per minute into ohlc_1m.",
         )
 
     def _create_ticks_table(self, table: str, comment: str) -> None:
