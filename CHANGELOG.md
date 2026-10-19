@@ -1,3 +1,15 @@
+## [2.1.1](https://github.com/terrylica/exness-data-preprocess/compare/v2.1.0...v2.1.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **clickhouse:** resolve the binary from PATH instead of a dead mise shim ([2e5cbe0](https://github.com/terrylica/exness-data-preprocess/commit/2e5cbe0bd3c51f0d95d6c1baf583a98727a12d36))
+* **e2e:** apply review findings (memory cap, isolated downloads, marker selection, signals) ([ec2d8aa](https://github.com/terrylica/exness-data-preprocess/commit/ec2d8aaea4cc1f2ca7bb5527208345ad2d526a4b)), closes [#6](https://github.com/terrylica/exness-data-preprocess/issues/6)
+* **processor:** bootstrap exness database before first get_client() call ([0cc55a4](https://github.com/terrylica/exness-data-preprocess/commit/0cc55a43fa482e48870f4685d170f2b2ff1aa941))
+* **release:** bump the version with `uv version`, read __version__ from metadata ([aa86693](https://github.com/terrylica/exness-data-preprocess/commit/aa866932bb41517629a51186af740555cc959774)), closes [#4](https://github.com/terrylica/exness-data-preprocess/issues/4)
+* **scripts:** resolve ruff lint errors and formatting issues ([68d939f](https://github.com/terrylica/exness-data-preprocess/commit/68d939f5fafdd2692b5ef6f1ad4e5811e3364a87))
+* **types:** make `moon run repo:check` green (mypy 15 errors to 0) ([79b2259](https://github.com/terrylica/exness-data-preprocess/commit/79b2259af62e4d5086016669d8dba825fd69dbd9)), closes [#7](https://github.com/terrylica/exness-data-preprocess/issues/7)
+
 # [2.1.0](https://github.com/terrylica/exness-data-preprocess/compare/v2.0.0...v2.1.0) (2025-12-28)
 
 
