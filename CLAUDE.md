@@ -24,7 +24,8 @@ moon run repo:build      # sdist + wheel into dist/
 
 - `ensure_database_bootstrap()` must run before the first `get_client()` that binds the `exness` database (`tests/test_database_bootstrap_order.py`).
 - Insert DataFrames with `client.insert_df(...)`, never `client.insert(data=df)` (that takes row sequences).
-- Tables are ReplacingMergeTree: re-inserting a month is safe; duplicates collapse at merge time, so counts can be higher until a merge or `FINAL`.
+- Tables are ReplacingMergeTree. Tick tables dedupe on `(instrument, timestamp, seq)`: `seq` (`assign_tick_seq`) numbers same-timestamp ticks in source order, so distinct ticks sharing a timestamp are kept and re-inserting a month is idempotent. Duplicates only collapse at merge time, so every read whose answer depends on duplicates (counts, tick/OHLC rows, the OHLC build) uses `FINAL`; keep it that way.
+- Datetime query parameters are typed `DateTime64(6, 'UTC')`, never bare `DateTime64`: a bare one parses naive text in the server's time zone and shifts every filter on a non-UTC server. `repo:e2e` runs its server in America/New_York to catch this.
 - ClickHouse-backed tests are marked `clickhouse` or use `processor_with_clickhouse` (fixture users get the marker at collection, so `-m clickhouse` selects them); `conftest.py` skips them with the probe's reason unless `EXNESS_REQUIRE_CLICKHOUSE=1`. A server that holds :8123 but rejects the credentials (el02's shared system ClickHouse) counts as unavailable. Use `repo:e2e`, not that server.
 - `gapless-crypto-clickhouse` also uses localhost:8123. `clickhouse-stop` only stops the PID in this repo's pidfile.
 - ADRs and design specs under `docs/adr/` and `docs/design/` are historical records: add new ones, don't rewrite old ones.

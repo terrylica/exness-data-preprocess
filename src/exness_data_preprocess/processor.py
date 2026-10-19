@@ -260,7 +260,12 @@ class ExnessDataProcessor:
             raise ValueError(f"Invalid {param_name} '{date_str}': {e!s}") from e
 
     def download_exness_zip(
-        self, year: int, month: int, pair: str = "EURUSD", variant: str = "Raw_Spread"
+        self,
+        year: int,
+        month: int,
+        pair: str = "EURUSD",
+        variant: str = "Raw_Spread",
+        force: bool = False,
     ) -> Optional[Path]:
         """
         Download Exness ZIP file for specific month and variant.
@@ -274,7 +279,9 @@ class ExnessDataProcessor:
         Returns:
             Path to downloaded ZIP file, or None if download failed
         """
-        return self.downloader.download_zip(year=year, month=month, pair=pair, variant=variant)
+        return self.downloader.download_zip(
+            year=year, month=month, pair=pair, variant=variant, force=force
+        )
 
     def _load_ticks_from_zip(self, zip_path: Path) -> pd.DataFrame:
         """Load ticks from ZIP file into DataFrame."""
@@ -302,7 +309,8 @@ class ExnessDataProcessor:
         Args:
             pair: Currency pair (e.g., "EURUSD")
             start_date: Earliest date to download (YYYY-MM-DD)
-            force_redownload: Force re-download even if data exists
+            force_redownload: Re-download and re-insert every month from start_date, even months
+                already stored (restores ticks collapsed by a pre-3.0 table key)
             delete_zip: Delete ZIP files after processing
             dry_run: Preview operation without downloading
 
@@ -327,10 +335,20 @@ class ExnessDataProcessor:
         print(f"Updating {pair} in ClickHouse ({self.DATABASE})")
         print(f"{'=' * 70}")
 
-        # Discover missing months
-        print(f"\nDiscovering missing months (from {start_date})...")
-        missing_months = self.ch_gap_detector.discover_missing_months(pair, start_date)
-        print(f"Found {len(missing_months)} months to download")
+        if force_redownload:
+            # Every month from start_date through the current one, whether or not it is stored.
+            # Re-inserting is safe (ReplacingMergeTree on instrument, timestamp, seq) and restores
+            # ticks a pre-3.0 table key collapsed.
+            first = pd.Timestamp(start_date).to_period("M")
+            last = pd.Timestamp.now(tz="UTC").tz_localize(None).to_period("M")
+            missing_months = [(p.year, p.month) for p in pd.period_range(first, last, freq="M")]
+            print(
+                f"\nforce_redownload: re-processing {len(missing_months)} months from {start_date}"
+            )
+        else:
+            print(f"\nDiscovering missing months (from {start_date})...")
+            missing_months = self.ch_gap_detector.discover_missing_months(pair, start_date)
+            print(f"Found {len(missing_months)} months to download")
 
         if not missing_months:
             print("\n✓ Database is up to date")
@@ -384,13 +402,17 @@ class ExnessDataProcessor:
             print(f"\n--- Processing {year}-{month:02d} ---")
 
             # Download Raw_Spread variant
-            raw_zip = self.download_exness_zip(year, month, pair, variant="Raw_Spread")
+            raw_zip = self.download_exness_zip(
+                year, month, pair, variant="Raw_Spread", force=force_redownload
+            )
             if raw_zip is None:
                 print(f"⚠️  Skipping {year}-{month:02d} (Raw_Spread not available)")
                 continue
 
             # Download Standard variant
-            std_zip = self.download_exness_zip(year, month, pair, variant="")
+            std_zip = self.download_exness_zip(
+                year, month, pair, variant="", force=force_redownload
+            )
             if std_zip is None:
                 print(f"⚠️  Skipping {year}-{month:02d} (Standard not available)")
                 if delete_zip and raw_zip.exists():

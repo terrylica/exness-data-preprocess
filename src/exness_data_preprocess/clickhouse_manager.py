@@ -22,6 +22,8 @@ Codec Selection (research-validated):
 - LowCardinality(String): Dictionary encoding (4x query speed)
 """
 
+import logging
+
 import pandas as pd
 from clickhouse_connect.driver import Client
 
@@ -41,8 +43,70 @@ from exness_data_preprocess.clickhouse_client import (
 # run). Keep this name + value identical to ClickHouseManager.DATABASE.
 DATABASE_NAME = "exness"
 
+logger = logging.getLogger(__name__)
+
 # Every table ClickHouseManager.ensure_schema() creates; get_storage_bytes() sums exactly these.
 PACKAGE_TABLES = ("raw_spread_ticks", "standard_ticks", "ohlc_1m", "exchange_sessions", "holidays")
+
+
+TICK_SORTING_KEY = "instrument, timestamp, seq"
+
+
+def assign_tick_seq(timestamps: pd.Series) -> pd.Series:
+    """
+    Position of each tick among the ticks sharing its timestamp, in source order (0, 1, 2, ...).
+
+    Exness archives contain distinct ticks with identical timestamps. Making ``seq`` part of the
+    ReplacingMergeTree key keeps them, while re-inserting the same file reproduces the same
+    ``seq`` values, so re-loading a month still deduplicates.
+
+    Raises:
+        ValueError: If any timestamp is NaT, or more than 65,536 ticks share one timestamp (seq is UInt16).
+    """
+    if timestamps.isna().any():
+        raise ValueError(
+            f"{int(timestamps.isna().sum())} tick(s) have no timestamp (NaT); refusing to insert"
+        )
+    seq = timestamps.groupby(timestamps, sort=False).cumcount()
+    if len(seq) and int(seq.max()) > 65535:
+        raise ValueError(f"{int(seq.max()) + 1} ticks share one timestamp; seq (UInt16) overflows")
+    return seq.astype("uint16")
+
+
+def migrate_ticks_table_to_seq_key(client: Client, database: str, table: str) -> bool:
+    """
+    Migrate a pre-3.0 tick table (sorted by instrument, timestamp) to the lossless key in place.
+
+    Adds ``seq UInt16`` (implicit default 0) and extends the sorting key to (instrument, timestamp, seq) in
+    one ALTER; existing rows get seq = 0 and are not rewritten. Ticks that the old key already
+    collapsed are not recoverable from the table: re-download those months
+    (``update_data(..., force_redownload=True)``) to restore them. Idempotent.
+
+    Returns:
+        True if the table was migrated, False if it already had the lossless key or does not exist.
+    """
+    result = execute_query(
+        client,
+        "SELECT sorting_key FROM system.tables WHERE database = {database:String} AND name = {table:String}",
+        parameters={"database": database, "table": table},
+    )
+    if not result.result_rows or result.first_row[0] == TICK_SORTING_KEY:
+        return False
+    logger.warning(
+        "Migrating %s.%s sorting key %r -> (%s); re-download affected months to restore "
+        "same-timestamp ticks the old key collapsed",
+        database,
+        table,
+        result.first_row[0],
+        TICK_SORTING_KEY,
+    )
+    execute_command(
+        client,
+        f"ALTER TABLE {database}.{table} "
+        "ADD COLUMN IF NOT EXISTS seq UInt16 CODEC(T64, ZSTD) AFTER timestamp, "  # no DEFAULT: a sort-key column added in the same ALTER may not have one
+        f"MODIFY ORDER BY ({TICK_SORTING_KEY})",
+    )
+    return True
 
 
 def get_storage_bytes(client: Client, database: str = DATABASE_NAME) -> int:
@@ -165,45 +229,45 @@ class ClickHouseManager(ClickHouseClientMixin):
         self._create_holidays_table()
 
     def _create_raw_spread_ticks_table(self) -> None:
-        """Create raw_spread_ticks table with proper codecs.
+        self._create_ticks_table(
+            "raw_spread_ticks",
+            "Raw_Spread tick data from Exness. Columns: instrument (forex pair), timestamp "
+            "(microsecond precision), seq (position among same-timestamp ticks in source order), "
+            "bid/ask (mostly zero-spread execution prices). Deduplication via ReplacingMergeTree "
+            "on (instrument, timestamp, seq).",
+        )
+
+    def _create_standard_ticks_table(self) -> None:
+        self._create_ticks_table(
+            "standard_ticks",
+            "Standard tick data from Exness. Columns: instrument (forex pair), timestamp "
+            "(microsecond), seq (position among same-timestamp ticks in source order), bid/ask "
+            "(traditional quotes, Bid < Ask). ASOF merged with raw_spread_ticks.",
+        )
+
+    def _create_ticks_table(self, table: str, comment: str) -> None:
+        """Create a tick table, or migrate an existing pre-3.0 one to the lossless key.
 
         Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
         Schema documentation is in the table-level COMMENT and README.md#schema.
         """
+        assert "'" not in comment, "table comment is inlined into DDL and must not contain quotes"
         execute_command(
             self.client,
             f"""
-            CREATE TABLE IF NOT EXISTS {self.DATABASE}.raw_spread_ticks (
+            CREATE TABLE IF NOT EXISTS {self.DATABASE}.{table} (
                 instrument LowCardinality(String),
                 timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4),
+                seq UInt16 CODEC(T64, ZSTD),
                 bid Float64 CODEC(Gorilla, ZSTD),
                 ask Float64 CODEC(Gorilla, ZSTD)
             ) ENGINE = ReplacingMergeTree()
             PARTITION BY toYYYYMM(timestamp)
-            ORDER BY (instrument, timestamp)
-            COMMENT 'Raw_Spread tick data from Exness. Columns: instrument (forex pair), timestamp (microsecond precision), bid/ask (97.81% zero-spread execution prices). Deduplication via ReplacingMergeTree.'
+            ORDER BY (instrument, timestamp, seq)
+            COMMENT '{comment}'
             """,
         )
-
-    def _create_standard_ticks_table(self) -> None:
-        """Create standard_ticks table with proper codecs.
-
-        Note: Column-level COMMENTs removed - ClickHouse doesn't support CODEC + COMMENT together.
-        """
-        execute_command(
-            self.client,
-            f"""
-            CREATE TABLE IF NOT EXISTS {self.DATABASE}.standard_ticks (
-                instrument LowCardinality(String),
-                timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4),
-                bid Float64 CODEC(Gorilla, ZSTD),
-                ask Float64 CODEC(Gorilla, ZSTD)
-            ) ENGINE = ReplacingMergeTree()
-            PARTITION BY toYYYYMM(timestamp)
-            ORDER BY (instrument, timestamp)
-            COMMENT 'Standard tick data from Exness. Columns: instrument (forex pair), timestamp (microsecond), bid/ask (traditional quotes, always Bid < Ask). ASOF merged with raw_spread_ticks.'
-            """,
-        )
+        migrate_ticks_table_to_seq_key(self.client, self.DATABASE, table)
 
     def _create_ohlc_table(self) -> None:
         """Create ohlc_1m table with 27-column schema.
@@ -331,11 +395,12 @@ class ClickHouseManager(ClickHouseClientMixin):
         }
         df = df.rename(columns={k: v for k, v in column_map.items() if k in df.columns})
 
-        # Add instrument column
+        # Add instrument column and the same-timestamp position (part of the dedup key)
         df["instrument"] = instrument.upper()
+        df["seq"] = assign_tick_seq(df["timestamp"])
 
         # Ensure correct column order
-        df = df[["instrument", "timestamp", "bid", "ask"]]
+        df = df[["instrument", "timestamp", "seq", "bid", "ask"]]
 
         # Insert using clickhouse-connect
         try:
@@ -343,7 +408,7 @@ class ClickHouseManager(ClickHouseClientMixin):
                 table=table_name,
                 df=df,
                 database=self.DATABASE,
-                column_names=["instrument", "timestamp", "bid", "ask"],
+                column_names=["instrument", "timestamp", "seq", "bid", "ask"],
             )
             return len(df)
         except Exception as e:
@@ -368,7 +433,7 @@ class ClickHouseManager(ClickHouseClientMixin):
         table_name = f"{variant}_ticks"
         result = execute_query(
             self.client,
-            f"SELECT count() FROM {self.DATABASE}.{table_name} WHERE instrument = {{instrument:String}}",
+            f"SELECT count() FROM {self.DATABASE}.{table_name} FINAL WHERE instrument = {{instrument:String}}",
             parameters={"instrument": instrument.upper()},
         )
         return int(result.first_row[0])
@@ -382,7 +447,7 @@ class ClickHouseManager(ClickHouseClientMixin):
         """
         result = execute_query(
             self.client,
-            f"SELECT count() FROM {self.DATABASE}.ohlc_1m WHERE instrument = {{instrument:String}}",
+            f"SELECT count() FROM {self.DATABASE}.ohlc_1m FINAL WHERE instrument = {{instrument:String}}",
             parameters={"instrument": instrument.upper()},
         )
         return int(result.first_row[0])

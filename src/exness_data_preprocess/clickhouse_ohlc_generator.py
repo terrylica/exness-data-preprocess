@@ -124,8 +124,8 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 f"""
                 ALTER TABLE {self.DATABASE}.ohlc_1m DELETE
                 WHERE instrument = {{instrument:String}}
-                  AND timestamp >= {{start_date:DateTime64}}
-                  AND timestamp < addMonths(toDate({{end_date:String}}), 1)
+                  AND timestamp >= {{start_date:DateTime64(6, 'UTC')}}
+                  AND timestamp < addMonths(toDateTime64(toDate({{end_date:String}}), 6, 'UTC'), 1)
                 """,
                 parameters=params,
             )
@@ -136,11 +136,17 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         where_parts = ["r.instrument = {instrument:String}"]
 
         if start_date:
-            where_parts.append("r.timestamp >= {start_date:DateTime64}")
+            where_parts.append("r.timestamp >= {start_date:DateTime64(6, 'UTC')}")
         if end_date:
-            where_parts.append("r.timestamp < addMonths(toDate({end_date:String}), 1)")
+            where_parts.append(
+                "r.timestamp < addMonths(toDateTime64(toDate({end_date:String}), 6, 'UTC'), 1)"
+            )
 
         where_sql = " AND ".join(where_parts)
+        standard_where = ["instrument = {instrument:String}"]
+        if start_date:
+            standard_where.append("timestamp >= {start_date:DateTime64(6, 'UTC')} - INTERVAL 7 DAY")
+        standard_where_sql = " AND ".join(standard_where)
 
         # Generate session column initializations from exchange registry
         session_columns = ", ".join([f"0 AS is_{name}_session" for name in EXCHANGES.keys()])
@@ -152,10 +158,10 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
             SELECT
                 {{instrument:String}} AS instrument,
                 toStartOfMinute(r.timestamp) AS timestamp,
-                argMin(r.bid, r.timestamp) AS open,
+                argMin(r.bid, (r.timestamp, r.seq)) AS open,
                 max(r.bid) AS high,
                 min(r.bid) AS low,
-                argMax(r.bid, r.timestamp) AS close,
+                argMax(r.bid, (r.timestamp, r.seq)) AS close,
                 avg(r.ask - r.bid) AS raw_spread_avg,
                 avg(s.ask - s.bid) AS standard_spread_avg,
                 toUInt32(count(r.timestamp)) AS tick_count_raw_spread,
@@ -184,8 +190,15 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 toUInt8(0) AS is_major_holiday,
                 -- Trading session flags (initialized to 0, updated via session_detector)
                 {session_columns}
-            FROM {self.DATABASE}.raw_spread_ticks AS r
-            ASOF LEFT JOIN {self.DATABASE}.standard_ticks AS s
+            FROM {self.DATABASE}.raw_spread_ticks AS r FINAL
+            ASOF LEFT JOIN (
+                -- Only this instrument, and only from a week before start_date: enough for the
+                -- closest preceding Standard tick across a weekend, without reading (and FINAL-
+                -- merging) every instrument and month on the join's build side.
+                SELECT instrument, timestamp, ask, bid
+                FROM {self.DATABASE}.standard_ticks FINAL
+                WHERE {standard_where_sql}
+            ) AS s
                 ON r.instrument = s.instrument
                 AND r.timestamp >= s.timestamp
             WHERE {where_sql}
@@ -198,13 +211,15 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         # Get count of generated OHLC bars
         count_where = ["instrument = {instrument:String}"]
         if start_date:
-            count_where.append("timestamp >= {start_date:DateTime64}")
+            count_where.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
         if end_date:
-            count_where.append("timestamp < addMonths(toDate({end_date:String}), 1)")
+            count_where.append(
+                "timestamp < addMonths(toDateTime64(toDate({end_date:String}), 6, 'UTC'), 1)"
+            )
 
         count_result = execute_query(
             self.client,
-            f"SELECT count() FROM {self.DATABASE}.ohlc_1m WHERE " + " AND ".join(count_where),
+            f"SELECT count() FROM {self.DATABASE}.ohlc_1m FINAL WHERE " + " AND ".join(count_where),
             parameters=params,
         )
         ohlc_count = count_result.first_row[0] if count_result.result_rows else 0
@@ -240,10 +255,12 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         params: dict = {"instrument": instrument}
 
         if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64}")
+            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
             params["start_date"] = start_date
         if end_date:
-            where_parts.append("timestamp < addMonths(toDate({end_date:String}), 1)")
+            where_parts.append(
+                "timestamp < addMonths(toDateTime64(toDate({end_date:String}), 6, 'UTC'), 1)"
+            )
             params["end_date"] = end_date
 
         where_sql = " AND ".join(where_parts)
@@ -251,7 +268,7 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         # Query all OHLC data that needs session flags updated
         result = execute_query(
             self.client,
-            f"SELECT * FROM {self.DATABASE}.ohlc_1m WHERE {where_sql} ORDER BY timestamp",
+            f"SELECT * FROM {self.DATABASE}.ohlc_1m FINAL WHERE {where_sql} ORDER BY timestamp",
             parameters=params,
         )
 
