@@ -41,6 +41,28 @@ from exness_data_preprocess.clickhouse_client import (
 # run). Keep this name + value identical to ClickHouseManager.DATABASE.
 DATABASE_NAME = "exness"
 
+# Every table ClickHouseManager.ensure_schema() creates; get_storage_bytes() sums exactly these.
+PACKAGE_TABLES = ("raw_spread_ticks", "standard_ticks", "ohlc_1m", "exchange_sessions", "holidays")
+
+
+def get_storage_bytes(client: Client, database: str = DATABASE_NAME) -> int:
+    """
+    On-disk size of this package's tables, from ``system.tables.total_bytes``.
+
+    The tick and OHLC tables hold every instrument, so this is database-wide, not per pair.
+    Tables that do not exist yet contribute nothing; an empty schema returns 0.
+
+    Raises:
+        ClickHouseQueryError: If the query fails
+    """
+    result = execute_query(
+        client,
+        "SELECT ifNull(sum(total_bytes), 0) FROM system.tables "
+        "WHERE database = {database:String} AND name IN {tables:Array(String)}",
+        parameters={"database": database, "tables": list(PACKAGE_TABLES)},
+    )
+    return int(result.first_row[0])
+
 
 def ensure_database_bootstrap() -> None:
     """
@@ -350,6 +372,24 @@ class ClickHouseManager(ClickHouseClientMixin):
             parameters={"instrument": instrument.upper()},
         )
         return int(result.first_row[0])
+
+    def get_ohlc_bar_count(self, instrument: str) -> int:
+        """
+        Number of 1-minute bars stored in ohlc_1m for an instrument.
+
+        Raises:
+            ClickHouseQueryError: If query fails
+        """
+        result = execute_query(
+            self.client,
+            f"SELECT count() FROM {self.DATABASE}.ohlc_1m WHERE instrument = {{instrument:String}}",
+            parameters={"instrument": instrument.upper()},
+        )
+        return int(result.first_row[0])
+
+    def get_storage_bytes(self) -> int:
+        """On-disk size of this package's tables (database-wide); see get_storage_bytes()."""
+        return get_storage_bytes(self.client, self.DATABASE)
 
     def get_date_range(
         self, instrument: str, variant: str = "raw_spread"

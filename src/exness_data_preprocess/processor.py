@@ -354,8 +354,8 @@ class ExnessDataProcessor:
                 months_added=0,
                 raw_ticks_added=0,
                 standard_ticks_added=0,
-                ohlc_bars=self.ch_manager.get_tick_count(pair) // 1000,  # Approximate
-                storage_bytes=0,
+                ohlc_bars=self.ch_manager.get_ohlc_bar_count(pair),
+                storage_bytes=self.ch_manager.get_storage_bytes(),
             )
 
         # Dry-run mode
@@ -455,7 +455,7 @@ class ExnessDataProcessor:
             raw_ticks_added=raw_ticks_total,
             standard_ticks_added=standard_ticks_total,
             ohlc_bars=ohlc_bars,
-            storage_bytes=0,  # TODO: Query system.tables for size
+            storage_bytes=self.ch_manager.get_storage_bytes(),
         )
 
     def query_ticks(
