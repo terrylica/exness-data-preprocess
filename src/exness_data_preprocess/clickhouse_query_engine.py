@@ -35,6 +35,16 @@ from exness_data_preprocess.models import (
     VariantType,
 )
 
+CURSOR_SEPARATOR = "#"
+
+
+def _utc_text(value: object) -> str:
+    """Render a tick timestamp as naive UTC text with microseconds, for a DateTime64(6, 'UTC') param."""
+    ts = pd.Timestamp(value)  # type: ignore[arg-type]
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert("UTC").tz_localize(None)
+    return ts.strftime("%Y-%m-%d %H:%M:%S.%f")
+
 
 class ClickHouseQueryEngine(ClickHouseClientMixin):
     """
@@ -122,9 +132,9 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
 
         query = f"""
             SELECT timestamp, bid, ask
-            FROM {self.DATABASE}.{table_name}
+            FROM {self.DATABASE}.{table_name} FINAL
             WHERE {where_sql}
-            ORDER BY timestamp
+            ORDER BY timestamp, seq
             {limit_sql}
             {offset_sql}
         """
@@ -209,7 +219,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             # Direct query for 1m data
             query = f"""
                 SELECT *
-                FROM {self.DATABASE}.ohlc_1m
+                FROM {self.DATABASE}.ohlc_1m FINAL
                 WHERE {where_sql}
                 ORDER BY timestamp
                 {limit_sql}
@@ -247,7 +257,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
                         max(is_xasx_session) AS is_xasx_session,
                         max(is_xhkg_session) AS is_xhkg_session,
                         max(is_xses_session) AS is_xses_session
-                    FROM {self.DATABASE}.ohlc_1m
+                    FROM {self.DATABASE}.ohlc_1m FINAL
                     WHERE {where_sql}
                     GROUP BY ts
                 )
@@ -305,11 +315,11 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
                 countIf(1, table = 'standard_ticks') AS std_count
             FROM (
                 SELECT 'raw_spread_ticks' AS table
-                FROM {database:Identifier}.raw_spread_ticks
+                FROM {database:Identifier}.raw_spread_ticks FINAL
                 WHERE instrument = {instrument:String}
                 UNION ALL
                 SELECT 'standard_ticks' AS table
-                FROM {database:Identifier}.standard_ticks
+                FROM {database:Identifier}.standard_ticks FINAL
                 WHERE instrument = {instrument:String}
             )
         """
@@ -330,7 +340,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         try:
             ohlc_result = execute_query(
                 self.client,
-                f"SELECT count() FROM {self.DATABASE}.ohlc_1m WHERE instrument = {{instrument:String}}",
+                f"SELECT count() FROM {self.DATABASE}.ohlc_1m FINAL WHERE instrument = {{instrument:String}}",
                 parameters={"instrument": symbol},
             )
             ohlc_count = ohlc_result.first_row[0] if ohlc_result.result_rows else 0
@@ -408,7 +418,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         Args:
             instrument: Instrument symbol (e.g., "EURUSD")
             variant: "raw_spread" or "standard"
-            cursor: ISO 8601 timestamp to start from (exclusive), None for first page
+            cursor: next_cursor of the previous page ("<timestamp>#<seq>", exclusive), None for first page
             page_size: Number of rows per page (default: 100,000)
             start_date: Start date filter (YYYY-MM-DD), inclusive
             end_date: End date filter (YYYY-MM-DD), inclusive
@@ -431,8 +441,15 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         params: dict = {"instrument": symbol}
 
         if cursor:
-            where_parts.append("timestamp > {cursor:DateTime64}")
-            params["cursor"] = cursor
+            # Cursor is "<timestamp>#<seq>"; a bare timestamp (pre-3.0 cursors) means "after every
+            # tick at that timestamp". Comparing the (timestamp, seq) pair means ticks sharing the
+            # last timestamp of a page are not skipped.
+            cursor_ts, _, cursor_seq = cursor.partition(CURSOR_SEPARATOR)
+            where_parts.append(
+                "(timestamp, seq) > ({cursor_ts:DateTime64(6, 'UTC')}, {cursor_seq:UInt16})"
+            )
+            params["cursor_ts"] = cursor_ts
+            params["cursor_seq"] = int(cursor_seq) if cursor_seq else 65535
         if start_date:
             where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
             params["start_date"] = start_date
@@ -444,26 +461,27 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
 
         # Fetch page_size + 1 to detect if there's more data
         query = f"""
-            SELECT timestamp, bid, ask
-            FROM {self.DATABASE}.{table_name}
+            SELECT timestamp, seq, bid, ask
+            FROM {self.DATABASE}.{table_name} FINAL
             WHERE {where_sql}
-            ORDER BY timestamp
+            ORDER BY timestamp, seq
             LIMIT {page_size + 1}
         """
 
         result = execute_query(self.client, query, parameters=params)
-        df = pd.DataFrame(result.result_rows, columns=["timestamp", "bid", "ask"])
+        df = pd.DataFrame(result.result_rows, columns=["timestamp", "seq", "bid", "ask"])
 
         # Check if there's more data
         has_more = len(df) > page_size
         if has_more:
             df = df.iloc[:page_size]  # Trim to page_size
 
-        # Get next cursor from last timestamp
+        # Next cursor = (timestamp, seq) of the last row on this page
         next_cursor = None
         if has_more and len(df) > 0:
-            last_ts = df.iloc[-1]["timestamp"]
-            next_cursor = str(last_ts)
+            last = df.iloc[-1]
+            next_cursor = f"{_utc_text(last['timestamp'])}{CURSOR_SEPARATOR}{int(last['seq'])}"
+        df = df.drop(columns=["seq"]).reset_index(drop=True)
 
         return CursorResult(
             data=df,

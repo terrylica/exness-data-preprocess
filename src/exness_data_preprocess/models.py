@@ -373,11 +373,11 @@ class CursorResult(BaseModel):
     ADR: /docs/adr/2025-12-10-clickhouse-e2e-validation-pipeline.md
 
     Used for memory-efficient pagination through large tick datasets.
-    The cursor is an ISO 8601 timestamp marking the last row returned.
+    The cursor is "<timestamp>#<seq>" of the last row returned (opaque; pass it back unchanged).
 
     Attributes:
         data: DataFrame containing the current page of results
-        next_cursor: ISO 8601 timestamp for the next page (None if no more data)
+        next_cursor: Opaque cursor for the next page, "<timestamp>#<seq>" (None if no more data)
         has_more: Whether more data is available after this page
         page_size: Number of rows requested per page
 
@@ -394,7 +394,8 @@ class CursorResult(BaseModel):
         Field(description="DataFrame containing the current page of results")
     )
     next_cursor: Optional[str] = Field(
-        default=None, description="ISO 8601 timestamp to pass for next page (None if no more data)"
+        default=None,
+        description='Opaque cursor for the next page, "<timestamp>#<seq>" (None if no more data)',
     )
     has_more: bool = Field(description="Whether more data is available after this page")
     page_size: int = Field(ge=1, description="Number of rows requested per page")
@@ -405,7 +406,7 @@ class CursorResult(BaseModel):
             "examples": [
                 {
                     "data": "<DataFrame with 10000 rows>",
-                    "next_cursor": "2024-08-01 12:30:45.123456+00:00",
+                    "next_cursor": "2024-08-01 12:30:45.123456+00:00#0",
                     "has_more": True,
                     "page_size": 10000,
                 }

@@ -84,6 +84,40 @@ def check_load() -> None:
     assert coverage.storage_bytes > 0, "storage_bytes is 0 with data loaded"
     assert coverage.ohlc_bars > 0, "no OHLC bars after load"
 
+    # Lossless: after merging (FINAL), every inserted tick is still stored, including distinct
+    # ticks that share a timestamp (seq > 0), which the pre-3.0 key collapsed.
+    raw_final, std_final, raw_ties = _final_counts()
+    assert raw_final == result.raw_ticks_added, (
+        f"raw_spread_ticks FINAL={raw_final:,} != inserted {result.raw_ticks_added:,}"
+    )
+    assert std_final == result.standard_ticks_added, (
+        f"standard_ticks FINAL={std_final:,} != inserted {result.standard_ticks_added:,}"
+    )
+    assert raw_ties > 0, (
+        "no same-timestamp ticks stored (seq > 0); the lossless path was not exercised"
+    )
+    print(
+        f"  ✓ lossless: FINAL counts equal inserted ({raw_final:,} / {std_final:,}); {raw_ties:,} ticks with seq > 0"
+    )
+
+    # Re-inserting the same months must not add rows: force_redownload re-processes them all.
+    with ExnessDataProcessor() as processor:
+        forced = processor.update_data(
+            "EURUSD", start_date=start.isoformat(), force_redownload=True
+        )
+    assert isinstance(forced, UpdateResult) and forced.months_added == result.months_added, (
+        f"force_redownload processed {getattr(forced, 'months_added', None)} months, expected {result.months_added}"
+    )
+    assert _final_counts() == (raw_final, std_final, raw_ties), (
+        "force_redownload changed FINAL counts"
+    )
+    assert forced.ohlc_bars == result.ohlc_bars, (
+        f"force_redownload reported {forced.ohlc_bars:,} OHLC bars, first load {result.ohlc_bars:,}"
+    )
+    print(
+        f"  ✓ force_redownload re-inserted {forced.months_added} months; FINAL counts unchanged (idempotent)"
+    )
+
     # A second update finds nothing to download; its result must describe the stored data.
     with ExnessDataProcessor() as processor:
         again = processor.update_data("EURUSD", start_date=start.isoformat())
@@ -101,6 +135,102 @@ def check_load() -> None:
         f"  ✓ raw_spread_ticks={coverage.raw_spread_ticks:,} standard_ticks={coverage.standard_ticks:,}"
     )
     print("✅ Load passed")
+
+
+def _final_counts() -> tuple[int, int, int]:
+    """(raw_spread FINAL rows, standard FINAL rows, raw_spread FINAL rows with seq > 0) for EURUSD."""
+    from exness_data_preprocess import get_clickhouse_client
+
+    client = get_clickhouse_client()
+    try:
+        row = client.query(
+            "SELECT"
+            " (SELECT count() FROM exness.raw_spread_ticks FINAL WHERE instrument = 'EURUSD'),"
+            " (SELECT count() FROM exness.standard_ticks FINAL WHERE instrument = 'EURUSD'),"
+            " (SELECT count() FROM exness.raw_spread_ticks FINAL WHERE instrument = 'EURUSD' AND seq > 0)"
+        ).first_row
+    finally:
+        client.close()
+    return int(row[0]), int(row[1]), int(row[2])
+
+
+def check_migration() -> None:
+    """A pre-3.0 tick table (key: instrument, timestamp) migrates in place and keeps its rows."""
+    print("🔍 Validating pre-3.0 tick table migration...")
+    from exness_data_preprocess import get_clickhouse_client
+    from exness_data_preprocess.clickhouse_manager import (
+        TICK_SORTING_KEY,
+        migrate_ticks_table_to_seq_key,
+    )
+
+    db = "exness_migration_check"
+    client = get_clickhouse_client(database="")
+    try:
+        client.command(f"DROP DATABASE IF EXISTS {db}")
+        client.command(f"CREATE DATABASE {db}")
+        client.command(
+            f"CREATE TABLE {db}.raw_spread_ticks (instrument LowCardinality(String),"
+            " timestamp DateTime64(6, 'UTC'), bid Float64, ask Float64)"
+            " ENGINE = ReplacingMergeTree() PARTITION BY toYYYYMM(timestamp) ORDER BY (instrument, timestamp)"
+        )
+        client.command(
+            f"INSERT INTO {db}.raw_spread_ticks VALUES"
+            " ('EURUSD', '2026-09-01 00:00:01', 1.1, 1.1), ('EURUSD', '2026-09-01 00:00:02', 1.2, 1.2)"
+        )
+        assert migrate_ticks_table_to_seq_key(client, db, "raw_spread_ticks") is True, (
+            "did not migrate"
+        )
+        assert migrate_ticks_table_to_seq_key(client, db, "raw_spread_ticks") is False, (
+            "not idempotent"
+        )
+        key = client.query(
+            f"SELECT sorting_key FROM system.tables WHERE database = '{db}' AND name = 'raw_spread_ticks'"
+        ).first_row[0]
+        assert key == TICK_SORTING_KEY, f"sorting key after migration: {key!r}"
+        # A second tick at :01 with seq 1 now survives a merge alongside the migrated seq-0 row.
+        client.command(
+            f"INSERT INTO {db}.raw_spread_ticks (instrument, timestamp, seq, bid, ask)"
+            " VALUES ('EURUSD', '2026-09-01 00:00:01', 1, 1.15, 1.15)"
+        )
+        client.command(f"OPTIMIZE TABLE {db}.raw_spread_ticks FINAL")
+        n = client.query(f"SELECT count() FROM {db}.raw_spread_ticks").first_row[0]
+        assert n == 3, f"expected 3 rows after migration + tie insert + merge, got {n}"
+        print(f"  ✓ sorting key -> ({key}); existing rows kept; same-timestamp tick survives merge")
+    finally:
+        client.command(f"DROP DATABASE IF EXISTS {db}")
+        client.close()
+    print("✅ Migration validation passed")
+
+
+def check_ties() -> None:
+    """Cursor pagination through a run of same-timestamp ticks returns every one of them."""
+    print("🔍 Validating pagination across same-timestamp ticks...")
+    from exness_data_preprocess import ClickHouseQueryEngine, get_clickhouse_client
+
+    client = get_clickhouse_client()
+    try:
+        ts, n = client.query(
+            "SELECT timestamp, count() AS n FROM exness.raw_spread_ticks FINAL"
+            " WHERE instrument = 'EURUSD' GROUP BY timestamp HAVING n > 1 ORDER BY n DESC, timestamp LIMIT 1"
+        ).first_row
+    finally:
+        client.close()
+    engine = ClickHouseQueryEngine()
+    seen = 0
+    cursor = None
+    # page_size=1 puts a page boundary between every pair of tied ticks.
+    while True:
+        page = engine.query_ticks_paginated(
+            "EURUSD", page_size=1, cursor=cursor, start_date=str(ts), end_date=str(ts)
+        )
+        seen += len(page.data)
+        if not page.has_more:
+            break
+        cursor = page.next_cursor
+    engine.close()
+    assert seen == n, f"paginated {seen} ticks at {ts}, expected {n}"
+    print(f"  ✓ {n} ticks share {ts}; page_size=1 pagination returned all {seen}")
+    print("✅ Tie pagination passed")
 
 
 def check_data() -> None:
@@ -173,9 +303,11 @@ def check_ohlc() -> None:
 CHECKS: dict[str, Callable[[], None]] = {
     "status": check_status,
     "schema": check_schema,
+    "migration": check_migration,
     "load": check_load,
     "data": check_data,
     "pagination": check_pagination,
+    "ties": check_ties,
     "ohlc": check_ohlc,
 }
 

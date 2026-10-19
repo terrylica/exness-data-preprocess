@@ -154,10 +154,10 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
             SELECT
                 {{instrument:String}} AS instrument,
                 toStartOfMinute(r.timestamp) AS timestamp,
-                argMin(r.bid, r.timestamp) AS open,
+                argMin(r.bid, (r.timestamp, r.seq)) AS open,
                 max(r.bid) AS high,
                 min(r.bid) AS low,
-                argMax(r.bid, r.timestamp) AS close,
+                argMax(r.bid, (r.timestamp, r.seq)) AS close,
                 avg(r.ask - r.bid) AS raw_spread_avg,
                 avg(s.ask - s.bid) AS standard_spread_avg,
                 toUInt32(count(r.timestamp)) AS tick_count_raw_spread,
@@ -186,8 +186,8 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 toUInt8(0) AS is_major_holiday,
                 -- Trading session flags (initialized to 0, updated via session_detector)
                 {session_columns}
-            FROM {self.DATABASE}.raw_spread_ticks AS r
-            ASOF LEFT JOIN {self.DATABASE}.standard_ticks AS s
+            FROM {self.DATABASE}.raw_spread_ticks AS r FINAL
+            ASOF LEFT JOIN {self.DATABASE}.standard_ticks AS s FINAL
                 ON r.instrument = s.instrument
                 AND r.timestamp >= s.timestamp
             WHERE {where_sql}
@@ -208,7 +208,7 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
 
         count_result = execute_query(
             self.client,
-            f"SELECT count() FROM {self.DATABASE}.ohlc_1m WHERE " + " AND ".join(count_where),
+            f"SELECT count() FROM {self.DATABASE}.ohlc_1m FINAL WHERE " + " AND ".join(count_where),
             parameters=params,
         )
         ohlc_count = count_result.first_row[0] if count_result.result_rows else 0
@@ -257,7 +257,7 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
         # Query all OHLC data that needs session flags updated
         result = execute_query(
             self.client,
-            f"SELECT * FROM {self.DATABASE}.ohlc_1m WHERE {where_sql} ORDER BY timestamp",
+            f"SELECT * FROM {self.DATABASE}.ohlc_1m FINAL WHERE {where_sql} ORDER BY timestamp",
             parameters=params,
         )
 

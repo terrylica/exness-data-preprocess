@@ -302,7 +302,8 @@ class ExnessDataProcessor:
         Args:
             pair: Currency pair (e.g., "EURUSD")
             start_date: Earliest date to download (YYYY-MM-DD)
-            force_redownload: Force re-download even if data exists
+            force_redownload: Re-download and re-insert every month from start_date, even months
+                already stored (restores ticks collapsed by a pre-3.0 table key)
             delete_zip: Delete ZIP files after processing
             dry_run: Preview operation without downloading
 
@@ -327,10 +328,20 @@ class ExnessDataProcessor:
         print(f"Updating {pair} in ClickHouse ({self.DATABASE})")
         print(f"{'=' * 70}")
 
-        # Discover missing months
-        print(f"\nDiscovering missing months (from {start_date})...")
-        missing_months = self.ch_gap_detector.discover_missing_months(pair, start_date)
-        print(f"Found {len(missing_months)} months to download")
+        if force_redownload:
+            # Every month from start_date through the current one, whether or not it is stored.
+            # Re-inserting is safe (ReplacingMergeTree on instrument, timestamp, seq) and restores
+            # ticks a pre-3.0 table key collapsed.
+            first = pd.Timestamp(start_date).to_period("M")
+            last = pd.Timestamp.now(tz="UTC").tz_localize(None).to_period("M")
+            missing_months = [(p.year, p.month) for p in pd.period_range(first, last, freq="M")]
+            print(
+                f"\nforce_redownload: re-processing {len(missing_months)} months from {start_date}"
+            )
+        else:
+            print(f"\nDiscovering missing months (from {start_date})...")
+            missing_months = self.ch_gap_detector.discover_missing_months(pair, start_date)
+            print(f"Found {len(missing_months)} months to download")
 
         if not missing_months:
             print("\n✓ Database is up to date")
