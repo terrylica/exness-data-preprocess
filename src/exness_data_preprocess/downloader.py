@@ -44,6 +44,7 @@ class ExnessDownloader:
         month: int,
         pair: str = "EURUSD",
         variant: str = "Raw_Spread",
+        force: bool = False,
     ) -> Optional[Path]:
         """
         Download Exness ZIP file for specific month and variant.
@@ -53,6 +54,7 @@ class ExnessDownloader:
             month: Month (1-12)
             pair: Currency pair (default: EURUSD)
             variant: Data variant ("Raw_Spread" or "" for Standard)
+            force: Re-download even if the ZIP is already on disk
 
         Returns:
             Path to downloaded ZIP file, or None if download failed
@@ -70,7 +72,9 @@ class ExnessDownloader:
         zip_path = self.temp_dir / f"Exness_{symbol}_{year}_{month:02d}.zip"
 
         if zip_path.exists():
-            return zip_path
+            if not force:
+                return zip_path
+            zip_path.unlink()  # force: fetch the archive again instead of reusing a cached copy
 
         # Download to a sibling .part file and rename on success, so an interrupted or concurrent
         # download never leaves a truncated ZIP at zip_path for the exists() check above to reuse.

@@ -260,7 +260,12 @@ class ExnessDataProcessor:
             raise ValueError(f"Invalid {param_name} '{date_str}': {e!s}") from e
 
     def download_exness_zip(
-        self, year: int, month: int, pair: str = "EURUSD", variant: str = "Raw_Spread"
+        self,
+        year: int,
+        month: int,
+        pair: str = "EURUSD",
+        variant: str = "Raw_Spread",
+        force: bool = False,
     ) -> Optional[Path]:
         """
         Download Exness ZIP file for specific month and variant.
@@ -274,7 +279,9 @@ class ExnessDataProcessor:
         Returns:
             Path to downloaded ZIP file, or None if download failed
         """
-        return self.downloader.download_zip(year=year, month=month, pair=pair, variant=variant)
+        return self.downloader.download_zip(
+            year=year, month=month, pair=pair, variant=variant, force=force
+        )
 
     def _load_ticks_from_zip(self, zip_path: Path) -> pd.DataFrame:
         """Load ticks from ZIP file into DataFrame."""
@@ -395,13 +402,17 @@ class ExnessDataProcessor:
             print(f"\n--- Processing {year}-{month:02d} ---")
 
             # Download Raw_Spread variant
-            raw_zip = self.download_exness_zip(year, month, pair, variant="Raw_Spread")
+            raw_zip = self.download_exness_zip(
+                year, month, pair, variant="Raw_Spread", force=force_redownload
+            )
             if raw_zip is None:
                 print(f"⚠️  Skipping {year}-{month:02d} (Raw_Spread not available)")
                 continue
 
             # Download Standard variant
-            std_zip = self.download_exness_zip(year, month, pair, variant="")
+            std_zip = self.download_exness_zip(
+                year, month, pair, variant="", force=force_redownload
+            )
             if std_zip is None:
                 print(f"⚠️  Skipping {year}-{month:02d} (Standard not available)")
                 if delete_zip and raw_zip.exists():

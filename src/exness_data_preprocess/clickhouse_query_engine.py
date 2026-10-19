@@ -16,6 +16,7 @@ Handles:
 - Parameterized queries for safe, efficient access
 """
 
+import re
 from collections.abc import Iterator
 
 import pandas as pd
@@ -36,6 +37,7 @@ from exness_data_preprocess.models import (
 )
 
 CURSOR_SEPARATOR = "#"
+_DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 def _utc_text(value: object) -> str:
@@ -44,6 +46,28 @@ def _utc_text(value: object) -> str:
     if ts.tzinfo is not None:
         ts = ts.tz_convert("UTC").tz_localize(None)
     return ts.strftime("%Y-%m-%d %H:%M:%S.%f")
+
+
+def _date_bounds(start_date: str | None, end_date: str | None) -> tuple[list[str], dict]:
+    """
+    WHERE clauses and parameters for the inclusive start_date / end_date filters (UTC).
+
+    A date-only end_date ("YYYY-MM-DD") includes that whole day; a full timestamp is an exact
+    inclusive bound. Values are bound as UTC types, never parsed in the server's time zone.
+    """
+    parts: list[str] = []
+    params: dict = {}
+    if start_date:
+        parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
+        params["start_date"] = start_date
+    if end_date:
+        if _DATE_ONLY.fullmatch(end_date.strip()):
+            parts.append("timestamp < addDays(toDateTime64({end_date:Date}, 6, 'UTC'), 1)")
+            params["end_date"] = end_date.strip()
+        else:
+            parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
+            params["end_date"] = end_date
+    return parts, params
 
 
 class ClickHouseQueryEngine(ClickHouseClientMixin):
@@ -92,7 +116,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             instrument: Instrument symbol (e.g., "EURUSD")
             variant: "raw_spread" or "standard"
             start_date: Start date (YYYY-MM-DD), inclusive
-            end_date: End date (YYYY-MM-DD), inclusive
+            end_date: End date, inclusive (YYYY-MM-DD covers that whole day; a timestamp is exact)
             limit: Maximum number of rows to return
             offset: Number of rows to skip (for pagination)
 
@@ -119,12 +143,9 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         where_parts = ["instrument = {instrument:String}"]
         params: dict = {"instrument": symbol}
 
-        if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
-            params["start_date"] = start_date
-        if end_date:
-            where_parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
-            params["end_date"] = end_date
+        bound_parts, bound_params = _date_bounds(start_date, end_date)
+        where_parts.extend(bound_parts)
+        params.update(bound_params)
 
         where_sql = " AND ".join(where_parts)
         limit_sql = f"LIMIT {limit}" if limit else ""
@@ -162,7 +183,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             instrument: Instrument symbol (e.g., "EURUSD")
             timeframe: Timeframe (1m, 5m, 15m, 30m, 1h, 4h, 1d)
             start_date: Start date (YYYY-MM-DD), inclusive
-            end_date: End date (YYYY-MM-DD), inclusive
+            end_date: End date, inclusive (YYYY-MM-DD covers that whole day; a timestamp is exact)
             limit: Maximum number of rows to return
             offset: Number of rows to skip (for pagination)
 
@@ -204,12 +225,9 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
         where_parts = ["instrument = {instrument:String}"]
         params: dict = {"instrument": symbol, "minutes": minutes}
 
-        if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
-            params["start_date"] = start_date
-        if end_date:
-            where_parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
-            params["end_date"] = end_date
+        bound_parts, bound_params = _date_bounds(start_date, end_date)
+        where_parts.extend(bound_parts)
+        params.update(bound_params)
 
         where_sql = " AND ".join(where_parts)
         limit_sql = f"LIMIT {limit}" if limit else ""
@@ -421,7 +439,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             cursor: next_cursor of the previous page ("<timestamp>#<seq>", exclusive), None for first page
             page_size: Number of rows per page (default: 100,000)
             start_date: Start date filter (YYYY-MM-DD), inclusive
-            end_date: End date filter (YYYY-MM-DD), inclusive
+            end_date: End date filter, inclusive (YYYY-MM-DD covers that whole day; a timestamp is exact)
 
         Returns:
             CursorResult with data, next_cursor, has_more, and page_size
@@ -445,17 +463,17 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             # tick at that timestamp". Comparing the (timestamp, seq) pair means ticks sharing the
             # last timestamp of a page are not skipped.
             cursor_ts, _, cursor_seq = cursor.partition(CURSOR_SEPARATOR)
+            # The plain timestamp bound changes no result; it lets ClickHouse prune parts and
+            # partitions by primary key, which it does not do for the tuple comparison alone.
+            where_parts.append("timestamp >= {cursor_ts:DateTime64(6, 'UTC')}")
             where_parts.append(
                 "(timestamp, seq) > ({cursor_ts:DateTime64(6, 'UTC')}, {cursor_seq:UInt16})"
             )
             params["cursor_ts"] = cursor_ts
             params["cursor_seq"] = int(cursor_seq) if cursor_seq else 65535
-        if start_date:
-            where_parts.append("timestamp >= {start_date:DateTime64(6, 'UTC')}")
-            params["start_date"] = start_date
-        if end_date:
-            where_parts.append("timestamp <= {end_date:DateTime64(6, 'UTC')}")
-            params["end_date"] = end_date
+        bound_parts, bound_params = _date_bounds(start_date, end_date)
+        where_parts.extend(bound_parts)
+        params.update(bound_params)
 
         where_sql = " AND ".join(where_parts)
 
@@ -513,7 +531,7 @@ class ClickHouseQueryEngine(ClickHouseClientMixin):
             variant: "raw_spread" or "standard"
             batch_size: Number of rows per batch (default: 100,000 = ~8MB)
             start_date: Start date filter (YYYY-MM-DD), inclusive
-            end_date: End date filter (YYYY-MM-DD), inclusive
+            end_date: End date filter, inclusive (YYYY-MM-DD covers that whole day; a timestamp is exact)
             max_batches: Maximum number of batches to yield (None = unlimited)
 
         Yields:

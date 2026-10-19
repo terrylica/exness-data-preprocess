@@ -143,6 +143,10 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
             )
 
         where_sql = " AND ".join(where_parts)
+        standard_where = ["instrument = {instrument:String}"]
+        if start_date:
+            standard_where.append("timestamp >= {start_date:DateTime64(6, 'UTC')} - INTERVAL 7 DAY")
+        standard_where_sql = " AND ".join(standard_where)
 
         # Generate session column initializations from exchange registry
         session_columns = ", ".join([f"0 AS is_{name}_session" for name in EXCHANGES.keys()])
@@ -187,7 +191,14 @@ class ClickHouseOHLCGenerator(ClickHouseClientMixin):
                 -- Trading session flags (initialized to 0, updated via session_detector)
                 {session_columns}
             FROM {self.DATABASE}.raw_spread_ticks AS r FINAL
-            ASOF LEFT JOIN {self.DATABASE}.standard_ticks AS s FINAL
+            ASOF LEFT JOIN (
+                -- Only this instrument, and only from a week before start_date: enough for the
+                -- closest preceding Standard tick across a weekend, without reading (and FINAL-
+                -- merging) every instrument and month on the join's build side.
+                SELECT instrument, timestamp, ask, bid
+                FROM {self.DATABASE}.standard_ticks FINAL
+                WHERE {standard_where_sql}
+            ) AS s
                 ON r.instrument = s.instrument
                 AND r.timestamp >= s.timestamp
             WHERE {where_sql}

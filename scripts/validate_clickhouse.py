@@ -249,6 +249,15 @@ def check_data() -> None:
         assert col in df.columns, f"Missing column: {col}"
     print("  ✓ All expected columns present")
 
+    # A date-only end_date includes that whole day (it used to stop at 00:00:00 of that day).
+    day = str(df["timestamp"].iloc[-1])[:10]
+    whole_day = engine.query_ticks("EURUSD", start_date=day, end_date=day)
+    days = {str(t)[:10] for t in whole_day["timestamp"]}
+    assert len(whole_day) > 1 and days == {day}, (
+        f"start_date=end_date={day} returned {len(whole_day)} ticks on days {sorted(days)}"
+    )
+    print(f"  ✓ start_date=end_date={day} returned the whole day: {len(whole_day):,} ticks")
+
     engine.close()
     print("✅ Data validation passed")
 

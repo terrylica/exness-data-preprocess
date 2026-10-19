@@ -61,8 +61,12 @@ def assign_tick_seq(timestamps: pd.Series) -> pd.Series:
     ``seq`` values, so re-loading a month still deduplicates.
 
     Raises:
-        ValueError: If more than 65,536 ticks share one timestamp (seq is UInt16).
+        ValueError: If any timestamp is NaT, or more than 65,536 ticks share one timestamp (seq is UInt16).
     """
+    if timestamps.isna().any():
+        raise ValueError(
+            f"{int(timestamps.isna().sum())} tick(s) have no timestamp (NaT); refusing to insert"
+        )
     seq = timestamps.groupby(timestamps, sort=False).cumcount()
     if len(seq) and int(seq.max()) > 65535:
         raise ValueError(f"{int(seq.max()) + 1} ticks share one timestamp; seq (UInt16) overflows")

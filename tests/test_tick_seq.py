@@ -45,3 +45,9 @@ def test_overflow_raises():
     ts = pd.Series(pd.to_datetime(["2026-09-01"] * 65537, utc=True))
     with pytest.raises(ValueError, match="overflows"):
         assign_tick_seq(ts)
+
+
+def test_nat_rejected_with_clear_message():
+    ts = pd.Series(pd.to_datetime(["2026-09-01 00:00:01", None], utc=True))
+    with pytest.raises(ValueError, match="NaT"):
+        assign_tick_seq(ts)

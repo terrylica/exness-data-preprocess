@@ -406,7 +406,7 @@ class CursorResult(BaseModel):
             "examples": [
                 {
                     "data": "<DataFrame with 10000 rows>",
-                    "next_cursor": "2024-08-01 12:30:45.123456+00:00#0",
+                    "next_cursor": "2024-08-01 12:30:45.123456#0",
                     "has_more": True,
                     "page_size": 10000,
                 }
